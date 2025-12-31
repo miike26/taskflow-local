@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-// Caminhos relativos corrigidos para garantir a resolução dos arquivos
+// Caminhos relativos mantidos
 import { LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS } from '../constants';
 import Sidebar from './Sidebar';
 import DashboardView from './views/DashboardView';
 import { GoogleIcon } from './icons';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useAuth } from '../hooks/useAuth'; // <--- Importando a lógica de Auth
 
 interface LoginScreenProps {
     login: (user: string, pass: string) => Promise<boolean>;
@@ -13,6 +14,9 @@ interface LoginScreenProps {
 const inputClass = "flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-400 text-sm p-3 transition-all duration-200 hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium";
 
 const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => void }> = ({ onSignup, onClose }) => {
+    const { registerWithGoogle } = useAuth(); // <--- Hook de Auth
+    const [localError, setLocalError] = useState(''); // <--- Erro visual para o modal
+
     const [formData, setFormData] = useState({
         fullName: '',
         nickname: '',
@@ -33,10 +37,15 @@ const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => v
         }
     };
 
-    const handleGoogleConnect = () => {
-        // Redireciona o usuário para usar o botão de Login principal, já que o fluxo do Google é tratado lá
-        onClose();
-        alert("Por favor, use a opção 'Entrar com Google' na tela de login.");
+    // --- NOVA LÓGICA DE CADASTRO COM GOOGLE ---
+    const handleGoogleConnect = async () => {
+        setLocalError('');
+        try {
+            await registerWithGoogle();
+            onClose(); // Fecha o modal após sucesso (o App.tsx vai redirecionar pelo AuthState)
+        } catch (err: any) {
+            setLocalError(err.message || "Erro ao conectar com Google.");
+        }
     };
 
     return (
@@ -58,6 +67,11 @@ const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => v
                     <GoogleIcon className="w-5 h-5" />
                     <span>Conectar com Google</span>
                 </button>
+
+                {/* Exibição de Erro no Modal de Cadastro */}
+                {localError && (
+                    <p className="text-sm text-red-500 text-center">{localError}</p>
+                )}
 
                 <div className="relative flex items-center justify-center">
                     <div className="absolute inset-0 border-t border-gray-200 dark:border-gray-700"></div>
@@ -135,6 +149,7 @@ const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => v
 };
 
 const LoginModal: React.FC<{ login: (u: string, p: string) => Promise<boolean>, onToggleMode: () => void }> = ({ login, onToggleMode }) => {
+    const { loginWithGoogle } = useAuth(); // <--- Hook de Auth
     const [username, setUsername] = useState(''); 
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -150,13 +165,22 @@ const LoginModal: React.FC<{ login: (u: string, p: string) => Promise<boolean>, 
         // Chama a função de login (que pode ser a do Google ou a legada)
         const success = await login(u, p);
         if (!success) {
-            // O erro geralmente é tratado via alert no hook useAuth
+            // O erro geralmente é tratado via alert no hook useAuth, mas podemos setar aqui
+            // setError('Falha no login');
         }
     };
 
-    const handleGoogleConnect = () => {
-        // Chama a função de login com strings vazias para ativar o fluxo do Google Provider no novo hook useAuth
-        login('', '');
+    // --- NOVA LÓGICA DE LOGIN COM GOOGLE ---
+    const handleGoogleConnect = async () => {
+        setError('');
+        try {
+            // Tenta logar e verificar no Firestore
+            await loginWithGoogle();
+        } catch (err: any) {
+            // Remove prefixo feio do Firebase se existir
+            const msg = err.message ? err.message.replace('Firebase: ', '') : "Erro ao entrar.";
+            setError(msg);
+        }
     };
 
     return (

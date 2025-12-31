@@ -71,8 +71,17 @@ export const App = () => {
   const [tags, setTags] = useLocalStorage<Tag[]>('tags', DEFAULT_TAGS);
   const [projects, setProjects] = useLocalStorage<Project[]>('projects', DEFAULT_PROJECTS);
   
-  const { isAuthenticated, login, logout } = useAuth();
+  // --- ALTERAÇÃO AQUI: Ajuste para o novo useAuth ---
+  const { user, loading, logout } = useAuth();
   const [userName, setUserName] = useLocalStorage<string>('userName', 'Admin');
+
+  // Atualiza o nome do usuário localmente quando logar pelo Google
+  useEffect(() => {
+    if (user?.displayName) {
+        setUserName(user.displayName);
+    }
+  }, [user, setUserName]);
+  // --------------------------------------------------
 
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
   const [pinnedTaskIds, setPinnedTaskIds] = useLocalStorage<string[]>('pinnedTaskIds', []);
@@ -133,7 +142,9 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    // --- ALTERAÇÃO AQUI: Verifica user em vez de isAuthenticated ---
+    if (!user) return; 
+    // -------------------------------------------------------------
     const generateAndCheckNotifications = () => {
         const now = new Date();
         const generated: Notification[] = [];
@@ -261,7 +272,7 @@ export const App = () => {
     const interval = setInterval(generateAndCheckNotifications, 5000);
 
     return () => clearInterval(interval);
-  }, [tasks, categories, notificationSettings, isAuthenticated, readNotificationIds, clearedNotificationIds, habits]);
+  }, [tasks, categories, notificationSettings, user, readNotificationIds, clearedNotificationIds, habits]);
 
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !readNotificationIds.includes(n.id)), [notifications, readNotificationIds]);
@@ -936,9 +947,20 @@ export const App = () => {
     }
   };
   
-  if (!isAuthenticated) {
-    return <LoginScreen login={login} />;
+  // --- ALTERAÇÃO AQUI: Exibição de Loading e Verificação de User ---
+  if (loading) {
+      return (
+          <div className="flex h-screen items-center justify-center bg-ice-blue dark:bg-[#0D1117]">
+             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+          </div>
+      );
   }
+
+  if (!user) {
+    // Passamos uma função dummy pois o LoginScreen agora usa o hook internamente
+    return <LoginScreen login={async () => false} />;
+  }
+  // -----------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-ice-blue dark:bg-[#0D1117] text-gray-800 dark:text-gray-200 font-sans p-4">
@@ -987,6 +1009,7 @@ export const App = () => {
           selectedTask={selectedTask}
           onClearRecents={handleClearRecentTasks}
           userName={userName}
+          onLogout={logout} // Passando o logout
         />
         <main className="flex-1 flex flex-col overflow-hidden">
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (
