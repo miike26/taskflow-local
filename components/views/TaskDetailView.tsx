@@ -5,7 +5,7 @@ import type { Project, Task, Category, Tag, Status, Notification, Habit, Activit
 import { 
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
-    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon
+    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -739,7 +739,7 @@ const ActivityItem: React.FC<{ act: Activity, onDelete: (id: string, type: Activ
                     )}
 
                     {act.type === 'property_change' && (
-                         <>alterou {act.property} de <strong>{act.oldValue}</strong> para <strong>{act.newValue}</strong>.</>
+                         <>alterou {act.property} de <strong>{act.from || act.oldValue}</strong> para <strong>{act.to || act.newValue}</strong>.</>
                     )}
                 </p>
 
@@ -954,8 +954,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 type: 'property_change',
                 timestamp: new Date().toISOString(),
                 property: 'Título',
-                oldValue: task.title,
-                newValue: trimmedTitle,
+                from: task.title,
+                to: trimmedTitle,
                 user: userName,
             };
             onUpdate(taskData.id, { title: trimmedTitle, activity: [...taskData.activity, activityEntry] });
@@ -1017,16 +1017,57 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
     const handleDateSelect = (date: Date) => {
         const newDueDate = new Date(date);
         newDueDate.setHours(23, 59, 59); // End of day default
-        onUpdate(taskData.id, { dueDate: newDueDate.toISOString() });
+        const newDueDateIso = newDueDate.toISOString();
+        
+        if (taskData.dueDate !== newDueDateIso) {
+             const activityEntry: Activity = {
+                id: `act-${Date.now()}`,
+                type: 'property_change',
+                timestamp: new Date().toISOString(),
+                property: 'Prazo Final',
+                from: taskData.dueDate ? new Date(taskData.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo',
+                to: newDueDate.toLocaleDateString('pt-BR'),
+                user: userName,
+            };
+            onUpdate(taskData.id, { dueDate: newDueDateIso, activity: [...taskData.activity, activityEntry] });
+        }
         setIsDueDateCalendarOpen(false);
     };
 
     const handleCategoryChange = (catId: string) => {
-        onUpdate(taskData.id, { categoryId: catId });
+        if (taskData.categoryId !== catId) {
+            const oldCategoryName = categories.find(c => c.id === taskData.categoryId)?.name || 'Sem categoria';
+            const newCategoryName = categories.find(c => c.id === catId)?.name || 'Sem categoria';
+
+            const activityEntry: Activity = {
+                id: `act-${Date.now()}`,
+                type: 'property_change',
+                timestamp: new Date().toISOString(),
+                property: 'Categoria',
+                from: oldCategoryName,
+                to: newCategoryName,
+                user: userName,
+            };
+            onUpdate(taskData.id, { categoryId: catId, activity: [...taskData.activity, activityEntry] });
+        }
     };
 
     const handleTagChange = (tagId: string) => {
-        onUpdate(taskData.id, { tagId: tagId });
+        if (taskData.tagId !== tagId) {
+            const oldTagName = tags.find(t => t.id === taskData.tagId)?.name || 'Sem prioridade';
+            const newTagName = tags.find(t => t.id === tagId)?.name || 'Sem prioridade';
+
+            const activityEntry: Activity = {
+                id: `act-${Date.now()}`,
+                type: 'property_change',
+                timestamp: new Date().toISOString(),
+                property: 'Prioridade',
+                from: oldTagName,
+                to: newTagName,
+                user: userName,
+            };
+            onUpdate(taskData.id, { tagId: tagId, activity: [...taskData.activity, activityEntry] });
+        }
     };
 
     const handleProjectSelect = (project: Project) => {
@@ -1035,8 +1076,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             type: 'property_change',
             timestamp: new Date().toISOString(),
             property: 'Projeto',
-            oldValue: currentProject?.name || 'Nenhum',
-            newValue: project.name,
+            from: currentProject?.name || 'Nenhum',
+            to: project.name,
             user: userName
         };
         onUpdate(taskData.id, { projectId: project.id, activity: [...taskData.activity, activityEntry] });
@@ -1050,8 +1091,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             type: 'property_change',
             timestamp: new Date().toISOString(),
             property: 'Projeto',
-            oldValue: currentProject.name,
-            newValue: 'Nenhum',
+            from: currentProject.name,
+            to: 'Nenhum',
             user: userName
         };
         onUpdate(taskData.id, { projectId: undefined, activity: [...taskData.activity, activityEntry] });

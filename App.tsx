@@ -1,27 +1,27 @@
-
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import DashboardView from './components/views/DashboardView';
-import CalendarView from './components/views/CalendarView';
-import ListView from './components/views/ListView';
-import ReportsView from './components/views/ReportsView';
-import RemindersView from './components/views/RemindersView';
-import ProjectsView from './components/views/ProjectsView';
-import ProjectDetailView from './components/views/ProjectDetailView';
-import SettingsView from './components/views/SettingsView'; // Uses the new comprehensive view
-import TaskSheet from './components/TaskModal';
-import TaskDetailView from './components/views/TaskDetailView';
-import NotificationToast from './components/NotificationToast';
-import ConfirmationToast from './components/ConfirmationToast';
-import LoginScreen from './components/LoginScreen';
-import HabitSettingsModal from './components/HabitSettingsModal';
-import Confetti from './components/Confetti';
-import SuccessOverlay from './components/SuccessOverlay';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { useAuth } from './hooks/useAuth';
-import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types';
-import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants';
+import Sidebar from './components/Sidebar.tsx';
+import Header from './components/Header.tsx';
+import DashboardView from './components/views/DashboardView.tsx';
+import CalendarView from './components/views/CalendarView.tsx';
+import ListView from './components/views/ListView.tsx';
+import ReportsView from './components/views/ReportsView.tsx';
+import RemindersView from './components/views/RemindersView.tsx';
+import ProjectsView from './components/views/ProjectsView.tsx';
+import ProjectDetailView from './components/views/ProjectDetailView.tsx';
+import SettingsView from './components/views/SettingsView.tsx'; 
+import TaskSheet from './components/TaskModal.tsx';
+import TaskDetailView from './components/views/TaskDetailView.tsx';
+import NotificationToast from './components/NotificationToast.tsx';
+import ConfirmationToast from './components/ConfirmationToast.tsx';
+import LoginScreen from './components/LoginScreen.tsx';
+import HabitSettingsModal from './components/HabitSettingsModal.tsx';
+import Confetti from './components/Confetti.tsx';
+import SuccessOverlay from './components/SuccessOverlay.tsx';
+import { useLocalStorage } from './hooks/useLocalStorage.ts';
+import { useFirestore } from './hooks/useFirestore.ts';
+import { useAuth } from './hooks/useAuth.ts';
+import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
+import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
 
 interface ConfirmationDialogState {
   isOpen: boolean;
@@ -55,7 +55,18 @@ export const App = () => {
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [previousView, setPreviousView] = useState<View>('dashboard');
-  const [tasks, setTasks] = useLocalStorage<Task[]>('tasks', DEFAULT_TASKS);
+  
+  // Hook do Firestore para sincronização de tarefas
+  const { 
+    data: tasks, 
+    add: addTaskFire, 
+    update: updateTaskFire, 
+    remove: removeTaskFire,
+    updateBatch: updateBatchFire,
+    deleteBatch: deleteBatchFire
+  } = useFirestore<Task>('tasks', []);
+
+  // Dados locais (Categorias, Tags, Projetos, etc.)
   const [categories, setCategories] = useLocalStorage<Category[]>('categories', DEFAULT_CATEGORIES);
   const [tags, setTags] = useLocalStorage<Tag[]>('tags', DEFAULT_TAGS);
   const [projects, setProjects] = useLocalStorage<Project[]>('projects', DEFAULT_PROJECTS);
@@ -72,7 +83,6 @@ export const App = () => {
   const [initialDataForSheet, setInitialDataForSheet] = useState<Task | null>(null);
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
-  // Expanded Settings Defaults
   const [notificationSettings, setNotificationSettings] = useLocalStorage<NotificationSettings>('notificationSettings', { 
       enabled: true, 
       remindDaysBefore: 1,
@@ -102,10 +112,8 @@ export const App = () => {
   const [isHabitSettingsOpen, setIsHabitSettingsOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   
-  // Ref to track first load to prevent notification spam on login
   const isFirstLoad = useRef(true);
 
-  
   const notificationsRef = useRef(notifications);
   useEffect(() => {
     notificationsRef.current = notifications;
@@ -131,7 +139,6 @@ export const App = () => {
         const generated: Notification[] = [];
         const todayStr = now.toISOString().split('T')[0];
 
-        // From settings (upcoming/overdue) - Check granular setting
         if (notificationSettings.enabled && notificationSettings.taskReminders) {
           const startOfToday = new Date();
           startOfToday.setHours(0, 0, 0, 0);
@@ -142,7 +149,6 @@ export const App = () => {
               const startOfDueDate = new Date(dueDate);
               startOfDueDate.setHours(0, 0, 0, 0);
 
-              // Check if overdue (due date is before today)
               if (startOfDueDate.getTime() < startOfToday.getTime()) {
                   generated.push({
                       id: `${task.id}-overdue`,
@@ -152,9 +158,7 @@ export const App = () => {
                       notifyAt: task.dueDate,
                   });
               } else {
-                  // Check if upcoming (within notificationSettings.remindDaysBefore)
                   const calendarDaysDiff = (startOfDueDate.getTime() - startOfToday.getTime()) / (1000 * 3600 * 24);
-                  
                   const daysUntilDue = Math.round(calendarDaysDiff);
 
                   if (daysUntilDue <= notificationSettings.remindDaysBefore) {
@@ -176,7 +180,6 @@ export const App = () => {
           });
         }
         
-        // From custom reminders in activity
         if (notificationSettings.enabled) {
             tasks.forEach(task => {
             task.activity.forEach(act => {
@@ -193,7 +196,6 @@ export const App = () => {
             });
         }
         
-        // From habit reminders - Check granular setting
         if (notificationSettings.enabled && notificationSettings.habitReminders) {
             habits.forEach(habit => {
                 const isCompleted = (habit.type === 'manual' && habit.lastCompletedDate === todayStr) || (habit.overrideDate === todayStr);
@@ -204,8 +206,8 @@ export const App = () => {
 
                     if (now >= reminderDateTime) {
                         generated.push({
-                            id: `habit-${habit.id}-${todayStr}`, // Unique per day
-                            taskId: `habit-${habit.id}`, // Special ID to identify it's a habit
+                            id: `habit-${habit.id}-${todayStr}`,
+                            taskId: `habit-${habit.id}`,
                             taskTitle: habit.title,
                             message: `Lembrete de rotina diária.`,
                             notifyAt: reminderDateTime.toISOString(),
@@ -217,7 +219,6 @@ export const App = () => {
 
         const sortedGenerated = generated.sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime()).filter(n => !clearedNotificationIds.includes(n.id));
         
-        // Only trigger toasts if it is NOT the first load/login
         if (!isFirstLoad.current) {
             const currentNotificationIds = new Set(notificationsRef.current.map(n => n.id));
             const newNotifications = sortedGenerated.filter(n => !currentNotificationIds.has(n.id));
@@ -228,8 +229,6 @@ export const App = () => {
                 const toastsToAdd = unreadNewNotifications.map((n): NotificationToastDataType | null => {
                     const taskForToast = tasks.find(t => t.id === n.taskId);
                     const categoryForToast = taskForToast ? categories.find(c => c.id === taskForToast.categoryId) : undefined;
-                    
-                    // For habits, task will be undefined, but we still want a toast.
                     const isHabit = n.taskId.startsWith('habit-');
 
                     if ((taskForToast && categoryForToast) || isHabit) {
@@ -252,7 +251,6 @@ export const App = () => {
                 }
             }
         } else {
-            // Mark first load as complete, so subsequent updates DO show toasts
             isFirstLoad.current = false;
         }
         
@@ -303,7 +301,7 @@ export const App = () => {
 
     setRecentTaskIds(prev => {
       const newRecents = [task.id, ...prev.filter(id => id !== task.id)];
-      return newRecents.slice(0, 10); // keep a bit more history internally
+      return newRecents.slice(0, 10);
     });
   };
 
@@ -318,7 +316,7 @@ export const App = () => {
         ...project,
         activity: project.activity.length > 0 ? project.activity : [{
             id: `proj-act-create-${Date.now()}`,
-            type: 'creation', // Ensure creation type is set
+            type: 'creation',
             timestamp: new Date().toISOString(),
             user: userName,
             note: 'Usuário criou esse projeto'
@@ -344,10 +342,10 @@ export const App = () => {
         message: 'Tem certeza que deseja excluir este projeto? As tarefas associadas a ele NÃO serão excluídas, mas ficarão sem projeto.',
         onConfirm: () => {
             setProjects(prev => prev.filter(p => p.id !== projectId));
-            // Optional: Remove projectId from tasks or delete tasks?
-            // For now, let's keep tasks but remove the association
-            setTasks(prev => prev.map(t => t.projectId === projectId ? { ...t, projectId: undefined } : t));
-            
+            const tasksToUnlink = tasks.filter(t => t.projectId === projectId).map(t => t.id);
+            if (tasksToUnlink.length > 0) {
+               updateBatchFire(tasksToUnlink, { projectId: null } as any);
+            }
             if (selectedProject?.id === projectId) {
                 setCurrentView('projects');
                 setSelectedProject(null);
@@ -364,12 +362,12 @@ export const App = () => {
         title: 'Excluir Tarefa',
         message: 'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
         onConfirm: () => {
-            setTasks(currentTasks => currentTasks.filter(t => t.id !== taskId));
+            removeTaskFire(taskId);
+            
             if (selectedTask?.id === taskId) {
               setCurrentView(previousView);
               setSelectedTask(null);
             }
-            // Add activity to project if applicable
             if (taskToDelete?.projectId) {
                 setProjects(prev => prev.map(p => {
                     if (p.id === taskToDelete.projectId) {
@@ -436,9 +434,8 @@ export const App = () => {
             note: 'Tarefa criada.'
         });
     }
-    setTasks(prevTasks => [...prevTasks, task]);
+    addTaskFire(task);
     
-    // Add activity to project if applicable
     if (task.projectId) {
         setProjects(prev => prev.map(p => {
             if (p.id === task.projectId) {
@@ -466,33 +463,22 @@ export const App = () => {
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
     const currentTask = tasks.find(t => t.id === taskId);
     
-    // Check if status changed to 'Concluída' to trigger confetti and overlay
     if (updates.status === 'Concluída' && currentTask?.status !== 'Concluída' && appSettings.enableAnimations) {
         setShowCelebration(true);
         setTimeout(() => setShowCelebration(false), 3000);
     }
 
-    // Optimistic Update
-    setTasks(currentTasks => 
-        currentTasks.map(t => {
-            if (t.id === taskId) {
-                return { ...t, ...updates };
-            }
-            return t;
-        })
-    );
+    updateTaskFire(taskId, updates);
 
     if (selectedTask?.id === taskId) {
         setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Side effect: Handle Project Linking/Unlinking/Switching Activity Log for the PROJECT History
     if (currentTask && 'projectId' in updates && updates.projectId !== currentTask.projectId) {
         const oldProjectId = currentTask.projectId;
         const newProjectId = updates.projectId;
 
         setProjects(prevProjects => prevProjects.map(p => {
-            // Case 1: Task removed from Old Project
             if (oldProjectId && p.id === oldProjectId) {
                 const activity: Activity = {
                     id: `proj-act-unlink-${Date.now()}-${Math.random()}`,
@@ -507,7 +493,6 @@ export const App = () => {
                 return updatedProject;
             }
 
-            // Case 2: Task added to New Project
             if (newProjectId && p.id === newProjectId) {
                 const activity: Activity = {
                     id: `proj-act-link-${Date.now()}-${Math.random()}`,
@@ -526,7 +511,6 @@ export const App = () => {
         }));
     }
 
-    // Side effect: Log status change to Project History
     if (currentTask && updates.status && updates.status !== currentTask.status && currentTask.projectId && (!('projectId' in updates) || updates.projectId === currentTask.projectId)) {
          setProjects(prev => prev.map(p => {
             if (p.id === currentTask.projectId) {
@@ -563,7 +547,6 @@ export const App = () => {
         user: userName
     };
     
-    // Just update the task. handleUpdateTask will now take care of the project side-effect.
     handleUpdateTask(taskId, {
       status: newStatus,
       activity: [...task.activity, activityEntry]
@@ -578,27 +561,23 @@ export const App = () => {
         setTimeout(() => setShowCelebration(false), 3000);
     }
 
-    // 1. Update Tasks
-    setTasks(currentTasks =>
-        currentTasks.map(task => {
-            if (taskIds.includes(task.id) && task.status !== newStatus) {
-                const activityEntry = {
-                    id: `act-${Date.now()}-${Math.random()}`,
-                    type: 'status_change' as const,
-                    timestamp: now,
-                    from: task.status,
-                    to: newStatus,
-                    user: userName
-                };
-                return { ...task, status: newStatus, activity: [...task.activity, activityEntry] };
-            }
-            return task;
-        })
-    );
+    taskIds.forEach(id => {
+        const task = tasks.find(t => t.id === id);
+        if (task && task.status !== newStatus) {
+            const activityEntry = {
+                id: `act-${Date.now()}-${Math.random()}`,
+                type: 'status_change' as const,
+                timestamp: now,
+                from: task.status,
+                to: newStatus,
+                user: userName
+            };
+            updateTaskFire(id, { status: newStatus, activity: [...task.activity, activityEntry] });
+        }
+    });
 
-    // 2. Aggregate Project Updates
     const tasksToUpdate = tasks.filter(t => taskIds.includes(t.id) && t.status !== newStatus);
-    const groups: Record<string, Record<Status, string[]>> = {}; // projectId -> fromStatus -> taskTitles[]
+    const groups: Record<string, Record<Status, string[]>> = {};
     
     tasksToUpdate.forEach(task => {
         if (!task.projectId) return;
@@ -646,7 +625,6 @@ export const App = () => {
   };
 
   const handleBulkDelete = (taskIds: string[]) => {
-    // Log deletion in projects
     const tasksToDelete = tasks.filter(t => taskIds.includes(t.id));
     tasksToDelete.forEach(task => {
         if (task.projectId) {
@@ -669,7 +647,7 @@ export const App = () => {
         }
     });
 
-    setTasks(currentTasks => currentTasks.filter(t => !taskIds.includes(t.id)));
+    deleteBatchFire(taskIds);
     addToast({ title: 'Tarefas Excluídas', subtitle: `${taskIds.length} tarefa(s) foram removidas.`, type: 'error' });
   };
 
@@ -696,17 +674,10 @@ export const App = () => {
         title: 'Excluir Lembrete',
         message: 'Tem certeza que deseja excluir este lembrete?',
         onConfirm: () => {
-            let updatedTask: Task | null = null;
-            const newTasks = tasks.map(task => {
-                if (task.id === taskId) {
-                    updatedTask = { ...task, activity: task.activity.filter(r => r.id !== reminderId) };
-                    return updatedTask;
-                }
-                return task;
-            });
-            setTasks(newTasks);
-            if (selectedTask?.id === taskId && updatedTask) {
-                setSelectedTask(updatedTask);
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                const updatedActivity = task.activity.filter(r => r.id !== reminderId);
+                updateTaskFire(taskId, { activity: updatedActivity });
             }
         }
     });
@@ -717,7 +688,7 @@ export const App = () => {
         if (!task) return;
 
         const onConfirmDelete = () => {
-            handleUpdateTask(taskId, { activity: task.activity.filter(act => act.id !== activityId) });
+            updateTaskFire(taskId, { activity: task.activity.filter(act => act.id !== activityId) });
         };
 
         if (type === 'reminder') {
@@ -746,14 +717,11 @@ export const App = () => {
       user: 'Sistema'
     };
 
-    setTasks(currentTasks => currentTasks.map(task => {
-      if (task.id === notification.taskId) {
-        return { ...task, activity: [...task.activity, newReminderActivity] };
-      }
-      return task;
-    }));
+    const task = tasks.find(t => t.id === notification.taskId);
+    if (task) {
+        updateTaskFire(notification.taskId, { activity: [...task.activity, newReminderActivity] });
+    }
 
-    // Mark original notification as read
     setReadNotificationIds(prev => [...new Set([...prev, notification.id])]);
     addToast({ title: 'Lembrete Adiado', subtitle: 'Você será notificado em 2 horas.', type: 'success' });
   };
@@ -791,14 +759,13 @@ export const App = () => {
 
       return habits.map(habit => {
           let isCompleted = false;
-          // Manual overrides take precedence
           if (habit.overrideDate === todayStr) {
-              isCompleted = false; // Manually marked as incomplete
+              isCompleted = false;
           } else if (habit.lastCompletedDate === todayStr) {
-              isCompleted = true; // Manually marked as complete
+              isCompleted = true;
           } else if (habit.type === 'auto-task-completion') {
-              isCompleted = wasTaskCompletedToday; // Automatic check
-          } else { // Manual habit, not marked as complete today
+              isCompleted = wasTaskCompletedToday;
+          } else {
               isCompleted = false;
           }
           return { ...habit, isCompleted };
@@ -813,14 +780,12 @@ export const App = () => {
           const isCurrentlyCompleted = habitsWithStatus.find(hs => hs.id === habitId)?.isCompleted ?? false;
           
           if (isCurrentlyCompleted) {
-              // User is un-checking it
               if (h.type === 'manual') {
                   return { ...h, lastCompletedDate: undefined };
-              } else { // auto
+              } else { 
                   return { ...h, overrideDate: todayStr, lastCompletedDate: undefined };
               }
           } else {
-              // User is checking it
               return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
           }
       }));
@@ -830,7 +795,6 @@ export const App = () => {
     const todayStr = new Date().toISOString().split('T')[0];
     setHabits(prevHabits => prevHabits.map(h => {
         if (h.id !== habitId) return h;
-        // Force completion by setting lastCompletedDate and removing any incompletion override
         return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
     }));
     const notificationId = `habit-${habitId}-${todayStr}`;
@@ -843,11 +807,9 @@ export const App = () => {
     setHabits(prevHabits =>
       prevHabits.map(h => {
         const habitStatus = habitsWithStatus.find(hs => hs.id === h.id);
-        // If the habit is not complete, mark it as complete.
         if (habitStatus && !habitStatus.isCompleted) {
           return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
         }
-        // If it's already complete, do nothing.
         return h;
       })
     );
@@ -860,7 +822,6 @@ export const App = () => {
       addToast({ title: 'Rotinas Salvas', subtitle: 'Suas alterações foram salvas com sucesso.', type: 'success' });
   };
 
-  // Determine if current view should have hidden overflow in main container
   const isFixedLayout = ['dashboard', 'projectDetail', 'taskDetail', 'calendar', 'reminders', 'list', 'settings'].includes(currentView);
 
   const renderView = () => {
@@ -870,7 +831,7 @@ export const App = () => {
         tags,
         onSelectTask: handleSelectTask,
         onToggleComplete: handleToggleComplete,
-        appSettings // Passing down to views that need it for TaskCard
+        appSettings 
     };
     switch (currentView) {
       case 'dashboard':
@@ -878,12 +839,11 @@ export const App = () => {
       case 'calendar':
         return <CalendarView {...commonProps} />;
       case 'list':
-        return <ListView {...commonProps} setTasks={setTasks} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} />;
+        return <ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} />;
       case 'reminders':
         return <RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>;
       case 'reports':
         return <ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>;
-      // Removed ProfileView case
       case 'projects':
         return <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} />;
       case 'settings':
@@ -901,7 +861,7 @@ export const App = () => {
             <ProjectDetailView 
                 project={selectedProject}
                 tasks={tasks.filter(t => t.projectId === selectedProject.id)}
-                allTasks={tasks} // Pass all tasks for notification resolution
+                allTasks={tasks} 
                 categories={categories}
                 tags={tags}
                 onBack={() => {

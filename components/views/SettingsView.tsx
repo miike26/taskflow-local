@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import type { Category, Tag, NotificationSettings, AppSettings } from '../../types';
 import { 
@@ -9,9 +8,13 @@ import {
 
 interface SettingsViewProps {
   categories: Category[];
-  setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+  onAddCategory: (category: Category) => void;
+  onDeleteCategory: (id: string) => void;
+  
   tags: Tag[];
-  setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
+  onAddTag: (tag: Tag) => void;
+  onDeleteTag: (id: string) => void;
+
   notificationSettings: NotificationSettings;
   setNotificationSettings: React.Dispatch<React.SetStateAction<NotificationSettings>>;
   appSettings: AppSettings;
@@ -150,7 +153,8 @@ const CustomSelect = ({
 };
 
 const SettingsView: React.FC<SettingsViewProps> = ({ 
-    categories, setCategories, tags, setTags, 
+    categories, onAddCategory, onDeleteCategory,
+    tags, onAddTag, onDeleteTag,
     notificationSettings, setNotificationSettings,
     appSettings, setAppSettings,
     onLogout, userName, setUserName
@@ -172,33 +176,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
     // -- Handlers --
 
-    const handleAddCategory = () => {
+    const handleAddCategoryClick = () => {
         if(newCategory.trim()){
-            setCategories([...categories, {id: `cat-${Date.now()}`, name: newCategory.trim(), color: 'gray', icon: BriefcaseIcon }]);
+            onAddCategory({id: `cat-${Date.now()}`, name: newCategory.trim(), color: 'gray', icon: BriefcaseIcon });
             setNewCategory('');
         }
     };
-
-    const handleDeleteCategory = (id: string) => {
-        setCategories(categories.filter(c => c.id !== id));
-    }
     
-    const handleAddTag = () => {
+    const handleAddTagClick = () => {
         if(newTagName.trim()){
-            setTags([...tags, {
+            onAddTag({
                 id: `tag-${Date.now()}`, 
                 name: newTagName.trim(),
                 color: `text-${newTagColor}-700`,
                 bgColor: `bg-${newTagColor}-100 dark:bg-${newTagColor}-900/50 dark:text-${newTagColor}-300`,
                 baseColor: newTagColor as 'red' | 'yellow' | 'green' | 'blue' | 'indigo' | 'purple' | 'pink'
-            }]);
+            });
             setNewTagName('');
             setNewTagColor('red');
         }
-    }
-    
-    const handleDeleteTag = (id: string) => {
-        setTags(tags.filter(t => t.id !== id));
     }
 
     const handleNameSave = () => {
@@ -455,7 +451,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     <li key={cat.id} className="flex justify-between items-center p-3 bg-white dark:bg-[#161B22] rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm">
                                         <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">{cat.name}</span>
                                         {!PROTECTED_IDS.includes(cat.id) ? (
-                                            <button onClick={() => handleDeleteCategory(cat.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                                            <button onClick={() => onDeleteCategory(cat.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                                                 <TrashIcon className="w-4 h-4"/>
                                             </button>
                                         ) : (
@@ -472,7 +468,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     placeholder="Nova categoria"
                                     className="flex-grow block w-full rounded-lg p-2.5 border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#161B22] text-gray-900 dark:text-gray-200 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                                 />
-                                <button onClick={handleAddCategory} disabled={!newCategory.trim()} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors">
+                                <button onClick={handleAddCategoryClick} disabled={!newCategory.trim()} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors">
                                     <PlusIcon className="w-5 h-5" />
                                 </button>
                             </div>
@@ -490,7 +486,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                             {tag.name}
                                         </span>
                                         {!PROTECTED_IDS.includes(tag.id) ? (
-                                            <button onClick={() => handleDeleteTag(tag.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                                            <button onClick={() => onDeleteTag(tag.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                                                 <TrashIcon className="w-4 h-4"/>
                                             </button>
                                         ) : (
@@ -522,7 +518,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         ]}
                                     />
                                 </div>
-                                <button onClick={handleAddTag} disabled={!newTagName.trim()} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex-shrink-0 shadow-sm">
+                                <button onClick={handleAddTagClick} disabled={!newTagName.trim()} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors flex-shrink-0 shadow-sm">
                                     <PlusIcon className="w-5 h-5" />
                                 </button>
                             </div>
