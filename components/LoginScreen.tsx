@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
-import { LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, DEFAULT_PROJECTS } from '../constants';
+// Caminhos relativos corrigidos para garantir a resolução dos arquivos
+import { LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS } from '../constants';
 import Sidebar from './Sidebar';
 import DashboardView from './views/DashboardView';
 import { GoogleIcon } from './icons';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface LoginScreenProps {
-    login: (user: string, pass: string) => boolean;
+    login: (user: string, pass: string) => Promise<boolean>;
 }
 
 const inputClass = "flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-400 text-sm p-3 transition-all duration-200 hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium";
@@ -27,15 +27,16 @@ const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => v
 
     const handleRegister = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, validation and API call would go here.
+        // Em um app real, validação e API call iriam aqui.
         if (formData.nickname) {
             onSignup(formData.nickname);
         }
     };
 
     const handleGoogleConnect = () => {
-        // Mock Google Connect
-        onSignup("Usuário Google");
+        // Redireciona o usuário para usar o botão de Login principal, já que o fluxo do Google é tratado lá
+        onClose();
+        alert("Por favor, use a opção 'Entrar com Google' na tela de login.");
     };
 
     return (
@@ -133,27 +134,29 @@ const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => v
     );
 };
 
-const LoginModal: React.FC<{ login: (u: string, p: string) => boolean, onToggleMode: () => void }> = ({ login, onToggleMode }) => {
+const LoginModal: React.FC<{ login: (u: string, p: string) => Promise<boolean>, onToggleMode: () => void }> = ({ login, onToggleMode }) => {
     const [username, setUsername] = useState(''); 
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const handleLoginSubmit = (e: React.FormEvent) => {
+    const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        // Fallback convenience: if empty, try default credentials for demo experience
+        
+        // Fallback para desenvolvimento local: se vazio, tenta credenciais padrão
         const u = username || 'admin';
         const p = password || 'admin';
         
-        const success = login(u, p);
+        // Chama a função de login (que pode ser a do Google ou a legada)
+        const success = await login(u, p);
         if (!success) {
-            setError('Usuário ou senha inválidos.');
+            // O erro geralmente é tratado via alert no hook useAuth
         }
     };
 
     const handleGoogleConnect = () => {
-        // Mock Google Login
-        login('Usuário Google', 'password');
+        // Chama a função de login com strings vazias para ativar o fluxo do Google Provider no novo hook useAuth
+        login('', '');
     };
 
     return (
@@ -235,7 +238,7 @@ const LoginModal: React.FC<{ login: (u: string, p: string) => boolean, onToggleM
 }
 
 const DemoDashboardBackground = () => {
-    // Static dummy data for visual background
+    // Dados estáticos para o fundo visual
     const habitsWithStatus = DEFAULT_HABITS.map(h => ({ ...h, isCompleted: false }));
     const [appSettings] = useState({ 
       disableOverdueColor: false, 
@@ -287,23 +290,25 @@ const DemoDashboardBackground = () => {
 const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
     const [isSignupMode, setIsSignupMode] = useState(false);
     
+    // Armazena o nome apenas localmente para a experiência de "boas-vindas"
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, setStoredUserName] = useLocalStorage('userName', 'Admin');
 
     const handleSignupSuccess = (name: string) => {
         setStoredUserName(name);
-        // Auto-login logic for demo purposes
+        // Tenta logar (se estiver com Firebase Auth, o fluxo real será disparado pelo botão Google)
         login('admin', 'admin'); 
     };
 
     return (
         <div className="relative min-h-screen bg-ice-blue dark:bg-[#0D1117] flex items-center justify-center overflow-hidden">
             
-            {/* Background is now always visible */}
+            {/* Background fixo */}
             <div className="fixed inset-0 z-0">
                 <DemoDashboardBackground />
             </div>
             
-            {/* Overlay is now always visible */}
+            {/* Overlay escuro */}
             <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-10"></div>
 
             <div className="relative z-20 w-full flex items-center justify-center p-4">
