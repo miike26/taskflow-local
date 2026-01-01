@@ -1,4 +1,3 @@
-
 import React from 'react';
 import type { Task, Category, Tag, Status } from '../types';
 import { BriefcaseIcon, CalendarDaysIcon, ListBulletIcon } from './icons';
@@ -87,7 +86,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
   
   const statusColor = STATUS_COLORS[status];
-  const CategoryIcon = category ? category.icon : BriefcaseIcon;
+  
+  // --- CORREÇÃO AQUI ---
+  // Verifica se category existe E se category.icon existe.
+  // Se vier do Firebase, category.icon será undefined, então usamos o BriefcaseIcon.
+  const CategoryIcon = (category && category.icon) ? category.icon : BriefcaseIcon;
+  // ---------------------
   
   // Conditionally apply overdue styling
   const applyOverdueStyle = isOverdue && !disableOverdueColor;

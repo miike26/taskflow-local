@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { Project, Task, Category, Tag, Status, Notification, Habit, Activity, AppSettings, SubTask, ConfirmationToastData } from '../../types';
 import { 
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
-    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon
+    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon, BriefcaseIcon, UserCircleIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -13,6 +12,19 @@ import HabitChecklistPopup from '../HabitChecklistPopup';
 import DateRangeCalendar from '../DateRangeCalendar';
 import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
+
+// --- HELPER: Recupera ícones de categorias ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return FolderIcon; 
+    if (category.icon) return category.icon; // Se tiver na memória local
+
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListBulletIcon;     // Estudo / Lista
+        default: return FolderIcon;              // Personalizadas
+    }
+};
 
 const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') => {
     const date = new Date(dateString);
@@ -49,7 +61,14 @@ const NotificationCard: React.FC<{
 
     if (!task && !isHabitReminder) return null;
 
-    const CategoryIcon = isHabitReminder ? ClipboardDocumentCheckIcon : (category?.icon || BellIcon);
+    // Lógica segura de ícone
+    let CategoryIcon = BellIcon;
+    if (isHabitReminder) {
+        CategoryIcon = ClipboardDocumentCheckIcon;
+    } else {
+        CategoryIcon = getCategoryIcon(category);
+    }
+
     const bgClass = isRead 
         ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' 
         : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
@@ -1311,11 +1330,11 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                             return (
                                                 <div key={task.id} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10" onClick={() => handleResultClick(task)}>
                                                     <TaskCard
-                                                    task={task}
-                                                    category={category}
-                                                    tag={tag}
-                                                    onSelect={() => {}} 
-                                                    variant="compact"
+                                                      task={task}
+                                                      category={category}
+                                                      tag={tag}
+                                                      onSelect={() => {}} 
+                                                      variant="compact"
                                                     />
                                                 </div>
                                             );
@@ -1452,7 +1471,12 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                     className={`flex items-center justify-between w-full px-3 py-2 bg-white dark:bg-[#0D1117] border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 ${isCategoryDropdownOpen ? 'ring-2 ring-primary-500/20 dark:ring-primary-500/50 border-primary-500' : ''}`}
                                 >
                                      <div className="flex items-center gap-2 min-w-0">
-                                        {categories.find(c => c.id === taskData.categoryId)?.icon && React.createElement(categories.find(c => c.id === taskData.categoryId)!.icon, { className: "w-4 h-4 text-gray-500 dark:text-gray-400" })}
+                                        {/* CORREÇÃO NO DROPDOWN: Ícone da categoria selecionada */}
+                                        {(() => {
+                                            const cat = categories.find(c => c.id === taskData.categoryId);
+                                            const Icon = getCategoryIcon(cat);
+                                            return <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />;
+                                        })()}
                                         <span className={`text-sm truncate ${taskData.categoryId ? 'text-gray-900 dark:text-gray-200' : 'text-gray-500'}`}>
                                             {categories.find(c => c.id === taskData.categoryId)?.name || 'Selecionar Categoria'}
                                         </span>
@@ -1462,19 +1486,23 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                 
                                 {isCategoryDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60">
-                                        <div className="overflow-y-auto p-1">
-                                            {categories.map(cat => (
-                                                <button
-                                                    key={cat.id}
-                                                    onClick={() => { handleCategoryChange(cat.id); setIsCategoryDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.categoryId === cat.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                                >
-                                                    <cat.icon className="w-4 h-4" />
-                                                    <span className="truncate">{cat.name}</span>
-                                                    {taskData.categoryId === cat.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto" />}
-                                                </button>
-                                            ))}
-                                        </div>
+                                            <div className="overflow-y-auto p-1">
+                                                {categories.map(cat => {
+                                                    // CORREÇÃO NO DROPDOWN: Ícone da lista
+                                                    const Icon = getCategoryIcon(cat);
+                                                    return (
+                                                        <button
+                                                            key={cat.id}
+                                                            onClick={() => { handleCategoryChange(cat.id); setIsCategoryDropdownOpen(false); }}
+                                                            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.categoryId === cat.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                                        >
+                                                            <Icon className="w-4 h-4" />
+                                                            <span className="truncate">{cat.name}</span>
+                                                            {taskData.categoryId === cat.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                     </div>
                                 )}
                             </div>
@@ -1504,20 +1532,20 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                 </button>
                                 {isTagDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60">
-                                        <div className="overflow-y-auto p-1">
-                                            {tags.map(tag => (
-                                                <button
-                                                    key={tag.id}
-                                                    onClick={() => { handleTagChange(tag.id); setIsTagDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.tagId === tag.id ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                                >
-                                                    <span className={`px-2 py-1 text-xs font-bold rounded-full ${tag.bgColor} ${tag.color}`}>
-                                                        {tag.name}
-                                                    </span>
-                                                    {taskData.tagId === tag.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
-                                                </button>
-                                            ))}
-                                        </div>
+                                            <div className="overflow-y-auto p-1">
+                                                {tags.map(tag => (
+                                                    <button
+                                                        key={tag.id}
+                                                        onClick={() => { handleTagChange(tag.id); setIsTagDropdownOpen(false); }}
+                                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.tagId === tag.id ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                                    >
+                                                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${tag.bgColor} ${tag.color}`}>
+                                                            {tag.name}
+                                                        </span>
+                                                        {taskData.tagId === tag.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
+                                                    </button>
+                                                ))}
+                                            </div>
                                     </div>
                                 )}
                             </div>
@@ -1661,8 +1689,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                     <div className="space-y-2 overflow-y-auto pr-2 flex-1">
                         {Array.isArray(taskData.subTasks) && taskData.subTasks.length > 0 ? (
                             taskData.subTasks.map((st, index) => (
-                                <SubTaskItem
-                                    key={st.id}
+                                <SubTaskItem 
+                                    key={st.id} 
                                     subTask={st}
                                     onToggle={handleSubTaskToggle}
                                     onDelete={handleDeleteSubTask}
@@ -1697,7 +1725,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                          {/* ... Activity buttons ... */}
                          <div className="flex items-center gap-2">
                              {hasNotes && (
-                                <button
+                                <button 
                                     onClick={handleSummarizeActivities}
                                     disabled={isSummarizing}
                                     className="group flex items-center justify-center p-2 rounded-full bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:bg-gradient-to-r hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:text-white hover:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-purple-400 hover:ring-offset-2 dark:hover:ring-offset-[#161B22]"
@@ -1712,8 +1740,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                 <button
                                     onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
                                     className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${
-                                        activityFilter !== 'all'
-                                        ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300'
+                                        activityFilter !== 'all' 
+                                        ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300' 
                                         : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
                                     }`}
                                 >
@@ -1723,20 +1751,20 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                 
                                 {isFilterDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-[#21262D] p-1 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 space-y-0.5 animate-scale-in">
-                                        {activityFilterOptions.map(option => (
-                                            <button
-                                                key={option.value}
-                                                onClick={() => { setActivityFilter(option.value); setIsFilterDropdownOpen(false); }}
-                                                className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${
-                                                    activityFilter === option.value
-                                                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                }`}
-                                            >
-                                                {option.label}
-                                                {activityFilter === option.value && <CheckCircleIcon className="w-3 h-3" />}
-                                            </button>
-                                        ))}
+                                            {activityFilterOptions.map(option => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => { setActivityFilter(option.value); setIsFilterDropdownOpen(false); }}
+                                                    className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${
+                                                        activityFilter === option.value
+                                                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                    }`}
+                                                >
+                                                    {option.label}
+                                                    {activityFilter === option.value && <CheckCircleIcon className="w-3 h-3" />}
+                                                </button>
+                                            ))}
                                     </div>
                                 )}
                             </div>

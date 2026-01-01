@@ -117,6 +117,7 @@ export interface Habit {
   reminderTime?: string; // e.g., "09:00"
   lastCompletedDate?: string; // ISO date string 'YYYY-MM-DD'
   overrideDate?: string; // ISO date string 'YYYY-MM-DD' to mark an auto-habit as uncompleted for a day
+  order?: number; // <--- Ordem dos hábitos
 }
 
 export interface HabitTemplate {

@@ -7,7 +7,7 @@ import {
     CheckCircleIcon, PlayCircleIcon, StopCircleIcon, ClockIcon, 
     ArrowTrendingUpIcon, ArrowTrendingDownIcon, ClipboardDocumentCheckIcon, 
     CheckIcon, SparklesIcon, KanbanIcon, CalendarDaysIcon, BellIcon, ExclamationTriangleIcon,
-    ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon
+    ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, DragHandleIcon
 } from '../icons';
 import { STATUS_COLORS } from '../../constants';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -28,7 +28,7 @@ const taskSortFunction = (a: Task, b: Task) => {
 
 // --- WIDGETS COMPONENTS ---
 
-const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onToggle: (id: string) => void }> = ({ habits, onToggle }) => {
+const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onToggle: (id: string) => void, onReorder: (from: number, to: number) => void }> = ({ habits, onToggle, onReorder }) => {
     const completedCount = habits.filter(h => h.isCompleted).length;
     const totalCount = habits.length;
     const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -38,6 +38,25 @@ const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onTo
     const bgClass = allCompleted 
         ? 'bg-gradient-to-br from-emerald-400 to-green-500' // Success Green
         : 'bg-gradient-to-br from-amber-500 to-orange-600'; // Pending Orange
+
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+    const onDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+        setDraggedIndex(index);
+        e.dataTransfer.effectAllowed = "move";
+        // e.dataTransfer.setDragImage... if needed
+    };
+
+    const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+        e.preventDefault(); 
+    };
+
+    const onDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
+        e.preventDefault();
+        if (draggedIndex === null || draggedIndex === dropIndex) return;
+        onReorder(draggedIndex, dropIndex);
+        setDraggedIndex(null);
+    };
 
     return (
         <div className={`${bgClass} transition-colors duration-700 rounded-2xl p-6 text-white shadow-lg border border-transparent relative overflow-hidden group flex flex-col justify-between h-full min-h-[220px]`}>
@@ -83,12 +102,16 @@ const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onTo
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 relative z-10 pr-1 -mr-2">
-                {habits.length > 0 ? habits.map(habit => (
+                {habits.length > 0 ? habits.map((habit, index) => (
                     <div 
                         key={habit.id}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, index)}
+                        onDragOver={(e) => onDragOver(e)}
+                        onDrop={(e) => onDrop(e, index)}
                         onClick={() => onToggle(habit.id)}
                         className={`
-                            group/item flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer backdrop-blur-md
+                            group/item flex items-center gap-3 p-2.5 rounded-xl border transition-all cursor-pointer backdrop-blur-md relative
                             ${habit.isCompleted 
                                 ? 'bg-white/20 border-white/20' 
                                 : 'bg-white/10 border-white/5 hover:bg-white/20 hover:translate-x-1'
@@ -113,6 +136,11 @@ const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onTo
                                     <ClockIcon className="w-3 h-3" /> {habit.reminderTime}
                                 </p>
                             )}
+                        </div>
+                        
+                        {/* Drag Handle - Visible on hover */}
+                        <div className="ml-auto opacity-0 group-hover/item:opacity-100 transition-opacity pl-2 cursor-grab active:cursor-grabbing" onClick={(e) => e.stopPropagation()}>
+                            <DragHandleIcon className="w-4 h-4 text-white/50 hover:text-white" />
                         </div>
                     </div>
                 )) : (
@@ -518,10 +546,11 @@ interface DashboardViewProps {
   onToggleHabit: (habitId: string) => void;
   appSettings?: AppSettings;
   setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
-  isDemoMode?: boolean; // New Prop
+  isDemoMode?: boolean; 
+  onReorderHabits: (from: number, to: number) => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, onSelectTask, habits, onToggleHabit, appSettings, setAppSettings, isDemoMode = false }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, onSelectTask, habits, onToggleHabit, appSettings, setAppSettings, isDemoMode = false, onReorderHabits }) => {
   const [overviewViewMode, setOverviewViewMode] = useState<'status' | 'deadline'>('status');
   const [attentionFilter, setAttentionFilter] = useState<'all' | 'overdue' | 'today' | 'tomorrow'>('all');
   
@@ -814,7 +843,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
             {/* Right Panel: Widgets (Col Span 1) */}
             <div className="flex flex-col gap-6 min-w-0 h-auto xl:h-full xl:min-h-0 xl:overflow-y-auto custom-scrollbar pr-2 pb-2">
                 <div className="flex-1 flex flex-col min-h-[250px]">
-                    <HabitWidget habits={habits} onToggle={onToggleHabit} />
+                    <HabitWidget habits={habits} onToggle={onToggleHabit} onReorder={onReorderHabits} />
                 </div>
 
                 <div className="flex-1 flex flex-col min-h-[250px]">

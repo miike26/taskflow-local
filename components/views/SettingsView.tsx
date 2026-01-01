@@ -178,7 +178,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
     const handleAddCategoryClick = () => {
         if(newCategory.trim()){
-            onAddCategory({id: `cat-${Date.now()}`, name: newCategory.trim(), color: 'gray', icon: BriefcaseIcon });
+            onAddCategory({id: `cat-${Date.now()}`, name: newCategory.trim(), icon: BriefcaseIcon });
             setNewCategory('');
         }
     };

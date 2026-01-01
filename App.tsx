@@ -56,7 +56,26 @@ export const App = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [previousView, setPreviousView] = useState<View>('dashboard');
   
-  // Hook do Firestore para sincronização de tarefas
+  // --- INTEGRAÇÃO COM FIREBASE ---
+  const { user, loading: authLoading, logout } = useAuth();
+  const [userName, setUserName] = useLocalStorage<string>('userName', 'Admin');
+
+  // --- FUNÇÃO AUXILIAR DE DATA LOCAL (FUSO HORÁRIO) ---
+  // Essa função garante que "hoje" seja hoje no seu relógio, não em Londres.
+  const getLocalISODate = useCallback(() => {
+    const d = new Date();
+    const offset = d.getTimezoneOffset() * 60000; // Converte minutos para ms
+    return new Date(d.getTime() - offset).toISOString().split('T')[0];
+  }, []);
+
+  // Atualiza nome local
+  useEffect(() => {
+    if (user?.displayName) {
+        setUserName(user.displayName);
+    }
+  }, [user, setUserName]);
+
+  // 1. Tarefas (Firestore)
   const { 
     data: tasks, 
     add: addTaskFire, 
@@ -66,23 +85,40 @@ export const App = () => {
     deleteBatch: deleteBatchFire
   } = useFirestore<Task>('tasks', []);
 
-  // Dados locais (Categorias, Tags, Projetos, etc.)
-  const [categories, setCategories] = useLocalStorage<Category[]>('categories', DEFAULT_CATEGORIES);
-  const [tags, setTags] = useLocalStorage<Tag[]>('tags', DEFAULT_TAGS);
-  const [projects, setProjects] = useLocalStorage<Project[]>('projects', DEFAULT_PROJECTS);
+  // 2. Projetos (Firestore)
+  const {
+    data: projects,
+    add: addProjectFire,
+    update: updateProjectFire,
+    remove: removeProjectFire
+  } = useFirestore<Project>('projects', DEFAULT_PROJECTS);
+
+  // 3. Categorias (Firestore)
+  const {
+    data: categories,
+    add: addCategoryFire,
+    update: updateCategoryFire, 
+    remove: removeCategoryFire
+  } = useFirestore<Category>('categories', DEFAULT_CATEGORIES);
+
+  // 4. Tags (Firestore)
+  const {
+    data: tags,
+    add: addTagFire,
+    update: updateTagFire,
+    remove: removeTagFire
+  } = useFirestore<Tag>('tags', DEFAULT_TAGS);
+
+  // 5. Hábitos (Firestore)
+  const {
+    data: habits,
+    add: addHabitFire,
+    update: updateHabitFire,
+    remove: removeHabitFire,
+  } = useFirestore<Habit>('habits', DEFAULT_HABITS, 'order', 'asc');
+
+  // --- DADOS LOCAIS (Settings e Estado de UI) ---
   
-  // --- ALTERAÇÃO AQUI: Ajuste para o novo useAuth ---
-  const { user, loading, logout } = useAuth();
-  const [userName, setUserName] = useLocalStorage<string>('userName', 'Admin');
-
-  // Atualiza o nome do usuário localmente quando logar pelo Google
-  useEffect(() => {
-    if (user?.displayName) {
-        setUserName(user.displayName);
-    }
-  }, [user, setUserName]);
-  // --------------------------------------------------
-
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
   const [pinnedTaskIds, setPinnedTaskIds] = useLocalStorage<string[]>('pinnedTaskIds', []);
 
@@ -117,7 +153,6 @@ export const App = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationToasts, setNotificationToasts] = useState<NotificationToastDataType[]>([]);
   const [confirmationToasts, setConfirmationToasts] = useState<ConfirmationToastData[]>([]);
-  const [habits, setHabits] = useLocalStorage<Habit[]>('habits', DEFAULT_HABITS);
   const [isHabitSettingsOpen, setIsHabitSettingsOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   
@@ -142,13 +177,14 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    // --- ALTERAÇÃO AQUI: Verifica user em vez de isAuthenticated ---
     if (!user) return; 
-    // -------------------------------------------------------------
+    
     const generateAndCheckNotifications = () => {
         const now = new Date();
         const generated: Notification[] = [];
-        const todayStr = now.toISOString().split('T')[0];
+        
+        // CORREÇÃO: Usando data local para IDs de notificação
+        const todayStr = getLocalISODate();
 
         if (notificationSettings.enabled && notificationSettings.taskReminders) {
           const startOfToday = new Date();
@@ -272,7 +308,7 @@ export const App = () => {
     const interval = setInterval(generateAndCheckNotifications, 5000);
 
     return () => clearInterval(interval);
-  }, [tasks, categories, notificationSettings, user, readNotificationIds, clearedNotificationIds, habits]);
+  }, [tasks, categories, notificationSettings, user, readNotificationIds, clearedNotificationIds, habits, getLocalISODate]);
 
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !readNotificationIds.includes(n.id)), [notifications, readNotificationIds]);
@@ -334,12 +370,12 @@ export const App = () => {
         }]
     } as Project;
 
-    setProjects(prev => [...prev, projectWithActivity]);
+    addProjectFire(projectWithActivity);
     addToast({ title: 'Projeto Criado', subtitle: 'Projeto adicionado com sucesso.', type: 'success' });
   };
 
   const handleEditProject = (projectId: string, updates: Partial<Project>) => {
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+    updateProjectFire(projectId, updates);
     if (selectedProject && selectedProject.id === projectId) {
         setSelectedProject(prev => prev ? { ...prev, ...updates } : null);
     }
@@ -352,7 +388,7 @@ export const App = () => {
         title: 'Excluir Projeto',
         message: 'Tem certeza que deseja excluir este projeto? As tarefas associadas a ele NÃO serão excluídas, mas ficarão sem projeto.',
         onConfirm: () => {
-            setProjects(prev => prev.filter(p => p.id !== projectId));
+            removeProjectFire(projectId);
             const tasksToUnlink = tasks.filter(t => t.projectId === projectId).map(t => t.id);
             if (tasksToUnlink.length > 0) {
                updateBatchFire(tasksToUnlink, { projectId: null } as any);
@@ -379,23 +415,25 @@ export const App = () => {
               setCurrentView(previousView);
               setSelectedTask(null);
             }
+            // Atualizar activity do projeto no Firestore
             if (taskToDelete?.projectId) {
-                setProjects(prev => prev.map(p => {
-                    if (p.id === taskToDelete.projectId) {
-                        const activity: Activity = {
-                            id: `proj-act-${Date.now()}`,
-                            type: 'project',
-                            action: 'removed',
-                            timestamp: new Date().toISOString(),
-                            user: userName,
-                            taskTitle: taskToDelete.title
-                        };
-                        const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                        if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                        return updatedProject;
+                const projectToUpdate = projects.find(p => p.id === taskToDelete.projectId);
+                if (projectToUpdate) {
+                    const activity: Activity = {
+                        id: `proj-act-${Date.now()}`,
+                        type: 'project',
+                        action: 'removed',
+                        timestamp: new Date().toISOString(),
+                        user: userName,
+                        taskTitle: taskToDelete.title
+                    };
+                    const updatedActivity = [...(projectToUpdate.activity || []), activity];
+                    updateProjectFire(projectToUpdate.id, { activity: updatedActivity });
+                    
+                    if (selectedProject?.id === projectToUpdate.id) {
+                         setSelectedProject(prev => prev ? { ...prev, activity: updatedActivity } : null);
                     }
-                    return p;
-                }));
+                }
             }
             addToast({ title: 'Tarefa Excluída', subtitle: 'Sua tarefa foi removida.', type: 'error' });
         }
@@ -447,23 +485,25 @@ export const App = () => {
     }
     addTaskFire(task);
     
+    // Atualizar activity do projeto no Firestore
     if (task.projectId) {
-        setProjects(prev => prev.map(p => {
-            if (p.id === task.projectId) {
-                const activity: Activity = {
-                    id: `proj-act-${Date.now()}`,
-                    type: 'project',
-                    action: 'added',
-                    timestamp: new Date().toISOString(),
-                    user: userName,
-                    taskTitle: task.title
-                };
-                const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                return updatedProject;
+        const projectToUpdate = projects.find(p => p.id === task.projectId);
+        if (projectToUpdate) {
+            const activity: Activity = {
+                id: `proj-act-${Date.now()}`,
+                type: 'project',
+                action: 'added',
+                timestamp: new Date().toISOString(),
+                user: userName,
+                taskTitle: task.title
+            };
+            const updatedActivity = [...(projectToUpdate.activity || []), activity];
+            updateProjectFire(projectToUpdate.id, { activity: updatedActivity });
+            
+            if (selectedProject?.id === projectToUpdate.id) {
+                setSelectedProject(prev => prev ? { ...prev, activity: updatedActivity } : null);
             }
-            return p;
-        }));
+        }
     }
 
     setIsSheetOpen(false);
@@ -485,12 +525,15 @@ export const App = () => {
         setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
+    // Lógica complexa de Projetos (Mudança de vinculo)
     if (currentTask && 'projectId' in updates && updates.projectId !== currentTask.projectId) {
         const oldProjectId = currentTask.projectId;
         const newProjectId = updates.projectId;
 
-        setProjects(prevProjects => prevProjects.map(p => {
-            if (oldProjectId && p.id === oldProjectId) {
+        // Remover do antigo
+        if (oldProjectId) {
+            const oldProject = projects.find(p => p.id === oldProjectId);
+            if (oldProject) {
                 const activity: Activity = {
                     id: `proj-act-unlink-${Date.now()}-${Math.random()}`,
                     type: 'project',
@@ -499,12 +542,16 @@ export const App = () => {
                     user: userName,
                     taskTitle: currentTask.title
                 };
-                const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                return updatedProject;
+                const updatedActivity = [...(oldProject.activity || []), activity];
+                updateProjectFire(oldProject.id, { activity: updatedActivity });
+                if (selectedProject?.id === oldProject.id) setSelectedProject(prev => prev ? {...prev, activity: updatedActivity} : null);
             }
+        }
 
-            if (newProjectId && p.id === newProjectId) {
+        // Adicionar no novo
+        if (newProjectId) {
+            const newProject = projects.find(p => p.id === newProjectId);
+            if (newProject) {
                 const activity: Activity = {
                     id: `proj-act-link-${Date.now()}-${Math.random()}`,
                     type: 'project',
@@ -513,33 +560,30 @@ export const App = () => {
                     user: userName,
                     taskTitle: currentTask.title
                 };
-                const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                return updatedProject;
+                const updatedActivity = [...(newProject.activity || []), activity];
+                updateProjectFire(newProject.id, { activity: updatedActivity });
+                if (selectedProject?.id === newProject.id) setSelectedProject(prev => prev ? {...prev, activity: updatedActivity} : null);
             }
-
-            return p;
-        }));
+        }
     }
 
+    // Lógica complexa de Projetos (Mudança de Status da tarefa dentro do projeto)
     if (currentTask && updates.status && updates.status !== currentTask.status && currentTask.projectId && (!('projectId' in updates) || updates.projectId === currentTask.projectId)) {
-         setProjects(prev => prev.map(p => {
-            if (p.id === currentTask.projectId) {
-                const activity: Activity = {
-                    id: `proj-act-status-${Date.now()}-${Math.random()}`,
-                    type: 'status_change',
-                    timestamp: new Date().toISOString(),
-                    user: userName,
-                    from: currentTask.status,
-                    to: updates.status,
-                    taskTitle: currentTask.title
-                };
-                const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                return updatedProject;
-            }
-            return p;
-        }));
+         const projectToUpdate = projects.find(p => p.id === currentTask.projectId);
+         if (projectToUpdate) {
+            const activity: Activity = {
+                id: `proj-act-status-${Date.now()}-${Math.random()}`,
+                type: 'status_change',
+                timestamp: new Date().toISOString(),
+                user: userName,
+                from: currentTask.status,
+                to: updates.status,
+                taskTitle: currentTask.title
+            };
+            const updatedActivity = [...(projectToUpdate.activity || []), activity];
+            updateProjectFire(projectToUpdate.id, { activity: updatedActivity });
+            if (selectedProject?.id === projectToUpdate.id) setSelectedProject(prev => prev ? {...prev, activity: updatedActivity} : null);
+         }
     }
   };
 
@@ -572,6 +616,7 @@ export const App = () => {
         setTimeout(() => setShowCelebration(false), 3000);
     }
 
+    // Atualiza cada tarefa individualmente
     taskIds.forEach(id => {
         const task = tasks.find(t => t.id === id);
         if (task && task.status !== newStatus) {
@@ -587,6 +632,7 @@ export const App = () => {
         }
     });
 
+    // Agrupa para atualizar o histórico dos projetos
     const tasksToUpdate = tasks.filter(t => taskIds.includes(t.id) && t.status !== newStatus);
     const groups: Record<string, Record<Status, string[]>> = {};
     
@@ -597,13 +643,16 @@ export const App = () => {
         groups[task.projectId][task.status].push(task.title);
     });
 
-    const projectUpdates: Record<string, Activity[]> = {};
-
     Object.keys(groups).forEach(projectId => {
+        const projectToUpdate = projects.find(p => p.id === projectId);
+        if (!projectToUpdate) return;
+
+        let newActivities: Activity[] = [];
         const fromStatuses = Object.keys(groups[projectId]) as Status[];
+        
         fromStatuses.forEach(fromStatus => {
             const taskTitles = groups[projectId][fromStatus];
-            const newActivity: Activity = {
+            newActivities.push({
                 id: `proj-act-bulk-${Date.now()}-${Math.random()}`,
                 type: 'status_change',
                 timestamp: now,
@@ -612,49 +661,41 @@ export const App = () => {
                 to: newStatus,
                 count: taskTitles.length,
                 affectedTasks: taskTitles,
-            };
-            if (!projectUpdates[projectId]) projectUpdates[projectId] = [];
-            projectUpdates[projectId].push(newActivity);
+            });
         });
-    });
 
-    if (Object.keys(projectUpdates).length > 0) {
-        setProjects(prevProjects => prevProjects.map(p => {
-            if (projectUpdates[p.id]) {
-                return { ...p, activity: [...(p.activity || []), ...projectUpdates[p.id]] };
-            }
-            return p;
-        }));
+        const updatedActivity = [...(projectToUpdate.activity || []), ...newActivities];
+        updateProjectFire(projectId, { activity: updatedActivity });
 
-        if (selectedProject && projectUpdates[selectedProject.id]) {
-            setSelectedProject(prev => prev ? {
-                ...prev,
-                activity: [...(prev.activity || []), ...projectUpdates[prev.id]]
-            } : null);
+        if (selectedProject?.id === projectId) {
+            setSelectedProject(prev => prev ? { ...prev, activity: updatedActivity } : null);
         }
-    }
+    });
   };
 
   const handleBulkDelete = (taskIds: string[]) => {
     const tasksToDelete = tasks.filter(t => taskIds.includes(t.id));
+    
+    // Atualiza histórico de projetos antes de deletar
     tasksToDelete.forEach(task => {
         if (task.projectId) {
-             setProjects(prev => prev.map(p => {
-                if (p.id === task.projectId) {
-                    const activity: Activity = {
-                        id: `proj-act-${Date.now()}-${Math.random()}`,
-                        type: 'project', 
-                        action: 'removed',
-                        timestamp: new Date().toISOString(),
-                        user: userName,
-                        taskTitle: task.title
-                    };
-                    const updatedProject = { ...p, activity: [...(p.activity || []), activity] };
-                    if (selectedProject?.id === p.id) setSelectedProject(updatedProject);
-                    return updatedProject;
+            const projectToUpdate = projects.find(p => p.id === task.projectId);
+            if (projectToUpdate) {
+                const activity: Activity = {
+                    id: `proj-act-${Date.now()}-${Math.random()}`,
+                    type: 'project', 
+                    action: 'removed',
+                    timestamp: new Date().toISOString(),
+                    user: userName,
+                    taskTitle: task.title
+                };
+                const updatedActivity = [...(projectToUpdate.activity || []), activity];
+                updateProjectFire(task.projectId, { activity: updatedActivity });
+                
+                if (selectedProject?.id === task.projectId) {
+                    setSelectedProject(prev => prev ? { ...prev, activity: updatedActivity } : null);
                 }
-                return p;
-            }));
+            }
         }
     });
 
@@ -759,13 +800,22 @@ export const App = () => {
   };
 
   const habitsWithStatus = useMemo(() => {
-      const todayStr = new Date().toISOString().split('T')[0];
+      // CORREÇÃO: Usando data local
+      const todayStr = getLocalISODate();
+
       const wasTaskCompletedToday = tasks.some(task => {
           const completionActivity = [...task.activity]
               .reverse()
               .find(act => act.type === 'status_change' && act.to === 'Concluída');
+          
           if (!completionActivity) return false;
-          return new Date(completionActivity.timestamp).toISOString().split('T')[0] === todayStr;
+          
+          // Correção: Comparar também a atividade em horário local
+          const actDate = new Date(completionActivity.timestamp);
+          const offset = actDate.getTimezoneOffset() * 60000;
+          const actDateStr = new Date(actDate.getTime() - offset).toISOString().split('T')[0];
+
+          return actDateStr === todayStr;
       });
 
       return habits.map(habit => {
@@ -781,56 +831,105 @@ export const App = () => {
           }
           return { ...habit, isCompleted };
       });
-  }, [tasks, habits]);
+  }, [tasks, habits, getLocalISODate]);
 
+ // Handler de Hábito: Atualiza diretamente no Firebase
   const handleToggleHabit = (habitId: string) => {
-      const todayStr = new Date().toISOString().split('T')[0];
-      setHabits(prevHabits => prevHabits.map(h => {
-          if (h.id !== habitId) return h;
-          
-          const isCurrentlyCompleted = habitsWithStatus.find(hs => hs.id === habitId)?.isCompleted ?? false;
-          
-          if (isCurrentlyCompleted) {
-              if (h.type === 'manual') {
-                  return { ...h, lastCompletedDate: undefined };
-              } else { 
-                  return { ...h, overrideDate: todayStr, lastCompletedDate: undefined };
-              }
-          } else {
-              return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
+      // CORREÇÃO: Usando data local
+      const todayStr = getLocalISODate();
+
+      const habit = habits.find(h => h.id === habitId);
+      if (!habit) return;
+
+      const isCurrentlyCompleted = habitsWithStatus.find(hs => hs.id === habitId)?.isCompleted ?? false;
+      let updates = {};
+
+      if (isCurrentlyCompleted) {
+          // PARA DESMARCAR
+          if (habit.type === 'manual') {
+              updates = { lastCompletedDate: null }; 
+          } else { 
+              updates = { overrideDate: todayStr, lastCompletedDate: null };
           }
-      }));
+      } else {
+          // PARA MARCAR
+          updates = { lastCompletedDate: todayStr, overrideDate: null };
+      }
+      
+      updateHabitFire(habitId, updates as any);
   };
   
   const handleMarkHabitComplete = (habitId: string) => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    setHabits(prevHabits => prevHabits.map(h => {
-        if (h.id !== habitId) return h;
-        return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
-    }));
+    // CORREÇÃO: Usando data local
+    const todayStr = getLocalISODate();
+
+    updateHabitFire(habitId, { lastCompletedDate: todayStr, overrideDate: null } as any);
+    
     const notificationId = `habit-${habitId}-${todayStr}`;
     setReadNotificationIds(prev => [...new Set([...prev, notificationId])]);
     addToast({ title: 'Rotina Concluída!', type: 'success' });
   };
   
   const handleMarkAllHabitsComplete = () => {
-    const todayStr = new Date().toISOString().split('T')[0];
-    setHabits(prevHabits =>
-      prevHabits.map(h => {
+    // CORREÇÃO: Usando data local
+    const todayStr = getLocalISODate();
+    
+    habits.forEach(h => {
         const habitStatus = habitsWithStatus.find(hs => hs.id === h.id);
         if (habitStatus && !habitStatus.isCompleted) {
-          return { ...h, lastCompletedDate: todayStr, overrideDate: undefined };
+             updateHabitFire(h.id, { lastCompletedDate: todayStr, overrideDate: null } as any);
         }
-        return h;
-      })
-    );
+    });
     addToast({ title: 'Rotinas Concluídas!', type: 'success' });
   };
 
-  const handleSaveHabits = (updatedHabits: Habit[]) => {
-      setHabits(updatedHabits);
+const handleSaveHabits = (updatedHabits: Habit[]) => {
+      // 1. Identificar Removidos: Estão em 'habits' mas não em 'updatedHabits'
+      const updatedIds = new Set(updatedHabits.map(h => h.id));
+      const habitsToDelete = habits.filter(h => !updatedIds.has(h.id));
+      habitsToDelete.forEach(h => removeHabitFire(h.id));
+
+      // 2. Adicionar ou Atualizar
+      updatedHabits.forEach((habitFromModal, index) => {
+          
+          const habitToSave = { ...habitFromModal, order: index };
+
+          const existing = habits.find(h => h.id === habitToSave.id);
+          
+          if (existing) {
+              const hasChanged = 
+                  existing.title !== habitToSave.title ||
+                  existing.reminderTime !== habitToSave.reminderTime ||
+                  existing.order !== habitToSave.order; 
+
+              if (hasChanged) {
+                  updateHabitFire(habitToSave.id, habitToSave);
+              }
+          } else {
+              addHabitFire(habitToSave);
+          }
+      });
+
       setIsHabitSettingsOpen(false);
       addToast({ title: 'Rotinas Salvas', subtitle: 'Suas alterações foram salvas com sucesso.', type: 'success' });
+  };
+
+  // Add the reorder function here
+const handleReorderHabits = (fromIndex: number, toIndex: number) => {
+      // 1. Cria uma cópia da lista atual
+      const reorderedList = [...habits];
+      
+      // 2. Move o item dentro do array localmente
+      const [movedItem] = reorderedList.splice(fromIndex, 1);
+      reorderedList.splice(toIndex, 0, movedItem);
+
+      // 3. Percorre a lista nova e atualiza o 'order' no Firebase para cada item
+      reorderedList.forEach((habit, index) => {
+          // Só chama o update se a ordem realmente mudou (economiza leituras/escritas)
+          if (habit.order !== index) {
+              updateHabitFire(habit.id, { order: index } as any);
+          }
+      });
   };
 
   const isFixedLayout = ['dashboard', 'projectDetail', 'taskDetail', 'calendar', 'reminders', 'list', 'settings'].includes(currentView);
@@ -846,7 +945,7 @@ export const App = () => {
     };
     switch (currentView) {
       case 'dashboard':
-        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} />;
+        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} onReorderHabits={handleReorderHabits} />;
       case 'calendar':
         return <CalendarView {...commonProps} />;
       case 'list':
@@ -859,10 +958,60 @@ export const App = () => {
         return <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} />;
       case 'settings':
         return <SettingsView 
-            categories={categories} setCategories={setCategories}
-            tags={tags} setTags={setTags}
-            notificationSettings={notificationSettings} setNotificationSettings={setNotificationSettings}
-            appSettings={appSettings} setAppSettings={setAppSettings}
+            // --- CATEGORIAS ---
+            categories={categories} 
+            onAddCategory={(newCat) => {
+                // 1. Remove o ícone (o Firestore não aceita componentes React)
+                const { icon, ...catData } = newCat; 
+                
+                // 2. Salva a nova categoria
+                addCategoryFire(catData as Category);
+
+                // 3. A CORREÇÃO MÁGICA 🪄: 
+                // Se as categorias padrão ainda estão visíveis (estavam rodando localmente),
+                // nós as salvamos no Firebase agora para elas não sumirem.
+                const defaultIds = ['cat-1', 'cat-2', 'cat-3'];
+                const defaults = categories.filter(c => defaultIds.includes(c.id));
+                
+                defaults.forEach(def => {
+                    const { icon: defIcon, ...defData } = def;
+                    addCategoryFire(defData as Category);
+                });
+
+                addToast({ title: 'Categoria Adicionada', type: 'success' });
+            }}
+            onDeleteCategory={(id) => {
+                removeCategoryFire(id);
+                addToast({ title: 'Categoria Removida', type: 'success' });
+            }}
+
+            // --- TAGS / PRIORIDADES ---
+            tags={tags} 
+            onAddTag={(newTag) => {
+                addTagFire(newTag);
+
+                // Aplicamos a mesma lógica para as Tags, por segurança
+                const defaultTagIds = ['tag-1', 'tag-2', 'tag-3'];
+                const defaultTags = tags.filter(t => defaultTagIds.includes(t.id));
+                
+                defaultTags.forEach(defTag => {
+                    addTagFire(defTag);
+                });
+
+                addToast({ title: 'Prioridade Adicionada', type: 'success' });
+            }}
+            onDeleteTag={(id) => {
+                removeTagFire(id);
+                addToast({ title: 'Prioridade Removida', type: 'success' });
+            }}
+
+            // --- CONFIGURAÇÕES GERAIS ---
+            notificationSettings={notificationSettings} 
+            setNotificationSettings={setNotificationSettings}
+            appSettings={appSettings} 
+            setAppSettings={setAppSettings}
+            
+            // --- CONTA ---
             onLogout={logout}
             userName={userName}
             setUserName={setUserName}
@@ -943,12 +1092,11 @@ export const App = () => {
             setAppSettings={setAppSettings}
         /> : null;
       default:
-        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} />;
+        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} onReorderHabits={handleReorderHabits} />;
     }
   };
   
-  // --- ALTERAÇÃO AQUI: Exibição de Loading e Verificação de User ---
-  if (loading) {
+  if (authLoading) {
       return (
           <div className="flex h-screen items-center justify-center bg-ice-blue dark:bg-[#0D1117]">
              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
@@ -957,10 +1105,8 @@ export const App = () => {
   }
 
   if (!user) {
-    // Passamos uma função dummy pois o LoginScreen agora usa o hook internamente
     return <LoginScreen login={async () => false} />;
   }
-  // -----------------------------------------------------------------
 
   return (
     <div className="min-h-screen bg-ice-blue dark:bg-[#0D1117] text-gray-800 dark:text-gray-200 font-sans p-4">
@@ -1009,7 +1155,7 @@ export const App = () => {
           selectedTask={selectedTask}
           onClearRecents={handleClearRecentTasks}
           userName={userName}
-          onLogout={logout} // Passando o logout
+          onLogout={logout} 
         />
         <main className="flex-1 flex flex-col overflow-hidden">
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (

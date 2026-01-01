@@ -19,19 +19,22 @@ const HabitSettingsModal: React.FC<HabitSettingsModalProps> = ({ isOpen, onClose
     
     const draggedHabitRef = useRef<{ id: string; index: number } | null>(null);
 
-
+    // FIX: Removemos 'habits' das dependências para evitar resetar o form
+    // se houver update em background enquanto o modal está aberto.
+    // Carregamos apenas quando o modal ABRE.
     useEffect(() => {
         if (isOpen) {
-            setLocalHabits(JSON.parse(JSON.stringify(habits))); // Deep copy
+            setLocalHabits(JSON.parse(JSON.stringify(habits))); 
         } else {
-            // Reset states when modal is fully closed to prevent them from persisting
             setShowConfirmation(false);
             setHasUnsavedChanges(false);
         }
-    }, [isOpen, habits]);
+    }, [isOpen]); 
 
+    // Monitora alterações
     useEffect(() => {
         if(isOpen) {
+            // Comparação simples para ativar o botão salvar
             setHasUnsavedChanges(JSON.stringify(localHabits) !== JSON.stringify(habits));
         }
     }, [localHabits, habits, isOpen]);
@@ -44,7 +47,9 @@ const HabitSettingsModal: React.FC<HabitSettingsModalProps> = ({ isOpen, onClose
             id: `habit-local-${Date.now()}`,
             title: newHabitTitle.trim(),
             type: 'manual' as const,
+            order: localHabits.length, // Já adicionamos no final da fila
         };
+        // @ts-ignore - TS pode reclamar se a interface Habit não tiver order opcional ainda
         setLocalHabits(prev => [...prev, newHabit]);
         setNewHabitTitle('');
     };
@@ -54,7 +59,9 @@ const HabitSettingsModal: React.FC<HabitSettingsModalProps> = ({ isOpen, onClose
             id: `habit-local-${Date.now()}`,
             title: template.title,
             type: template.type,
+            order: localHabits.length,
         };
+        // @ts-ignore
         setLocalHabits(prev => [...prev, newHabit]);
     };
     
@@ -97,7 +104,6 @@ const HabitSettingsModal: React.FC<HabitSettingsModalProps> = ({ isOpen, onClose
         
         setLocalHabits(newHabits);
     };
-
 
     const handleCloseRequest = () => {
         if (hasUnsavedChanges) {
@@ -152,7 +158,6 @@ const HabitSettingsModal: React.FC<HabitSettingsModalProps> = ({ isOpen, onClose
                                     onDragEnd={handleDragEnd}
                                     onDragOver={(e) => handleDragOver(e, index)}
                                     className="flex items-center justify-between p-2.5 bg-ice-blue dark:bg-[#0D1117] rounded-md group transition-all duration-200"
-                                    style={{ transform: 'translate(0, 0)' }}
                                 >
                                     <div className="flex items-center gap-2">
                                         <DragHandleIcon className="w-5 h-5 text-gray-400 cursor-grab"/>

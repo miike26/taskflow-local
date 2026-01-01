@@ -304,6 +304,7 @@ const DemoDashboardBackground = () => {
                         appSettings={appSettings}
                         setAppSettings={() => {}}
                         isDemoMode={true}
+                        onReorderHabits={() => {}}
                     />
                 </div>
             </div>

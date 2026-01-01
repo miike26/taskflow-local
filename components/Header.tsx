@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { SunIcon, MoonIcon, SearchIcon, PlusIcon, BellIcon, ClockIcon, ChevronDownIcon, UserCircleIcon, BroomIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, DashboardIcon, CalendarIcon, ListIcon, BarChartIcon, FolderIcon, CheckIcon, Cog6ToothIcon } from './icons';
+import { SunIcon, MoonIcon, SearchIcon, PlusIcon, BellIcon, ClockIcon, ChevronDownIcon, UserCircleIcon, BroomIcon, ClipboardDocumentCheckIcon, CheckCircleIcon, DashboardIcon, CalendarIcon, ListIcon, BarChartIcon, FolderIcon, CheckIcon, Cog6ToothIcon, BriefcaseIcon } from './icons';
 import type { View, Category, Task, Tag, Status, Notification, Habit, AppSettings } from '../types';
 import TaskCard from './TaskCard';
 import { STATUS_COLORS, VIEW_TITLES } from '../constants';
@@ -24,6 +23,20 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
 };
 
+// --- HELPER: Recupera ícones perdidos na sincronização ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return BellIcon; // Ícone padrão para notificação genérica
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
+};
+
 const NotificationCard: React.FC<{
   notification: Notification;
   task?: Task;
@@ -41,8 +54,14 @@ const NotificationCard: React.FC<{
 
     if (!task && !isHabitReminder) return null;
 
-    const CategoryIcon = isHabitReminder ? ClipboardDocumentCheckIcon : (category?.icon || BellIcon);
-    // Dynamic colors based on read status
+    // Lógica corrigida de ícone
+    let CategoryIcon = BellIcon;
+    if (isHabitReminder) {
+        CategoryIcon = ClipboardDocumentCheckIcon;
+    } else {
+        CategoryIcon = getCategoryIcon(category);
+    }
+
     const bgClass = isRead 
         ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' 
         : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
@@ -79,14 +98,12 @@ const NotificationCard: React.FC<{
                 className={`relative group w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${bgClass} ${borderClass}`}
             >
                 <div className="flex gap-4">
-                    {/* Icon Column */}
                     <div className="flex-shrink-0 pt-1">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isRead ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'bg-white dark:bg-gray-800 text-primary-500 shadow-sm'}`}>
                             <CategoryIcon className="w-5 h-5" />
                         </div>
                     </div>
 
-                    {/* Content Column */}
                     <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-start mb-1">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
@@ -104,7 +121,6 @@ const NotificationCard: React.FC<{
                             {notification.message}
                         </p>
 
-                        {/* Actions Row */}
                         <div className="flex items-center gap-3 mt-3">
                             {isHabitReminder ? (
                                 <button 
@@ -500,7 +516,8 @@ const Header: React.FC<HeaderProps> = ({ currentView, tasks, tags, categories, o
                         <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Todas as Categorias</span>
                     </button>
                     {categories.map(cat => {
-                        const CategoryIcon = cat.icon;
+                        // Correção AQUI também: Usamos a função auxiliar
+                        const CategoryIcon = getCategoryIcon(cat);
                         return (
                             <button key={cat.id} onClick={() => { onCategoryChange(cat.id); setIsCategoryFilterOpen(false); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
                                 <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />

@@ -8,52 +8,67 @@ import {
   deleteDoc, 
   query, 
   writeBatch,
-  getDocs
+  getDocs,
+  orderBy,              // <--- Importante: Isso estava faltando
+  OrderByDirection,     // <--- Importante: Isso estava faltando
+  where                 // <--- Importante: Para filtrar por usuário
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from './useAuth';
 
-// Hook genérico para qualquer coleção (tasks, projects, categories...)
 export function useFirestore<T extends { id: string }>(
   collectionName: string, 
-  initialData: T[] = []
+  initialData: T[] = [],
+  sortField?: string,                      // 3º Argumento novo
+  sortDirection: OrderByDirection = 'asc'  // 4º Argumento novo
 ) {
   const { user } = useAuth();
   const [data, setData] = useState<T[]>(initialData);
   const [loading, setLoading] = useState(true);
   
-  // Ref para evitar loops de verificação
   const hasCheckedSeed = useRef(false);
 
-  // 1. ESCUTAR DADOS EM TEMPO REAL E POPULAR SE NECESSÁRIO
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
 
-    // Define a referência da coleção do usuário
+    // Referência base
     const colRef = collection(db, 'users', user.uid, collectionName);
-    const q = query(colRef);
+    
+    // --- QUERY COM ORDENAÇÃO ---
+    let q;
+    if (sortField) {
+        // Se pediu ordenação, usamos orderBy
+        q = query(colRef, orderBy(sortField, sortDirection));
+    } else {
+        // Se não, busca padrão
+        q = query(colRef);
+    }
 
-    // Função para verificar e popular dados iniciais (Seed)
+    // Seed de dados iniciais (se banco vazio)
     const seedDataIfNeeded = async () => {
       if (hasCheckedSeed.current) return;
       
       try {
-        const snapshot = await getDocs(q);
-        // Se o banco estiver vazio E tivermos dados iniciais para inserir
+        const simpleQ = query(colRef); 
+        const snapshot = await getDocs(simpleQ);
+
         if (snapshot.empty && initialData.length > 0) {
           console.log(`Coleção ${collectionName} vazia. Inserindo dados padrão...`);
           const batch = writeBatch(db);
           
-          initialData.forEach(item => {
+          initialData.forEach((item, index) => {
             const docRef = doc(db, 'users', user.uid!, collectionName, item.id);
-            batch.set(docRef, item);
+            // Adiciona ordem automaticamente se necessário
+            const itemToSave = sortField === 'order' 
+                ? { ...item, order: index } 
+                : item;
+            batch.set(docRef, itemToSave);
           });
           
           await batch.commit();
-          console.log(`Dados padrão de ${collectionName} inseridos com sucesso.`);
         }
         hasCheckedSeed.current = true;
       } catch (error) {
@@ -61,7 +76,6 @@ export function useFirestore<T extends { id: string }>(
       }
     };
 
-    // Executa a verificação de seed
     seedDataIfNeeded();
 
     // Listener em tempo real
@@ -71,27 +85,29 @@ export function useFirestore<T extends { id: string }>(
         items.push(doc.data() as T);
       });
       
-      // Só atualiza o estado se houver mudança ou se for a primeira carga
-      // Isso evita flickers se o array vazio vier antes do seed
       if (!snapshot.empty || hasCheckedSeed.current) {
-         setData(items);
+          setData(items);
       } else if (snapshot.empty && initialData.length > 0) {
-         // Se está vazio mas estamos fazendo seed, mantemos o initialData visualmente até o banco responder
-         setData(initialData);
+          setData(initialData);
       } else {
-         setData([]);
+          setData([]);
       }
       
       setLoading(false);
     }, (error) => {
       console.error(`Erro ao buscar ${collectionName}:`, error);
+      
+      // DICA: Se der erro de índice no console do navegador, o link para criar aparecerá aqui
+      if (error.code === 'failed-precondition') {
+          console.warn("FALTA ÍNDICE NO FIRESTORE: Abra o console do navegador e clique no link fornecido pelo Firebase para criar o índice composto.");
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user, collectionName]); // initialData removido das dependências para evitar re-loops
+  }, [user, collectionName, sortField, sortDirection]);
 
-  // 2. ADICIONAR (Criar ou Sobrescrever se ID existir)
+  // Funções de CRUD (add, update, remove...)
   const add = useCallback(async (item: T) => {
     if (!user) return;
     try {
@@ -99,11 +115,9 @@ export function useFirestore<T extends { id: string }>(
       await setDoc(docRef, item);
     } catch (error) {
       console.error("Erro ao adicionar:", error);
-      throw error;
     }
   }, [user, collectionName]);
 
-  // 3. ATUALIZAR (Merge dos dados)
   const update = useCallback(async (id: string, updates: Partial<T>) => {
     if (!user) return;
     try {
@@ -111,11 +125,9 @@ export function useFirestore<T extends { id: string }>(
       await updateDoc(docRef, updates as any);
     } catch (error) {
       console.error("Erro ao atualizar:", error);
-      throw error;
     }
   }, [user, collectionName]);
 
-  // 4. DELETAR
   const remove = useCallback(async (id: string) => {
     if (!user) return;
     try {
@@ -123,46 +135,28 @@ export function useFirestore<T extends { id: string }>(
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Erro ao deletar:", error);
-      throw error;
     }
   }, [user, collectionName]);
 
-  // 5. OPERAÇÕES EM LOTE
   const updateBatch = useCallback(async (ids: string[], updates: Partial<T>) => {
     if (!user) return;
-    try {
-        const batch = writeBatch(db);
-        ids.forEach(id => {
-            const docRef = doc(db, 'users', user.uid, collectionName, id);
-            batch.update(docRef, updates as any);
-        });
-        await batch.commit();
-    } catch (error) {
-        console.error("Erro no updateBatch:", error);
-    }
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+        const docRef = doc(db, 'users', user.uid, collectionName, id);
+        batch.update(docRef, updates as any);
+    });
+    await batch.commit();
   }, [user, collectionName]);
 
   const deleteBatch = useCallback(async (ids: string[]) => {
     if (!user) return;
-    try {
-        const batch = writeBatch(db);
-        ids.forEach(id => {
-            const docRef = doc(db, 'users', user.uid, collectionName, id);
-            batch.delete(docRef);
-        });
-        await batch.commit();
-    } catch (error) {
-        console.error("Erro no deleteBatch:", error);
-    }
+    const batch = writeBatch(db);
+    ids.forEach(id => {
+        const docRef = doc(db, 'users', user.uid, collectionName, id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
   }, [user, collectionName]);
 
-  return { 
-    data, 
-    loading, 
-    add, 
-    update, 
-    remove,
-    updateBatch,
-    deleteBatch
-  };
+  return { data, loading, add, update, remove, updateBatch, deleteBatch };
 }
