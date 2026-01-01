@@ -1,9 +1,9 @@
-
 import React, { useState, useMemo, useRef } from 'react';
 import type { Task, Category, Tag, Status, AppSettings } from '../../types';
 import TaskCard from '../TaskCard';
 import { STATUS_OPTIONS, STATUS_COLORS } from '../../constants';
-import { KanbanIcon, TableCellsIcon, ChevronDownIcon, CalendarDaysIcon, TrashIcon, ListBulletIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon } from '../icons';
+// Adicionados os ícones necessários para o mapeamento
+import { KanbanIcon, TableCellsIcon, ChevronDownIcon, CalendarDaysIcon, TrashIcon, ListBulletIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon, FolderIcon, BriefcaseIcon, UserCircleIcon, ListIcon } from '../icons';
 import DateRangeCalendar from '../DateRangeCalendar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
@@ -32,6 +32,20 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
             </div>
         </div>
     );
+};
+
+// --- HELPER: Recupera ícones perdidos na sincronização ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return FolderIcon; // Ícone padrão
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
 };
 
 interface ListViewProps {
@@ -387,7 +401,8 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                 {openFilter === 'category' && (
                     <div className="absolute top-full mt-2 left-0 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
                         {categories.map(cat => {
-                            const CategoryIcon = cat.icon;
+                            // Correção AQUI: Usando o helper para obter o ícone correto
+                            const CategoryIcon = getCategoryIcon(cat);
                             return (
                                 <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
                                     <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
@@ -460,7 +475,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                 </button>
                 {openFilter === 'creationDate' && (
                     <div className="absolute top-full mt-2 left-0 bg-transparent z-20">
-                       <DateRangeCalendar
+                        <DateRangeCalendar
                             range={creationDateRangeFilter}
                             onApply={(range) => {
                                 setCreationDateRangeFilter(range);
@@ -488,7 +503,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                 </button>
                 {openFilter === 'dueDate' && (
                     <div className="absolute top-full mt-2 left-0 bg-transparent z-20">
-                       <DateRangeCalendar
+                        <DateRangeCalendar
                             range={dueDateRangeFilter}
                             onApply={(range) => {
                                 setDueDateRangeFilter(range);
@@ -590,7 +605,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                                 onDragStart={handleDragStart}
                                 variant={isCompactMode ? 'compact' : 'full'}
                                 disableOverdueColor={appSettings?.disableOverdueColor}
-                              />
+                             />
                         ))
                     }
                 </KanbanColumn>
@@ -631,37 +646,37 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
 
                                 return (
                                 <tr key={task.id} className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 ${showOverdueStyle ? 'bg-red-50 dark:bg-red-900/10' : 'bg-white dark:bg-gray-800'}`}>
-                                        <td className="w-4 p-4">
-                                            <div className="flex items-center">
-                                                <input id={`checkbox-${task.id}`} type="checkbox"
-                                                checked={selectedTaskIds.has(task.id)}
-                                                onChange={() => handleSelectOne(task.id)}
-                                                className={checkboxClass} />
-                                                <label htmlFor={`checkbox-${task.id}`} className="sr-only">checkbox</label>
-                                            </div>
-                                        </td>
-                                        <td onClick={() => onSelectTask(task)} className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white cursor-pointer">
-                                            <div className="flex items-center gap-2">
-                                                <span>{task.title}</span>
-                                                {isOverdue && (
-                                                    <span className="relative flex h-2 w-2" title="Atrasado">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center">
-                                            <div className={`h-2.5 w-2.5 rounded-full mr-2 ${STATUS_COLORS[task.status]}`}></div>
-                                            {task.status}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">{getCategory(task.categoryId)?.name}</td>
-                                        <td className="px-6 py-4">
-                                            {tag && <span className={`px-2 py-1 font-semibold leading-tight rounded-full ${tag.bgColor} ${tag.color}`}>{tag.name}</span>}
-                                        </td>
-                                        <td className="px-6 py-4">{formatDate(task.dueDate)}</td>
+                                            <td className="w-4 p-4">
+                                                <div className="flex items-center">
+                                                    <input id={`checkbox-${task.id}`} type="checkbox"
+                                                    checked={selectedTaskIds.has(task.id)}
+                                                    onChange={() => handleSelectOne(task.id)}
+                                                    className={checkboxClass} />
+                                                    <label htmlFor={`checkbox-${task.id}`} className="sr-only">checkbox</label>
+                                                </div>
+                                            </td>
+                                            <td onClick={() => onSelectTask(task)} className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white cursor-pointer">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{task.title}</span>
+                                                    {isOverdue && (
+                                                        <span className="relative flex h-2 w-2" title="Atrasado">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center">
+                                                    <div className={`h-2.5 w-2.5 rounded-full mr-2 ${STATUS_COLORS[task.status]}`}></div>
+                                                    {task.status}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">{getCategory(task.categoryId)?.name}</td>
+                                            <td className="px-6 py-4">
+                                                {tag && <span className={`px-2 py-1 font-semibold leading-tight rounded-full ${tag.bgColor} ${tag.color}`}>{tag.name}</span>}
+                                            </td>
+                                            <td className="px-6 py-4">{formatDate(task.dueDate)}</td>
                                 </tr>
                                 )
                             })}

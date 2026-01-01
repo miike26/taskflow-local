@@ -1,14 +1,17 @@
-
 import React, { useState, useMemo } from 'react';
 import type { Project, Task } from '../../types';
 import { PlusIcon, FolderIcon, CheckCircleIcon, RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, PinIcon } from '../icons';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+
+// Adicionados os imports de ícones que faltavam para o mapeamento funcionar aqui também, caso precise no futuro
+import { BriefcaseIcon, UserCircleIcon, ListIcon } from '../icons';
 
 interface ProjectsViewProps {
   projects: Project[];
   tasks: Task[];
   onAddProject: (project: Project) => void;
   onSelectProject: (project: Project) => void;
+  // pinnedProjectIds removido, pois agora olhamos para dentro do objeto Project
+  onPinProject?: (project: Project) => void; // Recebe o objeto inteiro agora
 }
 
 const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
@@ -21,15 +24,12 @@ const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
     chart: ChartPieIcon
 };
 
-const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProject, onSelectProject }) => {
+const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProject, onSelectProject, onPinProject }) => {
     const [isCreating, setIsCreating] = useState(false);
     const [newProjectName, setNewProjectName] = useState('');
     const [newProjectDesc, setNewProjectDesc] = useState('');
     const [hideCompleted, setHideCompleted] = useState(false);
     
-    // Local state for pinned projects to avoid changing global Project type
-    const [pinnedProjectIds, setPinnedProjectIds] = useLocalStorage<string[]>('pinned_projects', []);
-
     const handleCreateProject = () => {
         if (!newProjectName.trim()) return;
 
@@ -37,9 +37,10 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
             id: `proj-${Date.now()}`,
             name: newProjectName.trim(),
             description: newProjectDesc.trim(),
-            color: 'bg-blue-500', // Default color for now
+            color: 'bg-blue-500', 
             createdAt: new Date().toISOString(),
             activity: [],
+            isPinned: false, // Inicializa como não pinado
         };
 
         onAddProject(newProject);
@@ -48,13 +49,11 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
         setIsCreating(false);
     };
 
-    const togglePin = (e: React.MouseEvent, projectId: string) => {
+    const togglePin = (e: React.MouseEvent, project: Project) => {
         e.stopPropagation();
-        setPinnedProjectIds(prev => 
-            prev.includes(projectId) 
-                ? prev.filter(id => id !== projectId) 
-                : [...prev, projectId]
-        );
+        if (onPinProject) {
+            onPinProject(project);
+        }
     };
 
     const processedProjects = useMemo(() => {
@@ -71,7 +70,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
                 progress,
                 isCompleted,
                 taskCount: totalTasks,
-                isPinned: pinnedProjectIds.includes(project.id)
+                // Agora usamos a propriedade direta do objeto, com fallback para false
+                isPinned: project.isPinned || false 
             };
         });
 
@@ -98,7 +98,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
             return a.name.localeCompare(b.name);
         });
 
-    }, [projects, tasks, hideCompleted, pinnedProjectIds]);
+    }, [projects, tasks, hideCompleted]); // Removemos pinnedProjectIds da dependência
 
     const checkboxClass = "appearance-none h-4 w-4 rounded-md border-2 border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600 transition-colors";
 
@@ -203,7 +203,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={(e) => togglePin(e, project.id)}
+                                        onClick={(e) => togglePin(e, project)}
                                         className={`
                                             p-1.5 rounded-lg transition-all duration-200
                                             ${project.isPinned 
@@ -243,8 +243,8 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
                                 </div>
                                 <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
                                     <div 
-                                        className={`h-full ${project.color} rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.1)]`} 
-                                        style={{ width: `${project.progress}%` }}
+                                            className={`h-full ${project.color} rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(0,0,0,0.1)]`} 
+                                            style={{ width: `${project.progress}%` }}
                                     ></div>
                                 </div>
                             </div>

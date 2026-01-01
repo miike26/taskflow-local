@@ -1,10 +1,11 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { Task, Category, Tag, Status, SubTask, Activity, Project } from '../types';
 import { 
     XIcon, TrashIcon, PlusIcon, CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon,
     ChevronDownIcon, CheckCircleIcon, FolderIcon, SearchIcon,
-    RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon
+    RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon,
+    // Adicionados para o mapeamento
+    BriefcaseIcon, UserCircleIcon, ListIcon
 } from './icons';
 import TaskCard from './TaskCard';
 import { STATUS_COLORS } from '../constants';
@@ -37,6 +38,19 @@ const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
     chart: ChartPieIcon
 };
 
+// --- HELPER: Recupera ícones perdidos na sincronização ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return FolderIcon; // Ícone padrão
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
+};
 
 const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
   const [taskData, setTaskData] = useState<Task | null>(null);
@@ -253,11 +267,11 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                         {d.getDate()}
                                     </span>
                                     <div className="flex justify-center items-center mt-1 space-x-0.5">
-                                        {dayTasks.length > 0 && dayTasks.slice(0, 3).map(t => {
-                                           const tag = tags.find(tg => tg.id === t.tagId)
-                                           const colorClass = tag ? `bg-${tag.baseColor}-500` : 'bg-gray-400'
-                                           return <div key={t.id} className={`w-1.5 h-1.5 rounded-full ${colorClass}`}></div>
-                                        })}
+                                            {dayTasks.length > 0 && dayTasks.slice(0, 3).map(t => {
+                                             const tag = tags.find(tg => tg.id === t.tagId)
+                                             const colorClass = tag ? `bg-${tag.baseColor}-500` : 'bg-gray-400'
+                                             return <div key={t.id} className={`w-1.5 h-1.5 rounded-full ${colorClass}`}></div>
+                                            })}
                                     </div>
                                 </div>
                             );
@@ -391,7 +405,11 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                     className={`flex items-center justify-between w-[240px] px-3 py-2 bg-white dark:bg-[#0D1117] border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer transition-all duration-200 hover:border-primary-400 dark:hover:border-primary-400 ${isCategoryDropdownOpen ? 'ring-2 ring-primary-500/20 border-primary-500' : ''}`}
                                 >
                                      <div className="flex items-center gap-2 min-w-0">
-                                        {categories.find(c => c.id === categoryId)?.icon && React.createElement(categories.find(c => c.id === categoryId)!.icon, { className: "w-4 h-4 text-gray-500 dark:text-gray-400" })}
+                                        {(() => {
+                                            const selectedCat = categories.find(c => c.id === categoryId);
+                                            const SelectedIcon = getCategoryIcon(selectedCat);
+                                            return <SelectedIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />;
+                                        })()}
                                         <span className={`text-sm font-medium truncate ${categoryId ? 'text-gray-900 dark:text-gray-200' : 'text-gray-400'}`}>
                                             {categories.find(c => c.id === categoryId)?.name || 'Nenhuma'}
                                         </span>
@@ -401,19 +419,22 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                 
                                 {isCategoryDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60">
-                                        <div className="overflow-y-auto p-1">
-                                            {categories.map(cat => (
-                                                <button
-                                                    key={cat.id}
-                                                    onClick={() => { handleUpdate({ categoryId: cat.id }); setIsCategoryDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${categoryId === cat.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                                >
-                                                    <cat.icon className="w-4 h-4" />
-                                                    <span className="truncate font-medium">{cat.name}</span>
-                                                    {categoryId === cat.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
-                                                </button>
-                                            ))}
-                                        </div>
+                                            <div className="overflow-y-auto p-1">
+                                                {categories.map(cat => {
+                                                    const CategoryIcon = getCategoryIcon(cat);
+                                                    return (
+                                                        <button
+                                                            key={cat.id}
+                                                            onClick={() => { handleUpdate({ categoryId: cat.id }); setIsCategoryDropdownOpen(false); }}
+                                                            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${categoryId === cat.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                                        >
+                                                            <CategoryIcon className="w-4 h-4" />
+                                                            <span className="truncate font-medium">{cat.name}</span>
+                                                            {categoryId === cat.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
                                     </div>
                                 )}
                             </div>
@@ -444,20 +465,20 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                 </button>
                                 {isTagDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60">
-                                        <div className="overflow-y-auto p-1">
-                                            {tags.map(tag => (
-                                                <button
-                                                    key={tag.id}
-                                                    onClick={() => { handleUpdate({ tagId: tag.id }); setIsTagDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${tagId === tag.id ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                                >
-                                                    <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${tag.bgColor} ${tag.color}`}>
-                                                        {tag.name}
-                                                    </span>
-                                                    {tagId === tag.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
-                                                </button>
-                                            ))}
-                                        </div>
+                                            <div className="overflow-y-auto p-1">
+                                                {tags.map(tag => (
+                                                    <button
+                                                        key={tag.id}
+                                                        onClick={() => { handleUpdate({ tagId: tag.id }); setIsTagDropdownOpen(false); }}
+                                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${tagId === tag.id ? 'bg-primary-50 dark:bg-primary-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                                    >
+                                                        <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${tag.bgColor} ${tag.color}`}>
+                                                            {tag.name}
+                                                        </span>
+                                                        {tagId === tag.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
+                                                    </button>
+                                                ))}
+                                            </div>
                                     </div>
                                 )}
                             </div>
@@ -505,34 +526,34 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                             >
                                                 <XIcon className="w-4 h-4" />
                                             </button>
-                                         ) : (
+                                       ) : (
                                             !isProjectDropdownOpen && <ChevronDownIcon className="w-4 h-4 text-gray-400" />
-                                         )}
+                                       )}
                                     </div>
                                 </div>
 
                                 {isProjectDropdownOpen && (
                                     <div className="absolute top-full right-0 mt-1 w-64 bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60">
-                                        <div className="overflow-y-auto p-1">
-                                            {filteredProjects.length > 0 ? filteredProjects.map(proj => {
-                                                const ItemIcon = proj.icon && PROJECT_ICONS[proj.icon] ? PROJECT_ICONS[proj.icon] : FolderIcon;
-                                                return (
-                                                    <button
-                                                        key={proj.id}
-                                                        onClick={() => { handleUpdate({ projectId: proj.id }); setIsProjectDropdownOpen(false); }}
-                                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.projectId === proj.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                                    >
-                                                        <ItemIcon className={`w-4 h-4 flex-shrink-0 ${proj.color.replace('bg-', 'text-')}`} />
-                                                        <span className="truncate font-medium">{proj.name}</span>
-                                                        {taskData.projectId === proj.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
-                                                    </button>
-                                                )
-                                            }) : (
-                                                <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
-                                                    Nenhum projeto
-                                                </div>
-                                            )}
-                                        </div>
+                                            <div className="overflow-y-auto p-1">
+                                                {filteredProjects.length > 0 ? filteredProjects.map(proj => {
+                                                    const ItemIcon = proj.icon && PROJECT_ICONS[proj.icon] ? PROJECT_ICONS[proj.icon] : FolderIcon;
+                                                    return (
+                                                        <button
+                                                            key={proj.id}
+                                                            onClick={() => { handleUpdate({ projectId: proj.id }); setIsProjectDropdownOpen(false); }}
+                                                            className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 ${taskData.projectId === proj.id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                                        >
+                                                            <ItemIcon className={`w-4 h-4 flex-shrink-0 ${proj.color.replace('bg-', 'text-')}`} />
+                                                            <span className="truncate font-medium">{proj.name}</span>
+                                                            {taskData.projectId === proj.id && <CheckCircleIcon className="w-3.5 h-3.5 ml-auto text-primary-500" />}
+                                                        </button>
+                                                    )
+                                                }) : (
+                                                    <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400 uppercase font-bold">
+                                                        Nenhum projeto
+                                                    </div>
+                                                )}
+                                            </div>
                                     </div>
                                 )}
                             </div>

@@ -135,6 +135,7 @@ export interface Project {
   icon?: string; // 'folder' | 'rocket' | 'code' | 'globe' | 'star' | 'heart' | 'chart'
   createdAt: string;
   activity: Activity[];
+  isPinned?: boolean;
 }
 
 export type PeriodOption = 'last-week' | 'last-month' | 'last-semester' | 'current-year' | 'last-year' | 'custom';

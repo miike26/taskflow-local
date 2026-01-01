@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { Task, Tag, Category, Status, Project, SavedSummary, PeriodOption, SummaryType, Tone, Length, Focus, AppSettings } from '../../types';
@@ -8,7 +7,9 @@ import {
     SparklesIcon, ArrowTopRightOnSquareIcon, CheckIcon, TrashIcon, DocumentDuplicateIcon,
     ArrowRightLeftIcon, FolderIcon, FilterIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon,
     UserCircleIcon, StarIcon, AcademicCapIcon, ChartPieIcon, ClipboardDocumentCheckIcon,
-    RocketLaunchIcon, HeartIcon, ArrowPathIcon, ArrowDownTrayIcon
+    RocketLaunchIcon, HeartIcon, ArrowPathIcon, ArrowDownTrayIcon,
+    // Adicionados para o mapeamento
+    BriefcaseIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -58,6 +59,20 @@ const filterTasksByDate = (tasks: Task[], start: Date, end: Date, type: 'created
         if (!dateToCheck) return false;
         return dateToCheck >= start && dateToCheck <= end;
     });
+};
+
+// --- HELPER: Recupera ícones perdidos na sincronização ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return FolderIcon; // Ícone padrão
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
 };
 
 // --- Sub-components for Layout ---
@@ -119,9 +134,9 @@ const StatCard: React.FC<{
     value: string | number; 
     icon?: React.ReactNode; 
     trend?: React.ReactNode; 
-    colorClass?: string;
-    subtext?: string;
-    tooltip?: string;
+    colorClass?: string; 
+    subtext?: string; 
+    tooltip?: string; 
     children?: React.ReactNode;
 }> = ({ label, value, icon, trend, colorClass = "text-gray-900 dark:text-white", subtext, tooltip, children }) => (
     <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col justify-between h-full relative overflow-visible group hover:shadow-md transition-all duration-300">
@@ -249,7 +264,6 @@ const TrendChart: React.FC<{ data: { label: string; created: number; completed: 
 type ExportPeriodOption = 'all' | 'last-week' | 'last-month' | 'last-semester' | 'current-year' | 'last-year' | 'custom';
 
 const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tasks, categories }) => {
-    // ... (Export Wizard logic remains unchanged) ...
     const [creationPeriod, setCreationPeriod] = useState<ExportPeriodOption>('all');
     const [duePeriod, setDuePeriod] = useState<ExportPeriodOption>('all');
     const [creationCustom, setCreationCustom] = useState<{ startDate: Date | null, endDate: Date | null }>({ startDate: null, endDate: null });
@@ -458,20 +472,24 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
                                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Categorias</label>
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                    {categories.map(cat => (
-                                        <button
-                                            key={cat.id}
-                                            onClick={() => toggleCategory(cat.id)}
-                                            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                                                selectedCategories.has(cat.id)
-                                                ? 'bg-primary-100 text-primary-700 border-primary-200 dark:bg-primary-900/40 dark:text-primary-300 dark:border-primary-800'
-                                                : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100'
-                                            }`}
-                                        >
-                                            <cat.icon className="w-3 h-3" />
-                                            {cat.name}
-                                        </button>
-                                    ))}
+                                    {categories.map(cat => {
+                                        // CORREÇÃO AQUI: Usando o helper para resolver o ícone
+                                        const CategoryIcon = getCategoryIcon(cat);
+                                        return (
+                                            <button
+                                                key={cat.id}
+                                                onClick={() => toggleCategory(cat.id)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                                                    selectedCategories.has(cat.id)
+                                                    ? 'bg-primary-100 text-primary-700 border-primary-200 dark:bg-primary-900/40 dark:text-primary-300 dark:border-primary-800'
+                                                    : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600 opacity-60 hover:opacity-100'
+                                                }`}
+                                            >
+                                                <CategoryIcon className="w-3 h-3" />
+                                                {cat.name}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -1109,7 +1127,35 @@ const AiWizard: React.FC<{
                                         ))}
                                     </div>
                                 </div>
-                                {/* ... */}
+                                
+                                {/* CORREÇÃO NO FILTRO DE CATEGORIA DO AI WIZARD */}
+                                <div>
+                                    <span className="text-xs font-semibold text-gray-400 block mb-2">Categorias</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {categories.map(cat => {
+                                            const CategoryIcon = getCategoryIcon(cat);
+                                            return (
+                                                <button
+                                                    key={cat.id}
+                                                    onClick={() => {
+                                                        const newSet = new Set(filterCategories);
+                                                        if (newSet.has(cat.id)) newSet.delete(cat.id);
+                                                        else newSet.add(cat.id);
+                                                        setFilterCategories(newSet);
+                                                    }}
+                                                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                                                        filterCategories.has(cat.id)
+                                                        ? 'bg-primary-100 text-primary-700 border-primary-200 dark:bg-primary-900/40 dark:text-primary-300 dark:border-primary-800'
+                                                        : 'bg-white dark:bg-gray-800 text-gray-500 border-gray-200 dark:border-gray-600'
+                                                    }`}
+                                                >
+                                                    <CategoryIcon className="w-3 h-3" />
+                                                    {cat.name}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         {/* Task List */}
@@ -1206,13 +1252,13 @@ const AiWizard: React.FC<{
                                                                 <span className="col-span-6 text-sm text-gray-700 dark:text-gray-300 truncate font-medium">{t.title}</span>
                                                                 <span className="col-span-3 text-xs text-gray-500 text-right">{new Date(t.dateTime).toLocaleDateString()}</span>
                                                                 <div className="col-span-3 flex justify-end">
-                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border ${
-                                                                        t.status === 'Concluída' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                                        t.status === 'Em andamento' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                                                        'bg-blue-50 text-blue-700 border-blue-200'
-                                                                    }`}>
-                                                                        {t.status}
-                                                                    </span>
+                                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border ${
+                                                                            t.status === 'Concluída' ? 'bg-green-50 text-green-700 border-green-200' :
+                                                                            t.status === 'Em andamento' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                                            'bg-blue-50 text-blue-700 border-blue-200'
+                                                                        }`}>
+                                                                            {t.status}
+                                                                        </span>
                                                                 </div>
                                                             </div>
                                                         </div>

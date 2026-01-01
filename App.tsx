@@ -121,6 +121,8 @@ export const App = () => {
   
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
   const [pinnedTaskIds, setPinnedTaskIds] = useLocalStorage<string[]>('pinnedTaskIds', []);
+ // const [pinnedProjectIds, setPinnedProjectIds] = useLocalStorage<string[]>('pinnedProjectIds', []);
+
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -467,6 +469,13 @@ export const App = () => {
         }
         return Array.from(newPinned);
     });
+  };
+
+  // Novo handler de Pin sincronizado
+  const handlePinProject = (project: Project) => {
+    // Inverte o estado atual de 'isPinned'. Se for undefined, assume false.
+    const newStatus = !(project.isPinned || false);
+    updateProjectFire(project.id, { isPinned: newStatus });
   };
 
   const handleClearRecentTasks = () => {
@@ -955,7 +964,7 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
       case 'reports':
         return <ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>;
       case 'projects':
-        return <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} />;
+        return <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />;
       case 'settings':
         return <SettingsView 
             // --- CATEGORIAS ---
@@ -1055,7 +1064,7 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
                 appSettings={appSettings}
                 setAppSettings={setAppSettings}
             />
-        ) : <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} />;
+        ) : <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />;
       case 'taskDetail':
         return selectedTask ? <TaskDetailView 
             task={selectedTask} 

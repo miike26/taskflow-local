@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Task, Category, Tag, Status } from '../types';
-import { BriefcaseIcon, CalendarDaysIcon, ListBulletIcon } from './icons';
+// Adicionados FolderIcon, UserCircleIcon e ListIcon aos imports
+import { BriefcaseIcon, CalendarDaysIcon, ListBulletIcon, FolderIcon, UserCircleIcon, ListIcon } from './icons';
 import { STATUS_COLORS } from '../constants';
 
 interface TaskCardProps {
@@ -21,6 +22,20 @@ const priorityColors: Record<string, string> = {
     'tag-1': 'bg-red-500',
     'tag-2': 'bg-yellow-500',
     'tag-3': 'bg-green-500',
+};
+
+// --- HELPER: Recupera ícones perdidos na sincronização ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return BriefcaseIcon; // Ícone padrão se não houver categoria (ou FolderIcon se preferir)
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
 };
 
 const DueDateDisplay: React.FC<{ dueDate: string, compact?: boolean, listItem?: boolean }> = ({ dueDate, compact = false, listItem = false }) => {
@@ -87,11 +102,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
   
   const statusColor = STATUS_COLORS[status];
   
-  // --- CORREÇÃO AQUI ---
-  // Verifica se category existe E se category.icon existe.
-  // Se vier do Firebase, category.icon será undefined, então usamos o BriefcaseIcon.
-  const CategoryIcon = (category && category.icon) ? category.icon : BriefcaseIcon;
-  // ---------------------
+  // --- CORREÇÃO APLICADA AQUI ---
+  // Substituí a verificação direta por nossa função helper
+  const CategoryIcon = getCategoryIcon(category);
+  // -----------------------------
   
   // Conditionally apply overdue styling
   const applyOverdueStyle = isOverdue && !disableOverdueColor;
