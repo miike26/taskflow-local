@@ -1,11 +1,12 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { Project, Task, Category, Tag, Status, Notification, Habit, Activity, AppSettings } from '../../types';
 import { 
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
-    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon
+    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon,
+    // Novos imports adicionados para o mapeamento de ícones
+    BriefcaseIcon, UserCircleIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -32,6 +33,20 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
 };
 
+// --- HELPER: Recupera ícones perdidos na sincronização (Igual ao Header.tsx) ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return BellIcon; // Ícone padrão para notificação genérica
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+
+    // Mapeamento manual para recuperar ícones das categorias padrão
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+    }
+};
+
 const NotificationCard: React.FC<{
   notification: Notification;
   task?: Task;
@@ -49,7 +64,14 @@ const NotificationCard: React.FC<{
 
     if (!task && !isHabitReminder) return null;
 
-    const CategoryIcon = isHabitReminder ? ClipboardDocumentCheckIcon : (category?.icon || BellIcon);
+    // Lógica corrigida de ícone usando o helper
+    let CategoryIcon = BellIcon;
+    if (isHabitReminder) {
+        CategoryIcon = ClipboardDocumentCheckIcon;
+    } else {
+        CategoryIcon = getCategoryIcon(category);
+    }
+
     const bgClass = isRead 
         ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' 
         : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
@@ -375,7 +397,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
                             </div>
                         </div>
 
-                         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Opções Rápidas</label>
                             <div className="grid grid-cols-2 gap-2 mt-2">
                                 <button onClick={() => setPreset(0, new Date().getHours() + 2, new Date().getMinutes())} className="text-sm p-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Daqui 2 horas</button>
@@ -1458,13 +1480,17 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'category' && (
                                     <div className="absolute top-full left-0 mt-2 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
-                                        {categories.map(cat => (
-                                            <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
-                                                <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
-                                                <cat.icon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
-                                            </label>
-                                        ))}
+                                        {categories.map(cat => {
+                                            // Correção AQUI: Usamos a função auxiliar para resolver o ícone
+                                            const CategoryIcon = getCategoryIcon(cat);
+                                            return (
+                                                <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
+                                                    <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
+                                                    <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
+                                                </label>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1809,7 +1835,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         </div>
                         
                         {isSummarizing && (
-                        <div className="px-2 pb-3 flex-shrink-0">
+                           <div className="px-2 pb-3 flex-shrink-0">
                                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
                                     <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-1 rounded-full animate-pulse-glow w-full"></div>
                                 </div>
