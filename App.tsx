@@ -17,11 +17,15 @@ import LoginScreen from './components/LoginScreen.tsx';
 import HabitSettingsModal from './components/HabitSettingsModal.tsx';
 import Confetti from './components/Confetti.tsx';
 import SuccessOverlay from './components/SuccessOverlay.tsx';
+import OnboardingWizard from './components/OnboardingWizard';
 import { useLocalStorage } from './hooks/useLocalStorage.ts';
 import { useFirestore } from './hooks/useFirestore.ts';
 import { useAuth } from './hooks/useAuth.ts';
+// [NOVO] Importando o hook para gerenciar documento do usuário
+import { useUserDocument } from './hooks/useUserDocument.ts'; 
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
+
 
 interface ConfirmationDialogState {
   isOpen: boolean;
@@ -59,16 +63,19 @@ export const App = () => {
   // --- INTEGRAÇÃO COM FIREBASE ---
   const { user, loading: authLoading, logout } = useAuth();
   const [userName, setUserName] = useLocalStorage<string>('userName', 'Admin');
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage<boolean>('hasCompletedOnboarding', false);
+
+
+  // [NOVO] Hook para acessar dados do perfil (Settings e Notificações)
+  const { data: userData, updateDocument: updateUserDoc } = useUserDocument();
 
   // --- FUNÇÃO AUXILIAR DE DATA LOCAL (FUSO HORÁRIO) ---
-  // Essa função garante que "hoje" seja hoje no seu relógio, não em Londres.
   const getLocalISODate = useCallback(() => {
     const d = new Date();
-    const offset = d.getTimezoneOffset() * 60000; // Converte minutos para ms
+    const offset = d.getTimezoneOffset() * 60000; 
     return new Date(d.getTime() - offset).toISOString().split('T')[0];
   }, []);
 
-  // Atualiza nome local
   useEffect(() => {
     if (user?.displayName) {
         setUserName(user.displayName);
@@ -121,7 +128,6 @@ export const App = () => {
   
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
   
-  // --- ALTERAÇÃO: Pinned Tasks agora derivam do Firestore ---
   const pinnedTaskIds = useMemo(() => {
     return tasks
       .filter(task => task.isPinned)
@@ -134,24 +140,21 @@ export const App = () => {
   const [initialDataForSheet, setInitialDataForSheet] = useState<Task | null>(null);
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
-  const [notificationSettings, setNotificationSettings] = useLocalStorage<NotificationSettings>('notificationSettings', { 
-      enabled: true, 
-      remindDaysBefore: 1,
-      taskReminders: true,
-      habitReminders: true,
-      marketingEmails: false
-  });
+  // [MODIFICADO] Definição de valores padrão para uso quando o Firebase estiver vazio
+  const DEFAULT_NOTIF_SETTINGS: NotificationSettings = { 
+      enabled: true, remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
+  };
   
-  const [appSettings, setAppSettings] = useLocalStorage<AppSettings>('appSettings', { 
-      disableOverdueColor: false,
-      timeFormat: '24h',
-      weekStart: 'monday',
-      enableAi: true,
-      enableAnimations: true
-  });
+  const DEFAULT_APP_SETTINGS: AppSettings = { 
+      disableOverdueColor: false, timeFormat: '24h', weekStart: 'monday', enableAi: true, enableAnimations: true 
+  };
 
-  const [readNotificationIds, setReadNotificationIds] = useLocalStorage<string[]>('readNotificationIds', []);
-  const [clearedNotificationIds, setClearedNotificationIds] = useLocalStorage<string[]>('clearedNotificationIds', []);
+  // [MODIFICADO] Variáveis derivadas do userData (Firebase) em vez de useLocalStorage
+  const notificationSettings: NotificationSettings = userData?.notificationSettings || DEFAULT_NOTIF_SETTINGS;
+  const appSettings: AppSettings = userData?.appSettings || DEFAULT_APP_SETTINGS;
+  const readNotificationIds: string[] = userData?.readNotificationIds || [];
+  const clearedNotificationIds: string[] = userData?.clearedNotificationIds || [];
+
   const [confirmationState, setConfirmationState] = useState<ConfirmationDialogState>({
     isOpen: false, title: '', message: '', onConfirm: () => {},
   });
@@ -163,6 +166,81 @@ export const App = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   
   const isFirstLoad = useRef(true);
+
+  // [MODIFICADO] Handlers sincronizados com Firebase (substituem os antigos e o useLocalStorage)
+  // Eles aceitam tanto o valor direto quanto uma função (prev => next), calculam e salvam na nuvem.
+
+  const handleUpdateNotificationSettings = useCallback((value: NotificationSettings | ((val: NotificationSettings) => NotificationSettings)) => {
+      const current = userData?.notificationSettings || DEFAULT_NOTIF_SETTINGS;
+      const newValue = value instanceof Function ? value(current) : value;
+      updateUserDoc({ notificationSettings: newValue });
+  }, [userData, updateUserDoc]); // Depende do userData atual
+
+  const handleUpdateAppSettings = useCallback((value: AppSettings | ((val: AppSettings) => AppSettings)) => {
+      const current = userData?.appSettings || DEFAULT_APP_SETTINGS;
+      const newValue = value instanceof Function ? value(current) : value;
+      updateUserDoc({ appSettings: newValue });
+  }, [userData, updateUserDoc]);
+
+  // [NOVO] Setters para IDs de notificação (para manter compatibilidade com o código existente)
+  const setReadNotificationIds = useCallback((value: string[] | ((val: string[]) => string[])) => {
+      const current = userData?.readNotificationIds || [];
+      const newValue = value instanceof Function ? value(current) : value;
+      updateUserDoc({ readNotificationIds: newValue });
+  }, [userData, updateUserDoc]);
+
+  const setClearedNotificationIds = useCallback((value: string[] | ((val: string[]) => string[])) => {
+      const current = userData?.clearedNotificationIds || [];
+      const newValue = value instanceof Function ? value(current) : value;
+      updateUserDoc({ clearedNotificationIds: newValue });
+  }, [userData, updateUserDoc]);
+
+  const handleSyncOnboardingData = useCallback(() => {
+      // Logic to finalize onboarding
+      setHasCompletedOnboarding(true);
+      
+      // Placeholder: Handler to sync all initial user preferences to Firebase
+      /*
+      firebase.firestore().collection('users').doc(userId).set({
+          displayName: userName,
+          settings: appSettings,
+          theme: theme,
+          onboardingCompleted: true
+      }, { merge: true });
+      */
+      
+      addToast({ title: 'Tudo pronto!', subtitle: 'Suas preferências foram salvas.', type: 'success' });
+  }, [userName, appSettings, theme]);
+
+  // [NOVO] Efeito de Migração Automática (LocalStorage -> Firebase)
+  // Roda uma vez quando o usuário loga. Se não tiver nada no Firebase, tenta pegar do LocalStorage antigo.
+  useEffect(() => {
+      if (user && userData) { 
+          const migrateIfNeeded = (key: string, defaultVal: any) => {
+              if (userData[key] === undefined) {
+                  // Tenta ler do LocalStorage antigo
+                  const localItem = window.localStorage.getItem(key);
+                  if (localItem) {
+                      try {
+                          const parsed = JSON.parse(localItem);
+                          // console.log(`Migrando ${key} para a nuvem...`);
+                          updateUserDoc({ [key]: parsed });
+                      } catch (e) {
+                          updateUserDoc({ [key]: defaultVal });
+                      }
+                  } else {
+                      // Se não tem local nem na nuvem, inicializa com padrão
+                      updateUserDoc({ [key]: defaultVal });
+                  }
+              }
+          };
+
+          migrateIfNeeded('appSettings', DEFAULT_APP_SETTINGS);
+          migrateIfNeeded('notificationSettings', DEFAULT_NOTIF_SETTINGS);
+          if (userData.readNotificationIds === undefined) updateUserDoc({ readNotificationIds: [] });
+          if (userData.clearedNotificationIds === undefined) updateUserDoc({ clearedNotificationIds: [] });
+      }
+  }, [user, userData, updateUserDoc]); 
 
   const notificationsRef = useRef(notifications);
   useEffect(() => {
@@ -189,7 +267,6 @@ export const App = () => {
         const now = new Date();
         const generated: Notification[] = [];
         
-        // CORREÇÃO: Usando data local para IDs de notificação
         const todayStr = getLocalISODate();
 
         if (notificationSettings.enabled && notificationSettings.taskReminders) {
@@ -955,7 +1032,7 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
     };
     switch (currentView) {
       case 'dashboard':
-        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} onReorderHabits={handleReorderHabits} />;
+        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />;
       case 'calendar':
         return <CalendarView {...commonProps} />;
       case 'list':
@@ -1017,9 +1094,9 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
 
             // --- CONFIGURAÇÕES GERAIS ---
             notificationSettings={notificationSettings} 
-            setNotificationSettings={setNotificationSettings}
+            setNotificationSettings={handleUpdateNotificationSettings}
             appSettings={appSettings} 
-            setAppSettings={setAppSettings}
+            setAppSettings={handleUpdateAppSettings}
             
             // --- CONTA ---
             onLogout={logout}
@@ -1063,7 +1140,7 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
                 onBulkStatusChange={handleBulkStatusChange}
                 onBulkDelete={handleBulkDelete}
                 appSettings={appSettings}
-                setAppSettings={setAppSettings}
+                setAppSettings={handleUpdateAppSettings}
             />
         ) : <ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />;
       case 'taskDetail':
@@ -1099,10 +1176,10 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
             onMarkAllHabitsComplete={handleMarkAllHabitsComplete}
             onOpenHabitSettings={() => setIsHabitSettingsOpen(true)}
             appSettings={appSettings}
-            setAppSettings={setAppSettings}
+            setAppSettings={handleUpdateAppSettings}
         /> : null;
       default:
-        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={setAppSettings} onReorderHabits={handleReorderHabits} />;
+        return <DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />;
     }
   };
   
@@ -1120,6 +1197,19 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
 
   return (
     <div className="min-h-screen bg-ice-blue dark:bg-[#0D1117] text-gray-800 dark:text-gray-200 font-sans p-4">
+
+      {/* Onboarding Wizard Overlay */}
+      <OnboardingWizard 
+          isOpen={!hasCompletedOnboarding}
+          userName={userName}
+          setUserName={setUserName}
+          appSettings={appSettings}
+          setAppSettings={handleUpdateAppSettings}
+          theme={theme}
+          setTheme={setTheme}
+          onComplete={handleSyncOnboardingData}
+      />
+
       {showCelebration && (
         <>
             <Confetti />
