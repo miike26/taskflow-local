@@ -99,6 +99,7 @@ export interface Task {
   activity: Activity[];
   tags?: string[];
   projectId?: string;
+  isPinned?: boolean;
 }
 
 export interface ConfirmationToastData {

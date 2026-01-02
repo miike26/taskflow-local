@@ -120,9 +120,13 @@ export const App = () => {
   // --- DADOS LOCAIS (Settings e Estado de UI) ---
   
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
-  const [pinnedTaskIds, setPinnedTaskIds] = useLocalStorage<string[]>('pinnedTaskIds', []);
- // const [pinnedProjectIds, setPinnedProjectIds] = useLocalStorage<string[]>('pinnedProjectIds', []);
-
+  
+  // --- ALTERAÇÃO: Pinned Tasks agora derivam do Firestore ---
+  const pinnedTaskIds = useMemo(() => {
+    return tasks
+      .filter(task => task.isPinned)
+      .map(task => task.id);
+  }, [tasks]);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -454,24 +458,21 @@ export const App = () => {
             ...st,
             id: `sub-${Date.now()}-${Math.random()}`
         })),
+        isPinned: false, // Ao duplicar, não necessariamente queremos pinar a cópia
     };
     setInitialDataForSheet(duplicatedData);
     setIsSheetOpen(true);
 };
 
+  // --- ALTERAÇÃO: Atualiza o isPinned no Firestore ---
   const handlePinTask = (taskId: string) => {
-    setPinnedTaskIds(prev => {
-        const newPinned = new Set(prev);
-        if (newPinned.has(taskId)) {
-            newPinned.delete(taskId);
-        } else {
-            newPinned.add(taskId);
-        }
-        return Array.from(newPinned);
-    });
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+        updateTaskFire(taskId, { isPinned: !task.isPinned });
+    }
   };
 
-  // Novo handler de Pin sincronizado
+  // Novo handler de Pin sincronizado para Projetos
   const handlePinProject = (project: Project) => {
     // Inverte o estado atual de 'isPinned'. Se for undefined, assume false.
     const newStatus = !(project.isPinned || false);
