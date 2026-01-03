@@ -1022,7 +1022,7 @@ export const App = () => {
       case 'calendar':
         return <CalendarView {...commonProps} />;
       case 'list':
-        return <ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} />;
+        return <ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} projects={projects} />;
       case 'reminders':
         return <RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>;
       case 'reports':

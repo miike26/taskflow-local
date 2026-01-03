@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
-import type { Task, Category, Tag, Status, AppSettings } from '../../types';
+import type { Task, Category, Tag, Status, AppSettings, Project } from '../../types';
 import TaskCard from '../TaskCard';
 import { STATUS_OPTIONS, STATUS_COLORS } from '../../constants';
 // Adicionados os ícones necessários para o mapeamento
 import { KanbanIcon, TableCellsIcon, ChevronDownIcon, CalendarDaysIcon, TrashIcon, ListBulletIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon, FolderIcon, BriefcaseIcon, UserCircleIcon, ListIcon } from '../icons';
 import DateRangeCalendar from '../DateRangeCalendar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { exportTasksToCSV } from '../../utils/export'; // Ajuste o caminho se necessário
 
 
 interface ConfirmationDialogState {
@@ -59,6 +60,7 @@ interface ListViewProps {
   onBulkStatusChange: (taskIds: string[], newStatus: Status) => void;
   onBulkDelete: (taskIds: string[]) => void;
   appSettings?: AppSettings;
+  projects?: Project[]; // [NOVO] Adicionado prop de projetos
 }
 
 type ViewMode = 'kanban' | 'detailed-list';
@@ -149,7 +151,7 @@ const KanbanColumn: React.FC<{
     );
 };
 
-const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTask, onStatusChange, onBulkStatusChange, onBulkDelete, appSettings }) => {
+const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTask, onStatusChange, onBulkStatusChange, onBulkDelete, appSettings, projects }) => {
   const [filterCategories, setFilterCategories] = useLocalStorage<string[]>('listview.filters.categories', []);
   const [filterTags, setFilterTags] = useLocalStorage<string[]>('listview.filters.tags', []);
   const [filterStatuses, setFilterStatuses] = useLocalStorage<Status[]>('listview.filters.statuses', []);
@@ -685,7 +687,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                 </div>
             ) : (
                 <div className="flex-1 flex items-center justify-center">
-                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma tarefa encontrada.</p>
+                      <p className="text-center text-gray-500 dark:text-gray-400 py-10">Nenhuma tarefa encontrada.</p>
                 </div>
             )}
         </div>
@@ -700,7 +702,12 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                 </p>
                 <div className="flex justify-end gap-3">
                     <button onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors">Cancelar</button>
-                    <button onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md">
+                    {/* [MODIFICADO] Botão conectado à função de exportação */}
+                    <button onClick={() => {
+                        const tasksToExport = tasks.filter(t => selectedTaskIds.has(t.id));
+                        exportTasksToCSV(tasksToExport, categories, tags, projects || []);
+                        setIsExportModalOpen(false);
+                    }} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md">
                         <ArrowDownTrayIcon className="w-4 h-4" />
                         Exportar CSV
                     </button>

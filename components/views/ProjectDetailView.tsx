@@ -5,7 +5,6 @@ import {
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
     DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon,
-    // Novos imports adicionados para o mapeamento de ícones
     BriefcaseIcon, UserCircleIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
@@ -14,6 +13,8 @@ import HabitChecklistPopup from '../HabitChecklistPopup';
 import DateRangeCalendar from '../DateRangeCalendar';
 import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
+// [NOVO] Import da função de exportar
+import { exportTasksToCSV } from '../../utils/export';
 
 const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') => {
     const date = new Date(dateString);
@@ -294,7 +295,7 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
     if (!state.isOpen) return null;
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60]">
-            <div className="bg-white dark:bg-[#212D] rounded-xl p-6 shadow-2xl max-w-sm w-full mx-4">
+            <div className="bg-white dark:bg-[#21262D] rounded-xl p-6 shadow-2xl max-w-sm w-full mx-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{state.title}</h3>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{state.message}</p>
                 <div className="mt-6 flex justify-end space-x-3">
@@ -309,6 +310,7 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
     );
 };
 
+// ... (statusConfig, ReminderModal, formatActivityTimestamp, StatusSpan, PROJECT_ICONS, HabitWithStatus, activityConfig, ActivityItem - MANTIDOS IGUAIS) ...
 const statusConfig: Record<Status, { icon: React.ReactNode; color: string; text: string }> = {
     'Pendente': { icon: <StopCircleIcon className="w-5 h-5"/>, color: 'border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50', text: 'Pendente' },
     'Em andamento': { icon: <PlayCircleIcon className="w-5 h-5"/>, color: 'border-yellow-500 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50', text: 'Em Andamento' },
@@ -1480,17 +1482,17 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'category' && (
                                     <div className="absolute top-full left-0 mt-2 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
-                                        {categories.map(cat => {
-                                            // Correção AQUI: Usamos a função auxiliar para resolver o ícone
-                                            const CategoryIcon = getCategoryIcon(cat);
-                                            return (
-                                                <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
-                                                    <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
-                                                    <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
-                                                </label>
-                                            )
-                                        })}
+                                            {categories.map(cat => {
+                                                // Correção AQUI: Usamos a função auxiliar para resolver o ícone
+                                                const CategoryIcon = getCategoryIcon(cat);
+                                                return (
+                                                    <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
+                                                        <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
+                                                        <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
+                                                    </label>
+                                                )
+                                            })}
                                     </div>
                                 )}
                             </div>
@@ -1543,11 +1545,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'creationDate' && (
                                     <div className="absolute top-full left-0 mt-2 bg-transparent z-20">
-                                        <DateRangeCalendar
-                                            range={creationDateRangeFilter}
-                                            onApply={(range) => { setCreationDateRangeFilter(range); setOpenFilter(null); }}
-                                            onClear={() => { setCreationDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
-                                        />
+                                            <DateRangeCalendar
+                                                range={creationDateRangeFilter}
+                                                onApply={(range) => { setCreationDateRangeFilter(range); setOpenFilter(null); }}
+                                                onClear={() => { setCreationDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
+                                            />
                                     </div>
                                 )}
                             </div>
@@ -1561,11 +1563,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'dueDate' && (
                                     <div className="absolute top-full left-0 mt-2 bg-transparent z-20">
-                                        <DateRangeCalendar
-                                            range={dueDateRangeFilter}
-                                            onApply={(range) => { setDueDateRangeFilter(range); setOpenFilter(null); }}
-                                            onClear={() => { setDueDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
-                                        />
+                                            <DateRangeCalendar
+                                                range={dueDateRangeFilter}
+                                                onApply={(range) => { setDueDateRangeFilter(range); setOpenFilter(null); }}
+                                                onClear={() => { setDueDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
+                                            />
                                     </div>
                                 )}
                             </div>
@@ -1623,6 +1625,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 <TrashIcon className="w-4 h-4" />
                                 Excluir
                             </button>
+                            {/* [MODIFICADO] Botão de Exportar */}
                             <button
                                 onClick={() => setIsExportModalOpen(true)}
                                 className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 rounded-md text-sm font-medium transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/60"
@@ -1651,7 +1654,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                             { (['title', 'status', 'categoryId', 'tagId', 'dueDate'] as TableSortKey[]).map(key => (
                                                 <th key={key} scope="col" className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleTableSort(key)}>
                                                     <div className="flex items-center">
-                                                    { {title: 'Tarefa', status: 'Status', categoryId: 'Categoria', tagId: 'Prioridade', dueDate: 'Prazo'}[key] }
+                                                    { {title: 'Nome', status: 'Status', categoryId: 'Categoria', tagId: 'Prioridade', dueDate: 'Prazo'}[key] }
                                                     { tableSortConfig?.key === key && (<span>{tableSortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>) }
                                                     </div>
                                                 </th>
@@ -1804,7 +1807,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                         onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
                                         className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${
                                             activityFilter !== 'all'
-                                            ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300'
+                                            ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-700 dark:text-primary-300'
                                             : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
                                         }`}
                                     >
@@ -1899,7 +1902,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         </p>
                         <div className="flex justify-end gap-3">
                             <button onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors">Cancelar</button>
-                            <button onClick={() => setIsExportModalOpen(false)} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md">
+                            {/* [MODIFICADO] Botão conectado */}
+                            <button onClick={() => {
+                                const tasksToExport = filteredAndSortedTasks.filter(t => selectedTaskIds.has(t.id));
+                                exportTasksToCSV(tasksToExport, categories, tags, [project]); // Passa o array com o projeto atual
+                                setIsExportModalOpen(false);
+                            }} className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg font-bold flex items-center gap-2 transition-all shadow-md">
                                 <ArrowDownTrayIcon className="w-4 h-4" />
                                 Exportar CSV
                             </button>
