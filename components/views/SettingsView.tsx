@@ -3,7 +3,7 @@ import type { Category, Tag, NotificationSettings, AppSettings } from '../../typ
 import { 
     PencilIcon, TrashIcon, PlusIcon, BriefcaseIcon, Cog6ToothIcon, BellIcon, 
     UserCircleIcon, CpuChipIcon, SparklesIcon, ExclamationTriangleIcon,
-    FolderIcon, ArrowRightOnRectangleIcon, CheckIcon, ChevronDownIcon
+    FolderIcon, ArrowRightOnRectangleIcon, CheckIcon, ChevronDownIcon, InformationCircleIcon
 } from '../icons';
 
 interface SettingsViewProps {
@@ -22,6 +22,7 @@ interface SettingsViewProps {
   onLogout: () => void;
   userName: string;
   setUserName: (name: string) => void;
+  onOpenTour: () => void;
 }
 
 type SettingsTab = 'general' | 'notifications' | 'organization' | 'account';
@@ -157,7 +158,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     tags, onAddTag, onDeleteTag,
     notificationSettings, setNotificationSettings,
     appSettings, setAppSettings,
-    onLogout, userName, setUserName
+    onLogout, userName, setUserName, onOpenTour
 }) => {
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     
@@ -419,13 +420,24 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         onChange={(v) => setNotificationSettings(s => ({...s, habitReminders: v}))} 
                                     />
 
-                                    <SettingToggle 
-                                        label="Novidades e Dicas" 
-                                        description="Receber atualizações sobre novas funcionalidades." 
-                                        checked={notificationSettings.marketingEmails} 
-                                        onChange={(v) => setNotificationSettings(s => ({...s, marketingEmails: v}))} 
-                                        colorClass="bg-green-500"
-                                    />
+                                    <div className="py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                                        <SettingToggle 
+                                            label="Novidades e Dicas" 
+                                            description="Receber atualizações sobre novas funcionalidades." 
+                                            checked={notificationSettings.marketingEmails} 
+                                            onChange={(v) => setNotificationSettings(s => ({...s, marketingEmails: v}))} 
+                                            colorClass="bg-green-500"
+                                        />
+                                        <div className="mt-4 pt-2">
+                                            <button 
+                                                onClick={onOpenTour}
+                                                className="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
+                                            >
+                                                <InformationCircleIcon className="w-4 h-4" />
+                                                Ver Introdução (Tour)
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
