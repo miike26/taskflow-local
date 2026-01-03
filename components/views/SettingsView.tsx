@@ -362,9 +362,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         Habilita sugestões inteligentes de tarefas e resumos automáticos de projetos.
                                     </p>
                                     <div className="text-xs text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-black/20 p-2 rounded border border-indigo-100 dark:border-indigo-800/50">
-                                        <strong>Nota de Privacidade:</strong> Ao ativar, dados das tarefas (título, descrição) podem ser processados pela API do Google Gemini para gerar insights. Nenhum dado é usado para treinar modelos públicos.
-                                    </div>
-                                </div>
+                                        <strong>Nota de Privacidade:</strong> Ao ativar, os dados das tarefas são processados pela API do Google Gemini. Recomendamos evitar incluir informações sensíveis ou confidenciais (como senhas ou dados financeiros) nos títulos e descrições.                                    </div>
+                                 </div>
                             </div>
                         </div>
                     </div>

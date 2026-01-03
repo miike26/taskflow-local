@@ -8,11 +8,12 @@ import {
     ArrowRightLeftIcon, FolderIcon, FilterIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon,
     UserCircleIcon, StarIcon, AcademicCapIcon, ChartPieIcon, ClipboardDocumentCheckIcon,
     RocketLaunchIcon, HeartIcon, ArrowPathIcon, ArrowDownTrayIcon,
-    // Adicionados para o mapeamento
     BriefcaseIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
-import { useLocalStorage } from '../../hooks/useLocalStorage';
+// [MODIFICADO] Trocamos useLocalStorage por useFirestore
+//import { useLocalStorage } from '../../hooks/useLocalStorage';
+import { useFirestore } from '../../hooks/useFirestore';
 import DateRangeCalendar from '../DateRangeCalendar';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
 
@@ -63,15 +64,14 @@ const filterTasksByDate = (tasks: Task[], start: Date, end: Date, type: 'created
 
 // --- HELPER: Recupera ícones perdidos na sincronização ---
 const getCategoryIcon = (category?: Category) => {
-    if (!category) return FolderIcon; // Ícone padrão
-    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo (memória local)
+    if (!category) return FolderIcon;
+    if (category.icon) return category.icon;
 
-    // Mapeamento manual para recuperar ícones das categorias padrão
     switch (category.id) {
-        case 'cat-1': return BriefcaseIcon;      // Trabalho
-        case 'cat-2': return UserCircleIcon;     // Pessoal
-        case 'cat-3': return ListIcon;           // Estudo / Lista
-        default: return FolderIcon;              // Categorias personalizadas ganham ícone de Pasta
+        case 'cat-1': return BriefcaseIcon;
+        case 'cat-2': return UserCircleIcon;
+        case 'cat-3': return ListIcon;
+        default: return FolderIcon;
     }
 };
 
@@ -200,7 +200,6 @@ const TrendChart: React.FC<{ data: { label: string; created: number; completed: 
 
     return (
         <div className="h-full flex flex-col w-full">
-            {/* Legend */}
             <div className="flex items-center justify-end gap-6 mb-4 text-xs font-medium text-gray-500 dark:text-gray-400 flex-shrink-0">
                 <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-primary-500"></div>
@@ -212,7 +211,6 @@ const TrendChart: React.FC<{ data: { label: string; created: number; completed: 
                 </div>
             </div>
 
-            {/* Chart Container */}
             <div className="flex-grow flex flex-col min-h-0 relative">
                 <div className="relative flex-grow w-full flex items-end justify-between gap-2 sm:gap-4 px-2 border-b border-gray-200 dark:border-gray-700">
                     <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-px z-0">
@@ -264,21 +262,19 @@ const TrendChart: React.FC<{ data: { label: string; created: number; completed: 
 type ExportPeriodOption = 'all' | 'last-week' | 'last-month' | 'last-semester' | 'current-year' | 'last-year' | 'custom';
 
 const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tasks, categories }) => {
+    // ... (Mantendo a lógica interna do ExportWizard para poupar espaço, pois não alteramos nada aqui)
     const [creationPeriod, setCreationPeriod] = useState<ExportPeriodOption>('all');
     const [duePeriod, setDuePeriod] = useState<ExportPeriodOption>('all');
     const [creationCustom, setCreationCustom] = useState<{ startDate: Date | null, endDate: Date | null }>({ startDate: null, endDate: null });
     const [dueCustom, setDueCustom] = useState<{ startDate: Date | null, endDate: Date | null }>({ startDate: null, endDate: null });
     
-    // Default select all categories and statuses
     const [selectedStatuses, setSelectedStatuses] = useState<Set<Status>>(new Set(['Pendente', 'Em andamento', 'Concluída']));
     const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
 
-    // Init categories with all
     useEffect(() => {
         setSelectedCategories(new Set(categories.map(c => c.id)));
     }, [categories]);
 
-    // Popup states
     const [isCreationPickerOpen, setIsCreationPickerOpen] = useState(false);
     const [isDuePickerOpen, setIsDuePickerOpen] = useState(false);
     const creationPickerRef = useRef<HTMLButtonElement>(null);
@@ -319,7 +315,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
                 break;
         }
         
-        // Normalize time
         start.setHours(0, 0, 0, 0);
         end.setHours(23, 59, 59, 999);
         
@@ -331,21 +326,16 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
         const dueRange = getDateRangeFromPeriod(duePeriod, dueCustom);
 
         return tasks.filter(t => {
-            // Status Filter
             if (!selectedStatuses.has(t.status)) return false;
-            
-            // Category Filter
             if (selectedCategories.size > 0 && !selectedCategories.has(t.categoryId)) return false;
 
-            // Creation Date Filter
             if (creationRange.start && creationRange.end) {
                 const created = new Date(t.dateTime);
                 if (created < creationRange.start || created > creationRange.end) return false;
             }
 
-            // Due Date Filter
             if (dueRange.start && dueRange.end) {
-                if (!t.dueDate) return false; // If filtering by due date, tasks without one are usually excluded
+                if (!t.dueDate) return false; 
                 const due = new Date(t.dueDate);
                 if (due < dueRange.start || due > dueRange.end) return false;
             }
@@ -374,7 +364,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
     const toggleStatus = (status: Status) => {
         const newSet = new Set(selectedStatuses);
         if (newSet.has(status)) {
-            // Prevent deselecting the last item
             if (newSet.size > 1) {
                 newSet.delete(status);
             }
@@ -387,7 +376,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
     const toggleCategory = (id: string) => {
         const newSet = new Set(selectedCategories);
         if (newSet.has(id)) {
-            // Prevent deselecting the last item
             if (newSet.size > 1) {
                 newSet.delete(id);
             }
@@ -415,7 +403,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
         }
     };
 
-    // Close fixed dropdowns on scroll/resize to prevent misalignment
     useEffect(() => {
         const handleScroll = () => {
             if (isCreationPickerOpen || isDuePickerOpen) {
@@ -434,15 +421,12 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
     return (
         <>
             <div className="flex flex-col h-full bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden animate-fade-in relative">
-                {/* Header */}
                 <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Exportação de Dados</h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Selecione os critérios para filtrar as tarefas que deseja exportar.</p>
                 </div>
 
-                {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                    {/* ... (Export Wizard body content remains the same) ... */}
                     <section>
                         <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
                             <FilterIcon className="w-4 h-4" /> Escopo da Exportação
@@ -473,7 +457,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
                                 </div>
                                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar">
                                     {categories.map(cat => {
-                                        // CORREÇÃO AQUI: Usando o helper para resolver o ícone
                                         const CategoryIcon = getCategoryIcon(cat);
                                         return (
                                             <button
@@ -535,7 +518,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
                     </section>
                 </div>
 
-                {/* Footer */}
                 <div className="p-6 bg-gray-50 dark:bg-[#0D1117] border-t border-gray-200 dark:border-gray-700 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="text-center md:text-left">
                         <span className="block text-2xl font-bold text-gray-900 dark:text-white">{tasksToExport.length}</span>
@@ -562,7 +544,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
                 </div>
             </div>
 
-            {/* Fixed Dropdowns (Portaled-like via Fixed Positioning) */}
             {isCreationPickerOpen && creationRect && (
                 <>
                     <div className="fixed inset-0 z-[100]" onClick={() => setIsCreationPickerOpen(false)}></div>
@@ -638,7 +619,6 @@ const ExportWizard: React.FC<{ tasks: Task[], categories: Category[] }> = ({ tas
     );
 };
 
-// ... (AiWizard component logic remains the same) ...
 const AiWizard: React.FC<{
     tasks: Task[];
     categories: Category[];
@@ -646,10 +626,7 @@ const AiWizard: React.FC<{
     onClose: () => void;
     onSave: (summary: SavedSummary) => void;
 }> = ({ tasks, categories, projects = [], onClose, onSave }) => {
-    // ... (All AiWizard logic remains unchanged as in previous file content) ...
-    // To save tokens and output, I'm abbreviating the internal logic which isn't changing.
-    // Assuming the full content of AiWizard is preserved here.
-    // ...
+    // ... (All AiWizard logic remains unchanged) ...
     const [step, setStep] = useState(1);
     const [period, setPeriod] = useState<PeriodOption>('last-week');
     const [customRange, setCustomRange] = useState<{ startDate: Date | null, endDate: Date | null }>({ startDate: null, endDate: null });
@@ -668,7 +645,6 @@ const AiWizard: React.FC<{
     const customDateRef = useRef<HTMLDivElement>(null);
     const wizardCheckboxClass = "appearance-none h-4 w-4 rounded border-2 border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-[#161B22] cursor-pointer transition-colors";
 
-    // ... (Hooks and useEffects are the same) ...
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (customDateRef.current && !customDateRef.current.contains(event.target as Node)) {
@@ -1033,7 +1009,6 @@ const AiWizard: React.FC<{
 
     return (
         <div className="h-full flex flex-col bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 overflow-hidden relative">
-            {/* ... (Render AiWizard content - preserved for brevity, logic unchanged) ... */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <div className="flex items-center gap-4">
                     {step > 1 && (
@@ -1057,7 +1032,7 @@ const AiWizard: React.FC<{
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                {/* Simplified rendering of AiWizard Steps to ensure file structure remains valid but code is preserved */}
+                {/* ... (Steps logic preserved) ... */}
                 {step === 1 && (
                     <div className="space-y-6">
                         {/* Period Selection */}
@@ -1066,7 +1041,6 @@ const AiWizard: React.FC<{
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4">
                                 <SelectableCard title="Semana Passada" selected={period === 'last-week'} onClick={() => setPeriod('last-week')} />
                                 <SelectableCard title="Mês Passado" selected={period === 'last-month'} onClick={() => setPeriod('last-month')} />
-                                {/* ... other period cards ... */}
                                 <SelectableCard title="Último Semestre" selected={period === 'last-semester'} onClick={() => setPeriod('last-semester')} />
                                 <SelectableCard title="Ano Atual" selected={period === 'current-year'} onClick={() => setPeriod('current-year')} />
                                 <SelectableCard title="Ano Passado" selected={period === 'last-year'} onClick={() => setPeriod('last-year')} />
@@ -1083,24 +1057,24 @@ const AiWizard: React.FC<{
                                     />
                                     {isCustomDateOpen && period === 'custom' && (
                                         <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in origin-top-right">
-                                            <DateRangeCalendar
-                                                range={customRange}
+                                            <DateRangeCalendar 
+                                                range={customRange} 
                                                 onApply={(range) => {
                                                     setCustomRange(range);
                                                     setIsCustomDateOpen(false);
-                                                }}
+                                                }} 
                                                 onClear={() => {
                                                     setCustomRange({ startDate: null, endDate: null });
-                                                }}
+                                                }} 
                                             />
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
-                        {/* Filters and Task List (Preserved) */}
+                        {/* Filters and Task List */}
                         <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                            {/* ... Content of filters ... */}
+                             {/* ... Content of filters ... */}
                             <label className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 block">Filtrar Conteúdo</label>
                             <div className="flex flex-wrap gap-6">
                                 {/* ... Status/Category filters ... */}
@@ -1162,7 +1136,6 @@ const AiWizard: React.FC<{
                         {/* ... (Task List implementation preserved) ... */}
                          <div>
                             <div className="flex flex-col gap-3 mb-3">
-                                {/* ... Search and Select All ... */}
                                 <div className="flex justify-between items-center">
                                     <label className="text-sm font-bold text-gray-500 uppercase tracking-wider block">Tarefas Encontradas ({searchedTasks.length})</label>
                                     <span className={`text-xs font-bold ${selectedTasks.size === 0 ? 'text-red-500' : 'text-primary-600'}`}>
@@ -1197,7 +1170,6 @@ const AiWizard: React.FC<{
                             </div>
                             
                             <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden bg-white dark:bg-[#0D1117] max-h-[400px] overflow-y-auto custom-scrollbar">
-                                {/* ... Grouped Tasks Mapping ... */}
                                 {groupedTasks.length > 0 ? groupedTasks.map(([projectId, projectTasks]) => {
                                     const project = projects.find(p => p.id === projectId);
                                     const projectName = project ? project.name : (projectId === 'sem-projeto' ? 'Sem Projeto' : 'Projeto Desconhecido');
@@ -1272,13 +1244,13 @@ const AiWizard: React.FC<{
                         </div>
                     </div>
                 )}
-                {/* ... (Steps 2, 3, 4, 5 logic remain exactly same) ... */}
+                
+                {/* Steps 2, 3, 4, 5 */}
                 {step === 2 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <SelectableCard title="Self Review Profissional" desc="Estrutura ideal para avaliações de desempenho. Foca em entregas concretas, desafios técnicos superados e auto-crítica construtiva." selected={summaryType === 'self-review'} onClick={() => setSummaryType('self-review')} variant="large" className="min-h-[180px]" icon={UserCircleIcon} />
                         <SelectableCard title="Destaques e Impacto" desc="Foco total nas 'Big Wins'. Ignora tarefas rotineiras e ressalta apenas o que gerou valor real ou mudou o ponteiro." selected={summaryType === 'highlights'} onClick={() => setSummaryType('highlights')} variant="large" className="min-h-[180px]" icon={StarIcon} />
                         <SelectableCard title="Aprendizados e Evolução" desc="Reflexivo. Analisa não só o que foi feito, mas o que foi aprendido, novas habilidades adquiridas e áreas de melhoria." selected={summaryType === 'learnings'} onClick={() => setSummaryType('learnings')} variant="large" className="min-h-[180px]" icon={AcademicCapIcon} />
-                        {/* ... */}
                         <SelectableCard title="Resumo Objetivo" desc="Texto curto, direto ao ponto, orientado a dados (quantas tarefas, tempo gasto) e métricas. Sem narrativa longa." selected={summaryType === 'objective'} onClick={() => setSummaryType('objective')} variant="large" className="min-h-[180px]" icon={ChartPieIcon} />
                         <SelectableCard title="Linha do Tempo" desc="Narrativa cronológica dos acontecimentos. Útil para entender a sequência de eventos de um projeto longo." selected={summaryType === 'timeline'} onClick={() => setSummaryType('timeline')} variant="large" className="min-h-[180px]" icon={ClockIcon} />
                     </div>
@@ -1345,7 +1317,6 @@ const AiWizard: React.FC<{
                 )}
                 {step === 5 && (
                     <div className="space-y-6">
-                        {/* 1. Moved to Top: Controls */}
                         <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
                             <input 
                                 type="text" 
@@ -1371,12 +1342,10 @@ const AiWizard: React.FC<{
                             </div>
                         </div>
 
-                        {/* 2. Content with enforced spacing */}
                         <div className="bg-white dark:bg-[#0D1117] border border-gray-200 dark:border-gray-700 p-6 rounded-xl prose prose-sm dark:prose-invert max-w-none [&_h3]:mt-8 [&_h3]:mb-4 [&_p]:mb-4 [&_ul]:mb-4 [&_li]:mb-2">
                             <div dangerouslySetInnerHTML={{ __html: generatedContent }} />
                         </div>
 
-                        {/* 3. New Refinement Section */}
                         <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
                             <label className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 block">Ajustar Resultado</label>
                             <div className="flex flex-col md:flex-row gap-3">
@@ -1401,7 +1370,6 @@ const AiWizard: React.FC<{
                 )}
             </div>
 
-            {/* Footer Nav */}
             {step < 4 && (
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
                     <button onClick={onClose} className="px-6 py-2.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg font-medium">Cancelar</button>
@@ -1444,13 +1412,19 @@ const ExpandedTaskList: React.FC<{ tasks: Task[], emptyMessage: string, onSelect
     )
 };
 
-// ... (Rest of ReportsView component remains same) ...
 const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSelectTask, projects, appSettings }) => {
     
     const [activeTab, setActiveTab] = useState<ReportTab>('productivity');
     const [chartViewMode, setChartViewMode] = useState<'weekly' | 'daily'>('weekly');
     const [selectedWeekIndex, setSelectedWeekIndex] = useState(3);
-    const [savedSummaries, setSavedSummaries] = useLocalStorage<SavedSummary[]>('ai_saved_summaries', []);
+    
+    // [MODIFICADO] Hook conectado ao Firestore com ordenação por data
+    const { 
+        data: savedSummaries, 
+        add: addSummary, 
+        remove: removeSummary 
+    } = useFirestore<SavedSummary>('summaries', [], 'date', 'desc');
+
     const [isCreatingSummary, setIsCreatingSummary] = useState(false);
     const [selectedSummary, setSelectedSummary] = useState<SavedSummary | null>(null);
     const [isCopied, setIsCopied] = useState(false);
@@ -1460,9 +1434,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
 
     const highPriorityTagId = useMemo(() => tags.find(t => t.name.toLowerCase() === 'alta')?.id, [tags]);
 
-    // ... (reportData calculation logic same as before) ...
+    // ... (reportData calculation logic remains same) ...
     const reportData = useMemo(() => {
-        // ... (logic preserved) ...
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
@@ -1559,7 +1532,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
             title: 'Excluir Resumo',
             message: 'Tem certeza que deseja excluir este resumo permanentemente?',
             onConfirm: () => {
-                setSavedSummaries(current => current.filter(s => s.id !== selectedSummary.id));
+                // [MODIFICADO] Usa a função do hook para remover
+                removeSummary(selectedSummary.id);
                 setSelectedSummary(null);
             }
         });
@@ -1682,7 +1656,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
                                 projects={projects}
                                 onClose={() => setIsCreatingSummary(false)} 
                                 onSave={(summary) => {
-                                    setSavedSummaries([summary, ...savedSummaries]);
+                                    // [MODIFICADO] Adiciona ao Firestore
+                                    addSummary(summary);
                                     setIsCreatingSummary(false);
                                 }}
                             />

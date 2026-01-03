@@ -21,7 +21,6 @@ import OnboardingWizard from './components/OnboardingWizard';
 import { useLocalStorage } from './hooks/useLocalStorage.ts';
 import { useFirestore } from './hooks/useFirestore.ts';
 import { useAuth } from './hooks/useAuth.ts';
-// [NOVO] Importando o hook para gerenciar documento do usuário
 import { useUserDocument } from './hooks/useUserDocument.ts'; 
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
@@ -56,18 +55,25 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
 type NotificationToastDataType = { notification: Notification, task?: Task, category?: Category, key: string };
 
 export const App = () => {
+  // O tema continua no localStorage pois é preferência de dispositivo
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
+  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [previousView, setPreviousView] = useState<View>('dashboard');
   
   // --- INTEGRAÇÃO COM FIREBASE ---
   const { user, loading: authLoading, logout } = useAuth();
-  const [userName, setUserName] = useLocalStorage<string>('userName', 'Admin');
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage<boolean>('hasCompletedOnboarding', false);
-
-
-  // [NOVO] Hook para acessar dados do perfil (Settings e Notificações)
+  
+  // Hook para acessar dados do perfil (Settings, Notificações e Nome)
   const { data: userData, updateDocument: updateUserDoc } = useUserDocument();
+
+  // [MODIFICADO] Lógica de Dados do Usuário
+  // Removemos o useLocalStorage para userName e onboarding. Agora usamos o userData como fonte da verdade.
+  // Se userData ainda não carregou, usamos user.displayName do Auth ou um fallback.
+  const userName = userData?.displayName || user?.displayName || 'Usuário';
+  
+  // Verifica se o onboarding foi completado no documento do Firestore
+  const hasCompletedOnboarding = userData?.hasCompletedOnboarding === true;
 
   // --- FUNÇÃO AUXILIAR DE DATA LOCAL (FUSO HORÁRIO) ---
   const getLocalISODate = useCallback(() => {
@@ -75,12 +81,6 @@ export const App = () => {
     const offset = d.getTimezoneOffset() * 60000; 
     return new Date(d.getTime() - offset).toISOString().split('T')[0];
   }, []);
-
-  useEffect(() => {
-    if (user?.displayName) {
-        setUserName(user.displayName);
-    }
-  }, [user, setUserName]);
 
   // 1. Tarefas (Firestore)
   const { 
@@ -96,7 +96,7 @@ export const App = () => {
   const {
     data: projects,
     add: addProjectFire,
-    update: updateProjectFire,
+    update: updateProjectFire, 
     remove: removeProjectFire
   } = useFirestore<Project>('projects', DEFAULT_PROJECTS);
 
@@ -140,7 +140,6 @@ export const App = () => {
   const [initialDataForSheet, setInitialDataForSheet] = useState<Task | null>(null);
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
-  // [MODIFICADO] Definição de valores padrão para uso quando o Firebase estiver vazio
   const DEFAULT_NOTIF_SETTINGS: NotificationSettings = { 
       enabled: true, remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
   };
@@ -149,7 +148,6 @@ export const App = () => {
       disableOverdueColor: false, timeFormat: '24h', weekStart: 'monday', enableAi: true, enableAnimations: true 
   };
 
-  // [MODIFICADO] Variáveis derivadas do userData (Firebase) em vez de useLocalStorage
   const notificationSettings: NotificationSettings = userData?.notificationSettings || DEFAULT_NOTIF_SETTINGS;
   const appSettings: AppSettings = userData?.appSettings || DEFAULT_APP_SETTINGS;
   const readNotificationIds: string[] = userData?.readNotificationIds || [];
@@ -167,14 +165,13 @@ export const App = () => {
   
   const isFirstLoad = useRef(true);
 
-  // [MODIFICADO] Handlers sincronizados com Firebase (substituem os antigos e o useLocalStorage)
-  // Eles aceitam tanto o valor direto quanto uma função (prev => next), calculam e salvam na nuvem.
+  // --- HANDLERS SINCRONIZADOS COM FIREBASE ---
 
   const handleUpdateNotificationSettings = useCallback((value: NotificationSettings | ((val: NotificationSettings) => NotificationSettings)) => {
       const current = userData?.notificationSettings || DEFAULT_NOTIF_SETTINGS;
       const newValue = value instanceof Function ? value(current) : value;
       updateUserDoc({ notificationSettings: newValue });
-  }, [userData, updateUserDoc]); // Depende do userData atual
+  }, [userData, updateUserDoc]); 
 
   const handleUpdateAppSettings = useCallback((value: AppSettings | ((val: AppSettings) => AppSettings)) => {
       const current = userData?.appSettings || DEFAULT_APP_SETTINGS;
@@ -182,7 +179,11 @@ export const App = () => {
       updateUserDoc({ appSettings: newValue });
   }, [userData, updateUserDoc]);
 
-  // [NOVO] Setters para IDs de notificação (para manter compatibilidade com o código existente)
+  // [NOVO] Handler para atualizar o Nome do Usuário no Firebase
+  const handleUpdateUserName = useCallback((newName: string) => {
+      updateUserDoc({ displayName: newName });
+  }, [updateUserDoc]);
+
   const setReadNotificationIds = useCallback((value: string[] | ((val: string[]) => string[])) => {
       const current = userData?.readNotificationIds || [];
       const newValue = value instanceof Function ? value(current) : value;
@@ -195,41 +196,47 @@ export const App = () => {
       updateUserDoc({ clearedNotificationIds: newValue });
   }, [userData, updateUserDoc]);
 
+  // [MODIFICADO] Finaliza o onboarding salvando no Firebase
   const handleSyncOnboardingData = useCallback(() => {
-      // Logic to finalize onboarding
-      setHasCompletedOnboarding(true);
-      
-      // Placeholder: Handler to sync all initial user preferences to Firebase
-      /*
-      firebase.firestore().collection('users').doc(userId).set({
-          displayName: userName,
-          settings: appSettings,
-          theme: theme,
-          onboardingCompleted: true
-      }, { merge: true });
-      */
-      
+      updateUserDoc({ hasCompletedOnboarding: true });
       addToast({ title: 'Tudo pronto!', subtitle: 'Suas preferências foram salvas.', type: 'success' });
-  }, [userName, appSettings, theme]);
+  }, [updateUserDoc]);
 
-  // [NOVO] Efeito de Migração Automática (LocalStorage -> Firebase)
-  // Roda uma vez quando o usuário loga. Se não tiver nada no Firebase, tenta pegar do LocalStorage antigo.
+  // [NOVO] Função de Logout Seguro (Corrige o "Ghost Data")
+  const handleCompleteLogout = useCallback(async () => {
+    try {
+        // 1. Limpa resquícios do usuário no LocalStorage
+        window.localStorage.removeItem('recentTaskIds');
+        window.localStorage.removeItem('globalCategoryFilter');
+        // Limpa chaves antigas se existirem
+        window.localStorage.removeItem('userName'); 
+        window.localStorage.removeItem('hasCompletedOnboarding');
+        
+        // 2. Reseta estados locais críticos
+        setRecentTaskIds([]);
+        setNotifications([]);
+        
+        // 3. Logout do Firebase
+        await logout();
+    } catch (error) {
+        console.error("Erro ao sair:", error);
+    }
+  }, [logout, setRecentTaskIds]);
+
+  // Efeito de Migração Automática (LocalStorage -> Firebase)
   useEffect(() => {
       if (user && userData) { 
           const migrateIfNeeded = (key: string, defaultVal: any) => {
               if (userData[key] === undefined) {
-                  // Tenta ler do LocalStorage antigo
                   const localItem = window.localStorage.getItem(key);
                   if (localItem) {
                       try {
                           const parsed = JSON.parse(localItem);
-                          // console.log(`Migrando ${key} para a nuvem...`);
                           updateUserDoc({ [key]: parsed });
                       } catch (e) {
                           updateUserDoc({ [key]: defaultVal });
                       }
                   } else {
-                      // Se não tem local nem na nuvem, inicializa com padrão
                       updateUserDoc({ [key]: defaultVal });
                   }
               }
@@ -535,13 +542,12 @@ export const App = () => {
             ...st,
             id: `sub-${Date.now()}-${Math.random()}`
         })),
-        isPinned: false, // Ao duplicar, não necessariamente queremos pinar a cópia
+        isPinned: false, 
     };
     setInitialDataForSheet(duplicatedData);
     setIsSheetOpen(true);
 };
 
-  // --- ALTERAÇÃO: Atualiza o isPinned no Firestore ---
   const handlePinTask = (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
@@ -549,9 +555,7 @@ export const App = () => {
     }
   };
 
-  // Novo handler de Pin sincronizado para Projetos
   const handlePinProject = (project: Project) => {
-    // Inverte o estado atual de 'isPinned'. Se for undefined, assume false.
     const newStatus = !(project.isPinned || false);
     updateProjectFire(project.id, { isPinned: newStatus });
   };
@@ -572,7 +576,6 @@ export const App = () => {
     }
     addTaskFire(task);
     
-    // Atualizar activity do projeto no Firestore
     if (task.projectId) {
         const projectToUpdate = projects.find(p => p.id === task.projectId);
         if (projectToUpdate) {
@@ -612,7 +615,6 @@ export const App = () => {
         setSelectedTask(prev => prev ? { ...prev, ...updates } : null);
     }
 
-    // Lógica complexa de Projetos (Mudança de vinculo)
     if (currentTask && 'projectId' in updates && updates.projectId !== currentTask.projectId) {
         const oldProjectId = currentTask.projectId;
         const newProjectId = updates.projectId;
@@ -654,7 +656,6 @@ export const App = () => {
         }
     }
 
-    // Lógica complexa de Projetos (Mudança de Status da tarefa dentro do projeto)
     if (currentTask && updates.status && updates.status !== currentTask.status && currentTask.projectId && (!('projectId' in updates) || updates.projectId === currentTask.projectId)) {
          const projectToUpdate = projects.find(p => p.id === currentTask.projectId);
          if (projectToUpdate) {
@@ -887,7 +888,6 @@ export const App = () => {
   };
 
   const habitsWithStatus = useMemo(() => {
-      // CORREÇÃO: Usando data local
       const todayStr = getLocalISODate();
 
       const wasTaskCompletedToday = tasks.some(task => {
@@ -897,7 +897,6 @@ export const App = () => {
           
           if (!completionActivity) return false;
           
-          // Correção: Comparar também a atividade em horário local
           const actDate = new Date(completionActivity.timestamp);
           const offset = actDate.getTimezoneOffset() * 60000;
           const actDateStr = new Date(actDate.getTime() - offset).toISOString().split('T')[0];
@@ -920,9 +919,7 @@ export const App = () => {
       });
   }, [tasks, habits, getLocalISODate]);
 
- // Handler de Hábito: Atualiza diretamente no Firebase
   const handleToggleHabit = (habitId: string) => {
-      // CORREÇÃO: Usando data local
       const todayStr = getLocalISODate();
 
       const habit = habits.find(h => h.id === habitId);
@@ -932,14 +929,12 @@ export const App = () => {
       let updates = {};
 
       if (isCurrentlyCompleted) {
-          // PARA DESMARCAR
           if (habit.type === 'manual') {
               updates = { lastCompletedDate: null }; 
           } else { 
               updates = { overrideDate: todayStr, lastCompletedDate: null };
           }
       } else {
-          // PARA MARCAR
           updates = { lastCompletedDate: todayStr, overrideDate: null };
       }
       
@@ -947,7 +942,6 @@ export const App = () => {
   };
   
   const handleMarkHabitComplete = (habitId: string) => {
-    // CORREÇÃO: Usando data local
     const todayStr = getLocalISODate();
 
     updateHabitFire(habitId, { lastCompletedDate: todayStr, overrideDate: null } as any);
@@ -958,7 +952,6 @@ export const App = () => {
   };
   
   const handleMarkAllHabitsComplete = () => {
-    // CORREÇÃO: Usando data local
     const todayStr = getLocalISODate();
     
     habits.forEach(h => {
@@ -970,13 +963,11 @@ export const App = () => {
     addToast({ title: 'Rotinas Concluídas!', type: 'success' });
   };
 
-const handleSaveHabits = (updatedHabits: Habit[]) => {
-      // 1. Identificar Removidos: Estão em 'habits' mas não em 'updatedHabits'
+  const handleSaveHabits = (updatedHabits: Habit[]) => {
       const updatedIds = new Set(updatedHabits.map(h => h.id));
       const habitsToDelete = habits.filter(h => !updatedIds.has(h.id));
       habitsToDelete.forEach(h => removeHabitFire(h.id));
 
-      // 2. Adicionar ou Atualizar
       updatedHabits.forEach((habitFromModal, index) => {
           
           const habitToSave = { ...habitFromModal, order: index };
@@ -1001,18 +992,13 @@ const handleSaveHabits = (updatedHabits: Habit[]) => {
       addToast({ title: 'Rotinas Salvas', subtitle: 'Suas alterações foram salvas com sucesso.', type: 'success' });
   };
 
-  // Add the reorder function here
-const handleReorderHabits = (fromIndex: number, toIndex: number) => {
-      // 1. Cria uma cópia da lista atual
+  const handleReorderHabits = (fromIndex: number, toIndex: number) => {
       const reorderedList = [...habits];
       
-      // 2. Move o item dentro do array localmente
       const [movedItem] = reorderedList.splice(fromIndex, 1);
       reorderedList.splice(toIndex, 0, movedItem);
 
-      // 3. Percorre a lista nova e atualiza o 'order' no Firebase para cada item
       reorderedList.forEach((habit, index) => {
-          // Só chama o update se a ordem realmente mudou (economiza leituras/escritas)
           if (habit.order !== index) {
               updateHabitFire(habit.id, { order: index } as any);
           }
@@ -1048,15 +1034,9 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
             // --- CATEGORIAS ---
             categories={categories} 
             onAddCategory={(newCat) => {
-                // 1. Remove o ícone (o Firestore não aceita componentes React)
                 const { icon, ...catData } = newCat; 
-                
-                // 2. Salva a nova categoria
                 addCategoryFire(catData as Category);
 
-                // 3. A CORREÇÃO MÁGICA 🪄: 
-                // Se as categorias padrão ainda estão visíveis (estavam rodando localmente),
-                // nós as salvamos no Firebase agora para elas não sumirem.
                 const defaultIds = ['cat-1', 'cat-2', 'cat-3'];
                 const defaults = categories.filter(c => defaultIds.includes(c.id));
                 
@@ -1077,7 +1057,6 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
             onAddTag={(newTag) => {
                 addTagFire(newTag);
 
-                // Aplicamos a mesma lógica para as Tags, por segurança
                 const defaultTagIds = ['tag-1', 'tag-2', 'tag-3'];
                 const defaultTags = tags.filter(t => defaultTagIds.includes(t.id));
                 
@@ -1099,9 +1078,9 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
             setAppSettings={handleUpdateAppSettings}
             
             // --- CONTA ---
-            onLogout={logout}
+            onLogout={handleCompleteLogout} // [MODIFICADO] Usa o logout seguro
             userName={userName}
-            setUserName={setUserName}
+            setUserName={handleUpdateUserName} // [MODIFICADO] Atualiza no Firestore
         />;
       case 'projectDetail':
         return selectedProject ? (
@@ -1195,14 +1174,25 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
     return <LoginScreen login={async () => false} />;
   }
 
+  // [MODIFICADO] Previne "Ghost Data" (flash de dados antigos)
+  // Só renderiza o app se tivermos o userData carregado.
+  if (user && !userData) {
+      return (
+          <div className="flex h-screen items-center justify-center bg-ice-blue dark:bg-[#0D1117]">
+             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+          </div>
+      );
+  }
+
   return (
     <div className="min-h-screen bg-ice-blue dark:bg-[#0D1117] text-gray-800 dark:text-gray-200 font-sans p-4">
 
       {/* Onboarding Wizard Overlay */}
+      {/* Verifica se userData está carregado para não mostrar o wizard desnecessariamente */}
       <OnboardingWizard 
-          isOpen={!hasCompletedOnboarding}
+          isOpen={userData !== undefined && !hasCompletedOnboarding}
           userName={userName}
-          setUserName={setUserName}
+          setUserName={handleUpdateUserName} // [MODIFICADO] Salva no Firestore
           appSettings={appSettings}
           setAppSettings={handleUpdateAppSettings}
           theme={theme}
@@ -1255,7 +1245,7 @@ const handleReorderHabits = (fromIndex: number, toIndex: number) => {
           selectedTask={selectedTask}
           onClearRecents={handleClearRecentTasks}
           userName={userName}
-          onLogout={logout} 
+          onLogout={handleCompleteLogout} // [MODIFICADO] Logout seguro
         />
         <main className="flex-1 flex flex-col overflow-hidden">
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (
