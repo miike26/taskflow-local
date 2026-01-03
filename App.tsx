@@ -202,9 +202,12 @@ export const App = () => {
       addToast({ title: 'Tudo pronto!', subtitle: 'Suas preferências foram salvas.', type: 'success' });
   }, [updateUserDoc]);
 
-  // [NOVO] Função de Logout Seguro (Corrige o "Ghost Data")
+  // [MODIFICADO] Função de Logout Seguro e Reset de View
   const handleCompleteLogout = useCallback(async () => {
     try {
+        // 0. Reseta a view para o dashboard imediatamente
+        setCurrentView('dashboard');
+        
         // 1. Limpa resquícios do usuário no LocalStorage
         window.localStorage.removeItem('recentTaskIds');
         window.localStorage.removeItem('globalCategoryFilter');
@@ -222,6 +225,13 @@ export const App = () => {
         console.error("Erro ao sair:", error);
     }
   }, [logout, setRecentTaskIds]);
+
+  // [NOVO] Efeito para garantir que ao entrar (login), o usuário vá para o Dashboard
+  useEffect(() => {
+    if (user) {
+        setCurrentView('dashboard');
+    }
+  }, [user]); // Roda quando o objeto 'user' muda (login/logout)
 
   // Efeito de Migração Automática (LocalStorage -> Firebase)
   useEffect(() => {

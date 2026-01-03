@@ -109,7 +109,7 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
               subTasks: [],
               activity: [],
               tags: [],
-              projectId: undefined,
+              projectId: '',
             });
             setCalendarDisplayDate(tomorrow);
         }
@@ -520,7 +520,7 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                     <div className="flex items-center flex-shrink-0 ml-1">
                                          {currentProject && !isProjectDropdownOpen ? (
                                             <button 
-                                                onClick={(e) => { e.stopPropagation(); handleUpdate({ projectId: undefined }); }}
+                                                onClick={(e) => { e.stopPropagation(); handleUpdate({ projectId: '' }); }}
                                                 className="text-gray-400 hover:text-red-500 transition-colors p-0.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                                                 title="Desvincular"
                                             >

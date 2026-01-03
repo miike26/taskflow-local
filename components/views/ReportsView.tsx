@@ -4,10 +4,10 @@ import type { Task, Tag, Category, Status, Project, SavedSummary, PeriodOption, 
 import { 
     ClockIcon, BarChartIcon, CalendarDaysIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, 
     ExclamationTriangleIcon, ChevronLeftIcon, ChevronRightIcon, 
-    SparklesIcon, ArrowTopRightOnSquareIcon, CheckIcon, TrashIcon, DocumentDuplicateIcon,
-    ArrowRightLeftIcon, FolderIcon, FilterIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon,
+    SparklesIcon, CheckIcon, TrashIcon, DocumentDuplicateIcon,
+    FolderIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon,
     UserCircleIcon, StarIcon, AcademicCapIcon, ChartPieIcon, ClipboardDocumentCheckIcon,
-    RocketLaunchIcon, HeartIcon, ArrowPathIcon, ArrowDownTrayIcon,
+    RocketLaunchIcon, HeartIcon, ArrowPathIcon,
     BriefcaseIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
@@ -73,6 +73,40 @@ const getCategoryIcon = (category?: Category) => {
         case 'cat-3': return ListIcon;
         default: return FolderIcon;
     }
+};
+
+const getColorClass = (colorName: string) => {
+    const map: Record<string, string> = {
+        blue: 'text-blue-500',
+        green: 'text-emerald-500',
+        purple: 'text-purple-500',
+        red: 'text-red-500',
+        yellow: 'text-yellow-500',
+        gray: 'text-gray-500',
+        pink: 'text-pink-500',
+        indigo: 'text-indigo-500',
+        cyan: 'text-cyan-500',
+        teal: 'text-teal-500',
+        orange: 'text-orange-500',
+    };
+    return map[colorName] || 'text-gray-400';
+};
+
+const getBgColorClass = (colorName: string) => {
+    const map: Record<string, string> = {
+        blue: 'bg-blue-500',
+        green: 'bg-emerald-500',
+        purple: 'bg-purple-500',
+        red: 'bg-red-500',
+        yellow: 'bg-yellow-500',
+        gray: 'bg-gray-500',
+        pink: 'bg-pink-500',
+        indigo: 'bg-indigo-500',
+        cyan: 'bg-cyan-500',
+        teal: 'bg-teal-500',
+        orange: 'bg-orange-500',
+    };
+    return map[colorName] || 'bg-gray-400';
 };
 
 // --- Sub-components for Layout ---
@@ -187,6 +221,89 @@ const DonutChartSmall: React.FC<{ percentage: number, colorClass: string }> = ({
             </svg>
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-700 dark:text-gray-300">
                 {Math.round(percentage)}%
+            </div>
+        </div>
+    );
+};
+
+const CategoryDonutChart: React.FC<{ data: { label: string; value: number; color: string; percentage: number }[], total: number }> = ({ data, total }) => {
+    const sqSize = 200;
+    const strokeWidth = 20;
+    const radius = (sqSize - strokeWidth) / 2;
+    const viewBox = `0 0 ${sqSize} ${sqSize}`;
+    const circumference = radius * Math.PI * 2;
+
+    let cumulativePercent = 0;
+
+    return (
+        <div className="flex flex-col sm:flex-row items-center gap-8 h-full">
+            <div className="relative w-[200px] h-[200px] flex-shrink-0">
+                <svg width="100%" height="100%" viewBox={viewBox} className="transform -rotate-90">
+                    {/* Background Circle */}
+                    <circle 
+                        className="text-gray-100 dark:text-gray-800" 
+                        cx={sqSize / 2} cy={sqSize / 2} r={radius} 
+                        strokeWidth={`${strokeWidth}px`} fill="none" stroke="currentColor" 
+                    />
+                    
+                    {data.map((item, index) => {
+                        const dashArray = `${(item.percentage / 100) * circumference} ${circumference}`;
+                        const rotate = cumulativePercent * 3.6; // 360 / 100
+                        const circle = (
+                            <circle
+                                key={index}
+                                className={`${getColorClass(item.color)} transition-all duration-700 ease-out`}
+                                cx={sqSize / 2} cy={sqSize / 2} r={radius} 
+                                strokeWidth={`${strokeWidth}px`} fill="none"
+                                stroke="currentColor" 
+                                strokeDasharray={dashArray}
+                                strokeDashoffset={0} // Offset is handled by rotation logic usually, but here we stack cumulative rotations or offsets. 
+                                // Simplified approach: rotate the circle element itself
+                                style={{ 
+                                    transformOrigin: 'center',
+                                    transform: `rotate(${rotate}deg)`,
+                                }}
+                            />
+                        );
+                        cumulativePercent += item.percentage;
+                        return circle;
+                    })}
+                    
+                    {total === 0 && (
+                        <circle 
+                            className="text-gray-200 dark:text-gray-700" 
+                            cx={sqSize / 2} cy={sqSize / 2} r={radius} 
+                            strokeWidth={`${strokeWidth}px`} fill="none" stroke="currentColor" 
+                        />
+                    )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-3xl font-bold text-gray-800 dark:text-white">{total}</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Concluídas</span>
+                </div>
+            </div>
+
+            <div className="flex-1 w-full sm:w-auto overflow-y-auto max-h-[220px] custom-scrollbar pr-2">
+                <div className="space-y-3">
+                    {data.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between group">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${getBgColorClass(item.color)} flex-shrink-0`}></div>
+                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate max-w-[120px]" title={item.label}>
+                                    {item.label}
+                                </span>
+                                <span className="text-gray-400">– </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-bold text-gray-900 dark:text-white">{item.value}</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400 w-9 text-right">{Math.round(item.percentage)}%</span>
+                            </div>
+                        </div>
+                    ))}
+                    {data.length === 0 && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">Nenhum dado disponível.</p>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -1027,8 +1144,8 @@ const AiWizard: React.FC<{
 const ExpandedTaskList: React.FC<{ tasks: Task[], emptyMessage: string, onSelectTask: (task: Task) => void, categories: Category[], tags: Tag[], disableOverdueColor?: boolean }> = ({ tasks, emptyMessage, onSelectTask, categories, tags, disableOverdueColor }) => {
     return (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex-grow min-h-0 overflow-hidden flex flex-col">
-            <div className="overflow-y-auto px-2 space-y-2 flex-grow">
-                {tasks.length > 0 ? tasks.slice(0, 5).map(t => (
+            <div className="overflow-y-auto px-2 space-y-2 flex-grow custom-scrollbar">
+                {tasks.length > 0 ? tasks.map(t => (
                     <TaskCard 
                         key={t.id} 
                         task={t} 
@@ -1041,10 +1158,7 @@ const ExpandedTaskList: React.FC<{ tasks: Task[], emptyMessage: string, onSelect
                     />
                 )) : (
                     <p className="text-xs text-center text-gray-400 dark:text-gray-500 py-8 italic">{emptyMessage}</p>
-                )}
-                {tasks.length > 5 && (
-                    <p className="text-xs text-center text-gray-400 mt-2">+{tasks.length - 5} outras tarefas</p>
-                )}
+                )}                
             </div>
         </div>
     )
@@ -1070,6 +1184,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
         isOpen: false, title: '', message: '', onConfirm: () => {},
     });
 
+    // State for Focus Panel Tabs
+    const [focusTab, setFocusTab] = useState<'urgent' | 'today' | 'upcoming'>('urgent');
+
     const highPriorityTagId = useMemo(() => tags.find(t => t.name.toLowerCase() === 'alta')?.id, [tags]);
 
     // ... (reportData calculation logic remains same) ...
@@ -1079,6 +1196,10 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
         const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
         const thirtyDaysAgo = new Date(now);
         thirtyDaysAgo.setDate(now.getDate() - 30);
+
+        // For "Upcoming 7 Days"
+        const next7DaysEnd = new Date(endOfToday);
+        next7DaysEnd.setDate(next7DaysEnd.getDate() + 7);
 
         const completedTasks = tasks.filter(t => t.status === 'Concluída');
         const completionRate = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
@@ -1097,7 +1218,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
         const avgCompletionTime = completionTimes.length > 0 ? completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length : 0;
         
         const dueToday = tasks.filter(t => t.dueDate && new Date(t.dueDate) >= startOfToday && new Date(t.dueDate) <= endOfToday && t.status !== 'Concluída');
-        const upcomingTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) > endOfToday && t.status !== 'Concluída').sort((a,b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
+        const next7DaysTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) > endOfToday && new Date(t.dueDate) <= next7DaysEnd && t.status !== 'Concluída').sort((a,b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime());
         const highPriorityTasks = tasks.filter(t => t.tagId === highPriorityTagId && t.status !== 'Concluída');
         
         const weeklyData: { week: string; created: number; completed: number }[] = [];
@@ -1146,11 +1267,29 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
         const createdLast30Days = tasks.filter(t => new Date(t.dateTime) >= thirtyDaysAgo).length;
         const backlogChange = createdLast30Days - completedLast30Days.length;
 
+        // Add category logic here
+        const catStats: Record<string, number> = {};
+        completedLast30Days.forEach(t => {
+            catStats[t.categoryId] = (catStats[t.categoryId] || 0) + 1;
+        });
+        
+        const categoryData = Object.keys(catStats).map(catId => {
+            const cat = categories.find(c => c.id === catId);
+            return {
+                label: cat?.name || 'Sem Categoria',
+                value: catStats[catId],
+                color: cat?.color || 'gray',
+                percentage: (catStats[catId] / completedLast30Days.length) * 100
+            };
+        }).sort((a, b) => b.value - a.value);
+
         return {
-            completionRate, avgCompletionTime, dueToday, highPriorityTasks, upcomingTasks,
-            weeklyData, dailyData, backlogChange
+            completionRate, avgCompletionTime, dueToday, highPriorityTasks, next7DaysTasks,
+            weeklyData, dailyData, backlogChange,
+            categoryData,
+            totalCompleted30Days: completedLast30Days.length
         };
-    }, [tasks, highPriorityTagId]);
+    }, [tasks, highPriorityTagId, categories]);
 
     const weeklyDataForChart = reportData.weeklyData.map(d => ({ label: d.week, created: d.created, completed: d.completed }));
     const dailyDataForChart = reportData.dailyData[selectedWeekIndex]?.days.map(d => ({ label: d.dayName, created: d.created, completed: d.completed })) || [];
@@ -1176,6 +1315,21 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
             }
         });
     };
+
+    // Determine tasks for the focus panel
+    const focusPanelTasks = useMemo(() => {
+        if (focusTab === 'urgent') return reportData.highPriorityTasks;
+        if (focusTab === 'today') return reportData.dueToday;
+        if (focusTab === 'upcoming') return reportData.next7DaysTasks;
+        return [];
+    }, [focusTab, reportData]);
+
+    const focusPanelEmptyMessage = useMemo(() => {
+        if (focusTab === 'urgent') return "Sem urgências pendentes.";
+        if (focusTab === 'today') return "Tudo limpo por hoje!";
+        if (focusTab === 'upcoming') return "Sem prazos nos próximos 7 dias.";
+        return "";
+    }, [focusTab]);
 
     return (
         <div className="flex flex-col lg:flex-row gap-8 h-full p-4 lg:p-8 w-full relative">
@@ -1248,9 +1402,9 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
                                     <h3 className="text-lg font-bold text-gray-800 dark:text-white">Fluxo de Trabalho</h3>
                                     <p className="text-sm text-gray-500 dark:text-gray-400">Tarefas criadas vs. concluídas ao longo do tempo</p>
                                 </div>
-                                <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-800/50 p-1 rounded-lg">
-                                    <button onClick={() => setChartViewMode('weekly')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${chartViewMode === 'weekly' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>Semanal</button>
-                                    <button onClick={() => setChartViewMode('daily')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${chartViewMode === 'daily' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>Diário</button>
+                                <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#0D1117] p-1 rounded-lg">
+                                    <button onClick={() => setChartViewMode('weekly')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${chartViewMode === 'weekly' ? 'bg-white dark:bg-[#21262D] text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}>Semanal</button>
+                                    <button onClick={() => setChartViewMode('daily')} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${chartViewMode === 'daily' ? 'bg-white dark:bg-[#21262D] text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}>Diário</button>
                                 </div>
                             </div>
                             {chartViewMode === 'daily' && (
@@ -1263,22 +1417,46 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
                             <div className="flex-grow w-full min-h-0"><TrendChart data={chartViewMode === 'weekly' ? weeklyDataForChart : dailyDataForChart} /></div>
                         </div>
                         
-                        {/* Task Lists Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-[320px]">
-                                <div className="flex items-center justify-between mb-1"><h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><CalendarDaysIcon className="w-5 h-5 text-indigo-500"/> Vencendo Hoje</h4><span className="text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-1 rounded-full">{reportData.dueToday.length}</span></div>
-                                <p className="text-xs text-gray-500 mb-2">Requerem atenção até o fim do dia</p>
-                                <ExpandedTaskList tasks={reportData.dueToday} emptyMessage="Tudo limpo por hoje!" onSelectTask={onSelectTask} categories={categories} tags={tags} disableOverdueColor={appSettings?.disableOverdueColor} />
+                        {/* New Split Layout */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            
+                            {/* Category Distribution Chart (Left) */}
+                            <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 h-[400px] flex flex-col">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-800 dark:text-white">Distribuição por Categoria</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">Tarefas concluídas (30 dias)</p>
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-h-0 flex items-center justify-center">
+                                    <CategoryDonutChart data={reportData.categoryData} total={reportData.totalCompleted30Days} />
+                                </div>
                             </div>
-                            <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-[320px]">
-                                <div className="flex items-center justify-between mb-1"><h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><ExclamationTriangleIcon className="w-5 h-5 text-red-500"/> Alta Prioridade</h4><span className="text-xs font-bold bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 px-2 py-1 rounded-full">{reportData.highPriorityTasks.length}</span></div>
-                                <p className="text-xs text-gray-500 mb-2">Tarefas urgentes pendentes</p>
-                                <ExpandedTaskList tasks={reportData.highPriorityTasks} emptyMessage="Sem urgências pendentes." onSelectTask={onSelectTask} categories={categories} tags={tags} disableOverdueColor={appSettings?.disableOverdueColor} />
-                            </div>
-                            <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-[320px]">
-                                <div className="flex items-center justify-between mb-1"><h4 className="font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2"><CalendarDaysIcon className="w-5 h-5 text-gray-400"/> Prazos Iminentes</h4><span className="text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">{reportData.upcomingTasks.length}</span></div>
-                                <p className="text-xs text-gray-500 mb-2">Próximas entregas agendadas</p>
-                                <ExpandedTaskList tasks={reportData.upcomingTasks} emptyMessage="Sem prazos futuros definidos." onSelectTask={onSelectTask} categories={categories} tags={tags} disableOverdueColor={appSettings?.disableOverdueColor} />
+
+                            {/* Focus & Attention Panel (Right) */}
+                            <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-[400px]">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4 flex-shrink-0">
+                                    <h3 className="text-lg font-bold text-gray-800 dark:text-white">Foco e Atenção</h3>
+                                    <div className="flex bg-gray-100 dark:bg-[#0D1117] p-1 rounded-lg">
+                                        <button onClick={() => setFocusTab('urgent')} className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1.5 ${focusTab === 'urgent' ? 'bg-white dark:bg-[#21262D] text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}>
+                                            <ExclamationTriangleIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">Urgentes</span>
+                                        </button>
+                                        <button onClick={() => setFocusTab('today')} className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1.5 ${focusTab === 'today' ? 'bg-white dark:bg-[#21262D] text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}>
+                                            <CalendarDaysIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">Hoje</span>
+                                        </button>
+                                        <button onClick={() => setFocusTab('upcoming')} className={`px-2.5 py-1.5 text-xs font-medium rounded-md transition-all duration-200 flex items-center gap-1.5 ${focusTab === 'upcoming' ? 'bg-white dark:bg-[#21262D] text-primary-600 shadow-sm' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}>
+                                            <ClockIcon className="w-3.5 h-3.5"/> <span className="hidden sm:inline">Próx. 7 Dias</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <ExpandedTaskList 
+                                    tasks={focusPanelTasks} 
+                                    emptyMessage={focusPanelEmptyMessage} 
+                                    onSelectTask={onSelectTask} 
+                                    categories={categories} 
+                                    tags={tags} 
+                                    disableOverdueColor={appSettings?.disableOverdueColor} 
+                                />
                             </div>
                         </div>
                     </div>

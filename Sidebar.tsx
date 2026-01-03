@@ -1,9 +1,8 @@
-
 import React, { useMemo, useState } from 'react';
-import type { View, Task, Category, Status } from '../types';
-import { DashboardIcon, CalendarIcon, ListIcon, SettingsIcon, BarChartIcon, BellIcon, UserCircleIcon, PinIcon, BroomIcon, FolderIcon, ChevronLeftIcon, ChevronRightIcon, Cog6ToothIcon } from './icons';
-import { LOGO_URL } from '../constants';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import type { View, Task, Category, Status } from './types';
+import { DashboardIcon, CalendarIcon, ListIcon, SettingsIcon, BarChartIcon, BellIcon, UserCircleIcon, PinIcon, BroomIcon, FolderIcon, ChevronLeftIcon, ChevronRightIcon, Cog6ToothIcon } from './components/icons';
+import { LOGO_URL } from './constants';
+import { useLocalStorage } from './hooks/useLocalStorage';
 
 
 interface SidebarProps {
