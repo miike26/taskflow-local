@@ -34,7 +34,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
         if (!newProjectName.trim()) return;
 
         const newProject: Project = {
-            id: `proj-${Date.now()}`,
+            id: Date.now().toString(),
             name: newProjectName.trim(),
             description: newProjectDesc.trim(),
             color: 'bg-blue-500', 
@@ -229,7 +229,7 @@ const ProjectsView: React.FC<ProjectsViewProps> = ({ projects, tasks, onAddProje
                                     {project.name}
                                 </h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-3 leading-relaxed">
-                                    {project.description || 'Sem descrição definida.'}
+                                    {project.description}
                                 </p>
                             </div>
                             

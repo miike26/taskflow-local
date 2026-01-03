@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // [NOVO] Import do Router
 import type { View, Task, Category, Status } from './types';
 import { DashboardIcon, CalendarIcon, ListIcon, SettingsIcon, BarChartIcon, BellIcon, UserCircleIcon, PinIcon, BroomIcon, FolderIcon, ChevronLeftIcon, ChevronRightIcon, Cog6ToothIcon } from './components/icons';
 import { LOGO_URL } from './constants';
@@ -6,8 +7,8 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 
 
 interface SidebarProps {
-  currentView: View;
-  setCurrentView: (view: View) => void;
+  currentView: View; // Ainda recebemos para compatibilidade, mas o location é a fonte da verdade
+  setCurrentView: (view: View) => void; // Mantido para compatibilidade, mas não usado diretamente para navegação
   recentTaskIds: string[];
   pinnedTaskIds: string[];
   tasks: Task[];
@@ -17,26 +18,21 @@ interface SidebarProps {
   selectedTask: Task | null;
   onClearRecents: () => void;
   userName: string;
+  onLogout: () => void; // [ADICIONADO] Para o link do perfil (opcional, ou redireciona pra settings)
 }
 
 const NavItem: React.FC<{
-  viewName: View;
+  to: string; // [MODIFICADO] Recebe o caminho da URL
   label: string;
   icon: React.ReactNode;
-  currentView: View;
-  onClick: (view: View) => void;
+  isActive: boolean;
   hoverColorClass: string;
   showLabel: boolean;
-}> = ({ viewName, label, icon, currentView, onClick, hoverColorClass, showLabel }) => {
-  const isActive = currentView === viewName;
+}> = ({ to, label, icon, isActive, hoverColorClass, showLabel }) => {
   return (
     <li>
-      <a
-        href="#"
-        onClick={(e) => {
-          e.preventDefault();
-          onClick(viewName);
-        }}
+      <Link
+        to={to}
         title={!showLabel ? label : undefined}
         className={`group flex items-center p-3 text-base font-normal rounded-lg transition-all duration-200
           ${isActive 
@@ -52,7 +48,7 @@ const NavItem: React.FC<{
         <span className={`ml-3 font-medium whitespace-nowrap transition-all duration-300 overflow-hidden ${showLabel ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 ml-0'}`}>
             {label}
         </span>
-      </a>
+      </Link>
     </li>
   );
 };
@@ -87,9 +83,8 @@ const RecentTaskItem: React.FC<{
       className="group"
       title={task.title}
     >
-      <a
-        href="#"
-        onClick={(e) => { e.preventDefault(); onSelect(); }}
+      <Link
+        to={`/tasks/${task.id}`} // [MODIFICADO] Link direto para a tarefa
         className={`flex items-center p-2.5 text-base font-normal rounded-lg transition-colors
           ${isSelected
             ? 'bg-primary-500 text-white'
@@ -111,7 +106,7 @@ const RecentTaskItem: React.FC<{
         >
           <PinIcon className="w-4 h-4" isPinned={isPinned} />
         </button>
-      </a>
+      </Link>
     </li>
   );
 };
@@ -119,6 +114,7 @@ const RecentTaskItem: React.FC<{
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTaskIds, pinnedTaskIds, tasks, categories, onSelectTask, onPinTask, selectedTask, onClearRecents, userName }) => {
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebar.collapsed', false);
   const [isHovered, setIsHovered] = useState(false);
+  const location = useLocation(); // [NOVO] Hook para saber a URL atual
 
   // The sidebar is "fully visible" if it's NOT collapsed, OR if it IS collapsed but the user is hovering over it.
   const showFull = !isCollapsed || isHovered;
@@ -138,6 +134,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
     const combined = [...pinned, ...recents.slice(0, 5 - pinned.length)];
     return combined;
   }, [tasks, recentTaskIds, pinnedTaskIds]);
+
+  // Helper para verificar rota ativa
+  const isActive = (path: string) => {
+      if (path === '/') return location.pathname === '/';
+      return location.pathname.startsWith(path);
+  };
 
   return (
     // Outer Wrapper: reserves space in the flex layout (w-64 or w-20)
@@ -177,67 +179,60 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
             <div className="flex-1 flex flex-col overflow-y-auto min-h-0 pr-1 -mr-1 w-full custom-scrollbar">
             <ul className="space-y-2 w-full">
                 <NavItem 
-                viewName="dashboard" 
-                label="Dashboard" 
-                icon={<DashboardIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
+                    to="/" 
+                    label="Dashboard" 
+                    icon={<DashboardIcon className="w-6 h-6" />}
+                    isActive={location.pathname === '/'}
+                    hoverColorClass="text-cyan-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="projects"
-                label="Projetos"
-                icon={<FolderIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-blue-500"
-                showLabel={showFull}
+                    to="/projects"
+                    label="Projetos"
+                    icon={<FolderIcon className="w-6 h-6" />}
+                    isActive={isActive('/projects')}
+                    hoverColorClass="text-blue-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="list"
-                label="Lista de Tarefas"
-                icon={<ListIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-purple-500"
-                showLabel={showFull}
+                    to="/list"
+                    label="Lista de Tarefas"
+                    icon={<ListIcon className="w-6 h-6" />}
+                    isActive={isActive('/list')}
+                    hoverColorClass="text-purple-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="calendar"
-                label="Calendário"
-                icon={<CalendarIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-rose-500"
-                showLabel={showFull}
+                    to="/calendar"
+                    label="Calendário"
+                    icon={<CalendarIcon className="w-6 h-6" />}
+                    isActive={isActive('/calendar')}
+                    hoverColorClass="text-rose-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="reminders"
-                label="Meus Lembretes"
-                icon={<BellIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-amber-500"
-                showLabel={showFull}
+                    to="/reminders"
+                    label="Meus Lembretes"
+                    icon={<BellIcon className="w-6 h-6" />}
+                    isActive={isActive('/reminders')}
+                    hoverColorClass="text-amber-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="reports"
-                label="Relatórios"
-                icon={<BarChartIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-emerald-500"
-                showLabel={showFull}
+                    to="/reports"
+                    label="Relatórios"
+                    icon={<BarChartIcon className="w-6 h-6" />}
+                    isActive={isActive('/reports')}
+                    hoverColorClass="text-emerald-500"
+                    showLabel={showFull}
                 />
                 <NavItem
-                viewName="settings"
-                label="Configurações"
-                icon={<Cog6ToothIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-gray-500"
-                showLabel={showFull}
+                    to="/settings"
+                    label="Configurações"
+                    icon={<SettingsIcon className="w-6 h-6" />}
+                    isActive={isActive('/settings')}
+                    hoverColorClass="text-gray-500"
+                    showLabel={showFull}
                 />
             </ul>
 
@@ -253,7 +248,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                     {recentItems.map(task => {
                     const category = categories.find(c => c.id === task.categoryId);
                     const isPinned = pinnedTaskIds.includes(task.id);
-                    const isSelected = selectedTask?.id === task.id;
+                    // [MODIFICADO] Verifica seleção pela URL
+                    const isSelected = location.pathname === `/tasks/${task.id}`;
                     
                     return (
                         <RecentTaskItem
@@ -262,7 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                         category={category}
                         isPinned={isPinned}
                         isSelected={isSelected}
-                        onSelect={() => onSelectTask(task)}
+                        onSelect={() => {}} // O Link já cuida da navegação
                         onPin={() => onPinTask(task.id)}
                         showLabel={showFull}
                         />
@@ -277,11 +273,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
             <div className="mt-4 flex-shrink-0 w-full">
             <ul className={`space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700 ${!showFull ? 'border-t-0' : ''}`}>
                 <li>
-                <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); setCurrentView('profile'); }}
+                <Link
+                    to="/settings" // [MODIFICADO] Link para Settings
                     className={`group flex items-center p-2 text-base font-normal rounded-lg transition-colors w-full
-                        ${currentView === 'profile'
+                        ${location.pathname === '/settings'
                         ? 'bg-gray-100 dark:bg-white/10'
                         : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
                         }
@@ -289,13 +284,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                     `}
                     title={!showFull ? userName : undefined}
                 >
-                    <span className={`transition-colors duration-200 group-hover:text-indigo-500 ${currentView === 'profile' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <span className={`transition-colors duration-200 group-hover:text-indigo-500 ${location.pathname === '/settings' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-400 dark:text-gray-500'}`}>
                     <UserCircleIcon className="w-10 h-10 flex-shrink-0" />
                     </span>
                     <div className={`ml-3 text-left overflow-hidden transition-all duration-300 ${showFull ? 'opacity-100 w-auto' : 'opacity-0 w-0 ml-0'}`}>
                         <span className="font-semibold block text-sm text-gray-800 dark:text-gray-200 truncate">{userName}</span>
                     </div>
-                </a>
+                </Link>
                 </li>
             </ul>
             </div>

@@ -36,8 +36,8 @@ const HabitWidget: React.FC<{ habits: (Habit & { isCompleted: boolean })[], onTo
 
     // Dynamic background based on completion
     const bgClass = allCompleted 
-        ? 'bg-gradient-to-br from-emerald-400 to-green-500' // Success Green
-        : 'bg-gradient-to-br from-amber-500 to-orange-600'; // Pending Orange
+        ? 'bg-gradient-to-br from-emerald-500 to-green-500/95' // Success Green
+        : 'bg-gradient-to-br from-yellow-500 to-orange-500'; // Pending Orange
 
     const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -755,7 +755,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
 
                 <div className="lg:col-span-5 flex flex-col justify-between h-full">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                         <CompactStatCard label="Pendentes" value={stats.pending} icon={StopCircleIcon} colorClass="text-blue-500" bgClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800" trend={2} />
+                         <CompactStatCard label="Pendentes" value={stats.pending} icon={StopCircleIcon} colorClass="text-blue-500" bgClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/50" trend={2} />
                          <CompactStatCard label="Em Andamento" value={stats.inProgress} icon={PlayCircleIcon} colorClass="text-yellow-500" bgClass="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/30" trend={-1} />
                          <CompactStatCard label="Concluídas" value={stats.completed} icon={CheckCircleIcon} colorClass="text-green-500" bgClass="bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30" trend={5} />
                          <CompactStatCard label="Atrasadas" value={stats.overdue} icon={ClockIcon} colorClass="text-red-500" bgClass="bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30" trend={0} />

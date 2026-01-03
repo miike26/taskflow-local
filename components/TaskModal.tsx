@@ -98,7 +98,7 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
             const tomorrow = new Date();
             tomorrow.setDate(now.getDate() + 1);
             setTaskData({
-              id: `task-${Date.now()}`,
+              id: Date.now().toString(),
               title: '',
               description: '',
               dateTime: now.toISOString(),
