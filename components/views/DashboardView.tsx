@@ -450,14 +450,18 @@ const CompactStatCard: React.FC<{
     icon: React.FC<{className?: string}>; 
     colorClass: string; 
     bgClass: string; 
-    trend?: number; 
-}> = ({ label, value, icon: Icon, colorClass, bgClass, trend }) => (
+    trend?: number;
+    trendTooltip?: string; // <--- NOVO CAMPO
+}> = ({ label, value, icon: Icon, colorClass, bgClass, trend, trendTooltip }) => (
     <div className={`p-4 rounded-xl border border-transparent ${bgClass} flex items-center justify-between transition-all hover:scale-[1.02]`}>
         <div className="flex flex-col">
             <div className="flex items-center gap-2">
                 <span className="text-2xl font-bold text-gray-800 dark:text-white">{value}</span>
                 {trend !== undefined && trend !== 0 && (
-                    <span className={`flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full ${trend > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <span 
+                        title={trendTooltip} // <--- TOOLTIP NATIVO AQUI
+                        className={`flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full cursor-help ${trend > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
+                    >
                         {trend > 0 ? <ArrowTrendingUpIcon className="w-3 h-3 mr-0.5"/> : <ArrowTrendingDownIcon className="w-3 h-3 mr-0.5"/>}
                         {Math.abs(trend)}
                     </span>
@@ -598,6 +602,66 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
     completed: completedTasks.length,
     overdue: overdueTasks.length,
   }), [pendingTasks, inProgressTasks, completedTasks, overdueTasks]);
+
+  // [CÁLCULO DE SALDO DO DIA]
+  const trends = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    // Contadores
+    let createdToday = 0;
+    let completedToday = 0; // Tarefas finalizadas
+    let startedToday = 0;   // Tarefas movidas para "Em andamento"
+    let stoppedToday = 0;   // Tarefas que saíram de "Em andamento" (foram pra Concluída ou voltaram pra Pendente)
+    let becameOverdueToday = 0;
+
+    tasks.forEach(task => {
+        task.activity.forEach(act => {
+            const actDate = new Date(act.timestamp).getTime();
+            
+            // Só olhamos atividades de hoje
+            if (actDate >= startOfToday) {
+                if (act.type === 'creation') createdToday++;
+                
+                if (act.type === 'status_change') {
+                    // Logica de Conclusão
+                    if (act.to === 'Concluída') completedToday++;
+                    
+                    // Lógica de "Em Andamento"
+                    if (act.to === 'Em andamento') startedToday++;
+                    if (act.from === 'Em andamento') stoppedToday++;
+                }
+            }
+        });
+
+        // Checar atrasos (Mantém lógica de acumulador, pois "desatrasar" é complexo de rastrear sem histórico)
+        if (task.dueDate && task.status !== 'Concluída') {
+            const dueDate = new Date(task.dueDate);
+            if (dueDate.toDateString() === yesterdayStr) {
+                becameOverdueToday++;
+            }
+        }
+    });
+
+    return {
+        // SALDO PENDENTE: Criou (+) vs Concluiu (-)
+        // Se negativo (ex: -2), significa que você limpou 2 tarefas da fila!
+        pending: createdToday - completedToday, 
+
+        // SALDO EM ANDAMENTO: Começou (+) vs Parou/Terminou (-)
+        inProgress: startedToday - stoppedToday,
+
+        // CONCLUÍDAS: Mantém sempre positivo (Produção pura)
+        completed: completedToday,  
+
+        // ATRASADAS: Mantém acumulador de novas atrasadas
+        overdue: becameOverdueToday 
+    };
+  }, [tasks]);
 
   const completionRate = totalTasks > 0 ? (stats.completed / totalTasks) * 100 : 0;
 
@@ -755,10 +819,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
 
                 <div className="lg:col-span-5 flex flex-col justify-between h-full">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                         <CompactStatCard label="Pendentes" value={stats.pending} icon={StopCircleIcon} colorClass="text-blue-500" bgClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/50" trend={2} />
-                         <CompactStatCard label="Em Andamento" value={stats.inProgress} icon={PlayCircleIcon} colorClass="text-yellow-500" bgClass="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/30" trend={-1} />
-                         <CompactStatCard label="Concluídas" value={stats.completed} icon={CheckCircleIcon} colorClass="text-green-500" bgClass="bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30" trend={5} />
-                         <CompactStatCard label="Atrasadas" value={stats.overdue} icon={ClockIcon} colorClass="text-red-500" bgClass="bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30" trend={0} />
+                         <CompactStatCard label="Pendentes" value={stats.pending} icon={StopCircleIcon} colorClass="text-blue-500" bgClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/50" trend={trends.pending} trendTooltip="Saldo do dia: Novas Tarefas criadas vs. Concluídas hoje." />
+                         <CompactStatCard label="Em Andamento" value={stats.inProgress} icon={PlayCircleIcon} colorClass="text-yellow-500" bgClass="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-100 dark:border-yellow-900/30" trend={trends.inProgress} trendTooltip="Saldo do dia: Tarefas iniciadas vs. Finalizadas/Pausadas hoje." />
+                         <CompactStatCard label="Concluídas" value={stats.completed} icon={CheckCircleIcon} colorClass="text-green-500" bgClass="bg-green-50 dark:bg-green-900/20 border-green-100 dark:border-green-900/30" trend={trends.completed} trendTooltip="Total de tarefas concluídas hoje." />
+                         <CompactStatCard label="Atrasadas" value={stats.overdue} icon={ClockIcon} colorClass="text-red-500" bgClass="bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30" trend={trends.overdue} trendTooltip="Tarefas que venceram ontem e entraram em atraso hoje."/>
                     </div>
                     <div className="w-full h-px bg-gray-100 dark:bg-gray-800 my-4"></div>
                     <div className="flex flex-col md:flex-row gap-8 items-center">
