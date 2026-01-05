@@ -1793,6 +1793,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                     }}
                                     isLoading={isSummarizing}
                                     isAiHighlighted={isAiGenerated}
+                                    enableAi={appSettings.enableAi}
                                 />
                             </div>
                         ) : (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom'; // [NOVO] Imports do Router
+import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar.tsx';
 import Header from './components/Header.tsx';
 import DashboardView from './components/views/DashboardView.tsx';
@@ -21,7 +21,7 @@ import SuccessOverlay from './components/SuccessOverlay.tsx';
 import OnboardingWizard from './components/OnboardingWizard';
 import { useLocalStorage } from './hooks/useLocalStorage.ts';
 import { useFirestore } from './hooks/useFirestore.ts';
-import { useAuth } from './hooks/useAuth.ts';
+import { useAuth, AuthProvider } from './hooks/useAuth'; // [NOVO] Import do AuthProvider
 import { useUserDocument } from './hooks/useUserDocument.ts'; 
 import { writeBatch, doc } from 'firebase/firestore'; 
 import { db } from './lib/firebase';
@@ -59,47 +59,35 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
 
 type NotificationToastDataType = { notification: Notification, task?: Task, category?: Category, key: string };
 
-export const App = () => {
-  // [MODIFICADO] Hooks do Router
+// [IMPORTANTE] Renomeei seu componente antigo 'App' para 'AppContent'
+// O 'App' verdadeiro está lá no final do arquivo, envolvendo este aqui no AuthProvider.
+const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // O tema continua no localStorage pois é preferência de dispositivo
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('theme', 'light');
   
-  // [MODIFICADO] Derivamos o currentView da URL para manter compatibilidade com Sidebar/Header
   const currentView: View = useMemo(() => {
     const path = location.pathname;
     if (path === '/') return 'dashboard';
     if (path.startsWith('/projects/')) return 'projectDetail';
     if (path.startsWith('/tasks/')) return 'taskDetail';
-    // Remove a barra inicial para obter 'calendar', 'list', etc.
     return path.substring(1) as View; 
   }, [location.pathname]);
 
-  // [REMOVIDO] const [previousView, setPreviousView] ... (O histórico do navegador gerencia isso agora)
-  
-  // --- INTEGRAÇÃO COM FIREBASE ---
   const { user, loading: authLoading, logout } = useAuth();
-  
-  // Hook para acessar dados do perfil (Settings, Notificações e Nome)
   const { data: userData, updateDocument: updateUserDoc } = useUserDocument();
 
-  // [MODIFICADO] Lógica de Dados do Usuário
-  // Removemos o useLocalStorage para userName e onboarding. Agora usamos o userData como fonte da verdade.
   const userName = userData?.displayName || user?.displayName || 'Usuário';
-  
-  // Verifica se o onboarding foi completado no documento do Firestore
   const hasCompletedOnboarding = userData?.hasCompletedOnboarding === true;
 
-  // --- FUNÇÃO AUXILIAR DE DATA LOCAL (FUSO HORÁRIO) ---
   const getLocalISODate = useCallback(() => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000; 
     return new Date(d.getTime() - offset).toISOString().split('T')[0];
   }, []);
 
-  // 1. Tarefas (Firestore)
+  // 1. Tarefas
   const { 
     data: tasks, 
     add: addTaskFire, 
@@ -109,7 +97,7 @@ export const App = () => {
     deleteBatch: deleteBatchFire
   } = useFirestore<Task>('tasks', []);
 
-  // 2. Projetos (Firestore)
+  // 2. Projetos
   const {
     data: projects,
     add: addProjectFire,
@@ -117,7 +105,7 @@ export const App = () => {
     remove: removeProjectFire
   } = useFirestore<Project>('projects', []);
 
-  // 3. Categorias (Firestore)
+  // 3. Categorias
   const {
     data: categories,
     add: addCategoryFire,
@@ -125,7 +113,7 @@ export const App = () => {
     remove: removeCategoryFire
   } = useFirestore<Category>('categories', DEFAULT_CATEGORIES);
 
-  // 4. Tags (Firestore)
+  // 4. Tags
   const {
     data: tags,
     add: addTagFire,
@@ -133,7 +121,7 @@ export const App = () => {
     remove: removeTagFire
   } = useFirestore<Tag>('tags', DEFAULT_TAGS);
 
-  // 5. Hábitos (Firestore)
+  // 5. Hábitos
   const {
     data: habits,
     add: addHabitFire,
@@ -141,8 +129,6 @@ export const App = () => {
     remove: removeHabitFire,
   } = useFirestore<Habit>('habits', DEFAULT_HABITS, 'order', 'asc');
 
-  // --- DADOS LOCAIS (Settings e Estado de UI) ---
-  
   const [recentTaskIds, setRecentTaskIds] = useLocalStorage<string[]>('recentTaskIds', []);
   
   const pinnedTaskIds = useMemo(() => {
@@ -152,9 +138,6 @@ export const App = () => {
   }, [tasks]);
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  // [MODIFICADO] selectedTask e selectedProject agora são derivados da URL nos wrappers, 
-  // mas mantemos o estado aqui APENAS para ações rápidas que não navegam (se houver) ou para compatibilidade.
-  // Na verdade, para navegação completa, vamos usar as rotas.
   const [initialDataForSheet, setInitialDataForSheet] = useState<Task | null>(null);
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
@@ -183,10 +166,9 @@ export const App = () => {
 
   const [isTourOpen, setIsTourOpen] = useState(false);
   
-  const isFirstLoad = useRef(true);
-  const allowToasts = useRef(false);
-
-  // --- HANDLERS SINCRONIZADOS COM FIREBASE ---
+  const hasLoadedInitialNotifications = useRef(false);
+  // const isFirstLoad = useRef(true); < apagar
+  // const allowToasts = useRef(false); < apagar
 
   const handleUpdateNotificationSettings = useCallback((value: NotificationSettings | ((val: NotificationSettings) => NotificationSettings)) => {
       const current = userData?.notificationSettings || DEFAULT_NOTIF_SETTINGS;
@@ -200,7 +182,6 @@ export const App = () => {
       updateUserDoc({ appSettings: newValue });
   }, [userData, updateUserDoc]);
 
-  // [NOVO] Handler para atualizar o Nome do Usuário no Firebase
   const handleUpdateUserName = useCallback((newName: string) => {
       updateUserDoc({ displayName: newName });
   }, [updateUserDoc]);
@@ -217,37 +198,30 @@ export const App = () => {
       updateUserDoc({ clearedNotificationIds: newValue });
   }, [userData, updateUserDoc]);
 
-  // [MODIFICADO] Função de Logout Seguro e Reset de View
   const handleCompleteLogout = useCallback(async () => {
     try {
-        navigate('/'); // Vai para o Dashboard (raiz)
-        
-        // 1. Limpa resquícios do usuário no LocalStorage
+        navigate('/'); 
         window.localStorage.removeItem('recentTaskIds');
         window.localStorage.removeItem('globalCategoryFilter');
         window.localStorage.removeItem('userName'); 
         window.localStorage.removeItem('hasCompletedOnboarding');
         
-        // 2. Reseta estados locais críticos
         setRecentTaskIds([]);
         setNotifications([]);
         
-        // 3. Logout do Firebase
         await logout();
     } catch (error) {
         console.error("Erro ao sair:", error);
     }
   }, [logout, setRecentTaskIds, navigate]);
 
-// [NOVO] Libera os toasts após 2 segundos para evitar "explosão" no login
-useEffect(() => {
-  const timer = setTimeout(() => {
-    allowToasts.current = true;
-  }, 2000);
-  return () => clearTimeout(timer);
-}, []);
+// useEffect(() => {
+//   const timer = setTimeout(() => {
+//     allowToasts.current = true;
+//   }, 2000);
+//   return () => clearTimeout(timer);
+// }, []);
 
-  // Efeito de Migração Automática (LocalStorage -> Firebase)
   useEffect(() => {
       if (user && userData) { 
           const migrateIfNeeded = (key: string, defaultVal: any) => {
@@ -274,9 +248,9 @@ useEffect(() => {
   }, [user, userData, updateUserDoc]); 
 
   const notificationsRef = useRef(notifications);
-  useEffect(() => {
-    notificationsRef.current = notifications;
-  }, [notifications]);
+  // useEffect(() => {
+  //   notificationsRef.current = notifications;
+  // }, [notifications]);
 
   const addToast = useCallback((data: Omit<ConfirmationToastData, 'id'>) => {
     const id = Date.now() + Math.random();
@@ -291,7 +265,6 @@ useEffect(() => {
     setNotificationToasts(prev => prev.filter(t => t.key !== key));
   }, []);
 
-   // [MODIFICADO] Finaliza o onboarding E popula o banco de dados com dados padrão
   const handleSyncOnboardingData = useCallback(async () => {
       if (!user) return;
 
@@ -299,7 +272,6 @@ useEffect(() => {
           const batch = writeBatch(db);
           let hasDataToAdd = false;
 
-          // 1. Seeding de Categorias (Apenas se a lista atual estiver vazia)
           if (categories.length === 0) {
               DEFAULT_CATEGORIES.forEach(cat => {
                   const catRef = doc(db, 'users', user.uid, 'categories', cat.id);
@@ -308,7 +280,6 @@ useEffect(() => {
               hasDataToAdd = true;
           }
 
-          // 2. Seeding de Tags (Prioridades)
           if (tags.length === 0) {
               DEFAULT_TAGS.forEach(tag => {
                   const tagRef = doc(db, 'users', user.uid, 'tags', tag.id);
@@ -317,33 +288,25 @@ useEffect(() => {
               hasDataToAdd = true;
           }
 
-          // Só envia para o Firebase se tiver algo para adicionar
           if (hasDataToAdd) {
               await batch.commit();
           }
 
-          // Por fim, marca no perfil que o onboarding acabou
           updateUserDoc({ hasCompletedOnboarding: true });
           addToast({ title: 'Tudo pronto!', subtitle: 'Suas preferências foram salvas.', type: 'success' });
-
-          // Abre o tour automaticamente após finalizar o wizard
           setIsTourOpen(true);
 
       } catch (error) {
           console.error("Erro ao configurar ambiente:", error);
-          // Se der erro no seed, finalizamos o onboarding mesmo assim para não travar o usuário
           updateUserDoc({ hasCompletedOnboarding: true });
           addToast({ title: 'Aviso', subtitle: 'Houve um problema ao criar os dados padrão, mas seu acesso foi liberado.', type: 'error' });
-          
-          // Mesmo com erro no seed, queremos mostrar o tour
           setIsTourOpen(true);
       }
   }, [user, categories, tags, updateUserDoc, addToast]);
 
 
-  // [MANTER LÓGICA DE NOTIFICAÇÕES - Código Omitido Visualmente mas Preservado na Lógica]
-  // ... (generateAndCheckNotifications useEffect) ...
-  useEffect(() => {
+// [CORREÇÃO DO LOOP INFINITO E DA EXPLOSÃO DE TOASTS]
+useEffect(() => {
     if (!user) return; 
     
     const generateAndCheckNotifications = () => {
@@ -351,6 +314,7 @@ useEffect(() => {
         const generated: Notification[] = [];
         const todayStr = getLocalISODate();
 
+        // --- 1. GERAÇÃO (MANTIDA IGUAL) ---
         if (notificationSettings.enabled && notificationSettings.taskReminders) {
           const startOfToday = new Date();
           startOfToday.setHours(0, 0, 0, 0);
@@ -402,34 +366,52 @@ useEffect(() => {
 
         const sortedGenerated = generated.sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime()).filter(n => !clearedNotificationIds.includes(n.id));
         
-        if (!isFirstLoad.current) {
-            const currentNotificationIds = new Set(notificationsRef.current.map(n => n.id));
-            const newNotifications = sortedGenerated.filter(n => !currentNotificationIds.has(n.id));
+        // --- 2. VERIFICAÇÃO DE MUDANÇA ---
+        // Verificamos se houve mudança REAL comparando com a referência atual
+        const prevNotifications = notificationsRef.current;
+        const hasChanged = JSON.stringify(prevNotifications) !== JSON.stringify(sortedGenerated);
 
-            if (newNotifications.length > 0) {
-                const unreadNewNotifications = newNotifications.filter(n => !readNotificationIds.includes(n.id));
-                const toastsToAdd = unreadNewNotifications.map((n): NotificationToastDataType | null => {
-                    const taskForToast = tasks.find(t => t.id === n.taskId);
-                    const categoryForToast = taskForToast ? categories.find(c => c.id === taskForToast.categoryId) : undefined;
-                    const isHabit = n.taskId.startsWith('habit-');
-                    if ((taskForToast && categoryForToast) || isHabit) {
-                        return { notification: n, task: taskForToast, category: categoryForToast, key: n.id };
+        if (hasChanged) {
+            // Se já carregou o lote inicial antes, aí sim calculamos os Toasts
+            if (hasLoadedInitialNotifications.current) {
+                const currentNotificationIds = new Set(prevNotifications.map(n => n.id));
+                const newNotifications = sortedGenerated.filter(n => !currentNotificationIds.has(n.id));
+
+                if (newNotifications.length > 0) {
+                    const unreadNewNotifications = newNotifications.filter(n => !readNotificationIds.includes(n.id));
+                    const toastsToAdd = unreadNewNotifications.map((n): NotificationToastDataType | null => {
+                        const taskForToast = tasks.find(t => t.id === n.taskId);
+                        const categoryForToast = taskForToast ? categories.find(c => c.id === taskForToast.categoryId) : undefined;
+                        const isHabit = n.taskId.startsWith('habit-');
+                        if ((taskForToast && categoryForToast) || isHabit) {
+                            return { notification: n, task: taskForToast, category: categoryForToast, key: n.id };
+                        }
+                        return null;
+                    }).filter((t): t is NotificationToastDataType => !!t);
+
+                    if (toastsToAdd.length > 0) {
+                        setNotificationToasts(prev => {
+                            const existingKeys = new Set(prev.map(t => t.key));
+                            const uniqueNewToasts = toastsToAdd.filter(t => !existingKeys.has(t.key));
+                            return [...prev, ...uniqueNewToasts];
+                        });
                     }
-                    return null;
-                }).filter((t): t is NotificationToastDataType => !!t);
-
-                if (toastsToAdd.length > 0 && allowToasts.current) {
-                    setNotificationToasts(prev => {
-                        const existingKeys = new Set(prev.map(t => t.key));
-                        const uniqueNewToasts = toastsToAdd.filter(t => !existingKeys.has(t.key));
-                        return [...prev, ...uniqueNewToasts];
-                    });
+                }
+            } else {
+                // Primeira carga com dados: Apenas marcamos como carregado e NÃO mostramos toast
+                if (sortedGenerated.length > 0) {
+                    hasLoadedInitialNotifications.current = true;
                 }
             }
-        } else {
-            isFirstLoad.current = false;
+
+            // [FIX CRÍTICO 🛑] 
+            // Atualizamos a REF manualmente AGORA. Não esperamos o useEffect do 'notifications' rodar.
+            // Isso impede que, se esta função rodar 2x seguidas rápido, a segunda vez ache que tudo é novidade.
+            notificationsRef.current = sortedGenerated;
+            
+            // Atualizamos o estado visual
+            setNotifications(sortedGenerated);
         }
-        setNotifications(sortedGenerated);
     };
 
     generateAndCheckNotifications();
@@ -452,7 +434,6 @@ useEffect(() => {
     setTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
   
-  // [MODIFICADO] Navegação via Router
   const navigateToView = (view: View) => {
     if (view === 'dashboard') navigate('/');
     else navigate(`/${view}`);
@@ -463,7 +444,6 @@ useEffect(() => {
     setIsSheetOpen(true);
   };
 
-  // [MODIFICADO] Seleção via Navegação
   const handleSelectTask = (task: Task) => {
     navigate(`/tasks/${task.id}`);
 
@@ -473,7 +453,6 @@ useEffect(() => {
     });
   };
 
-  // [MODIFICADO] Seleção via Navegação
   const handleSelectProject = (project: Project) => {
     navigate(`/projects/${project.id}`);
   };
@@ -496,8 +475,6 @@ useEffect(() => {
 
   const handleEditProject = (projectId: string, updates: Partial<Project>) => {
     updateProjectFire(projectId, updates);
-    // [OBS] Se estivesse usando selectedProject state, atualizaria aqui. 
-    // Como agora é via URL, o componente Wrapper pega os dados atualizados do array 'projects' automaticamente.
     addToast({ title: 'Projeto Atualizado', type: 'success' });
   };
 
@@ -512,7 +489,6 @@ useEffect(() => {
             if (tasksToUnlink.length > 0) {
                updateBatchFire(tasksToUnlink, { projectId: null } as any);
             }
-            // [MODIFICADO] Redireciona para lista de projetos
             if (location.pathname.includes(projectId)) {
                 navigate('/projects');
             }
@@ -529,13 +505,10 @@ useEffect(() => {
         message: 'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
         onConfirm: () => {
             removeTaskFire(taskId);
-            
-            // [MODIFICADO] Redireciona para a tela anterior
             if (location.pathname.includes(taskId)) {
                 navigate(-1); 
             }
             
-            // Atualizar activity do projeto no Firestore
             if (taskToDelete?.projectId) {
                 const projectToUpdate = projects.find(p => p.id === taskToDelete.projectId);
                 if (projectToUpdate) {
@@ -620,7 +593,7 @@ useEffect(() => {
 
     setIsSheetOpen(false);
     addToast({ title: 'Tarefa Criada', subtitle: 'Sua tarefa foi adicionada com sucesso.', type: 'success' });
-    handleSelectTask(task); // Vai navegar para a nova tarefa
+    handleSelectTask(task); 
   };
   
   const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
@@ -632,13 +605,11 @@ useEffect(() => {
     }
 
     updateTaskFire(taskId, updates);
-    // selectTask state update removido pois agora é via URL
 
     if (currentTask && 'projectId' in updates && updates.projectId !== currentTask.projectId) {
         const oldProjectId = currentTask.projectId;
         const newProjectId = updates.projectId;
 
-        // Remover do antigo
         if (oldProjectId) {
             const oldProject = projects.find(p => p.id === oldProjectId);
             if (oldProject) {
@@ -655,7 +626,6 @@ useEffect(() => {
             }
         }
 
-        // Adicionar no novo
         if (newProjectId) {
             const newProject = projects.find(p => p.id === newProjectId);
             if (newProject) {
@@ -691,9 +661,6 @@ useEffect(() => {
     }
   };
 
-
-  // ... (handleTaskStatusChange, handleBulkStatusChange, handleBulkDelete mantidos iguais) ...
-  // Lógica de bulk updates mantida, só a navegação muda
   const handleTaskStatusChange = (taskId: string, newStatus: Status) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task || task.status === newStatus) return;
@@ -783,7 +750,7 @@ useEffect(() => {
   const handleSnoozeNotification = (notification: Notification) => {
     const now = new Date();
     const snoozeTime = new Date();
-    snoozeTime.setHours(snoozeTime.getHours() + 2); // Snooze for 2 hours
+    snoozeTime.setHours(snoozeTime.getHours() + 2); 
     const newReminderActivity: Activity = { id: `act-snooze-${Date.now()}`, type: 'reminder', timestamp: now.toISOString(), notifyAt: snoozeTime.toISOString(), note: `Soneca de: ${notification.taskTitle}`, user: 'Sistema' };
     const task = tasks.find(t => t.id === notification.taskId);
     if (task) { updateTaskFire(notification.taskId, { activity: [...task.activity, newReminderActivity] }); }
@@ -907,7 +874,6 @@ useEffect(() => {
         <Sidebar currentView={currentView} setCurrentView={navigateToView} recentTaskIds={recentTaskIds} pinnedTaskIds={pinnedTaskIds} tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onPinTask={handlePinTask} selectedTask={null} onClearRecents={handleClearRecentTasks} userName={userName} onLogout={handleCompleteLogout} />
         
         <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Header é mostrado apenas se NÃO for tela de detalhes */}
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (
             <Header currentView={currentView} tasks={tasks} tags={tags} onSelectTask={handleSelectTask} onAddTask={handleAddTask} theme={theme} toggleTheme={toggleTheme} categories={categories} globalCategoryFilter={globalCategoryFilter} onCategoryChange={setGlobalCategoryFilter} notifications={notifications} unreadNotifications={unreadNotifications} onNotificationClick={handleNotificationClick} onSnoozeNotification={handleSnoozeNotification} onMarkHabitComplete={handleMarkHabitComplete} onMarkAllNotificationsAsRead={handleMarkAllNotificationsAsRead} onClearAllNotifications={handleClearAllNotifications} setCurrentView={navigateToView} userName={userName} habitsWithStatus={habitsWithStatus} onToggleHabit={handleToggleHabit} onMarkAllHabitsComplete={handleMarkAllHabitsComplete} onOpenHabitSettings={() => setIsHabitSettingsOpen(true)} appSettings={appSettings} />
           )}
@@ -922,7 +888,6 @@ useEffect(() => {
                 <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />} />
                 <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={() => setIsTourOpen(true)}/>} />
                 
-                {/* Rotas Dinâmicas com Wrappers */}
                 <Route path="/projects/:projectId" element={
                     <ProjectDetailWrapper 
                         projects={projects}
@@ -946,7 +911,7 @@ useEffect(() => {
                         onOpenHabitSettings={() => setIsHabitSettingsOpen(true)}
                         appSettings={appSettings}
                         setAppSettings={handleUpdateAppSettings}
-                        onBack={() => navigate(-1)} // Voltar
+                        onBack={() => navigate(-1)} 
                         onSelectTask={handleSelectTask}
                         onUpdateTaskStatus={handleTaskStatusChange}
                         onAddTask={handleAddTask}
@@ -990,7 +955,6 @@ useEffect(() => {
                     />
                 } />
                 
-                {/* Fallback para rota desconhecida */}
                 <Route path="*" element={<Navigate to="/" />} />
             </Routes>
           </div>
@@ -1002,18 +966,11 @@ useEffect(() => {
   );
 };
 
-// --- WRAPPERS PARA AS ROTAS DE DETALHE ---
-// Estes componentes pegam o ID da URL e passam o objeto correto para a View
-
 const ProjectDetailWrapper = ({ projects, ...props }: any) => {
     const { projectId } = useParams();
     const project = projects.find((p: Project) => p.id === projectId);
     
     if (!project) {
-        // Se não achar o projeto (pode estar carregando ou não existir), volta ou mostra loading
-        // Aqui vamos redirecionar para a lista de projetos se não achar (após o load inicial)
-        // Como 'projects' vem do useFirestore, se estiver vazio no inicio, pode dar redirect falso.
-        // O ideal seria ter um estado de loading, mas por hora, se projects tiver items e não achar, redirect.
         if (projects.length > 0) return <Navigate to="/projects" />;
         return <div className="flex h-full items-center justify-center text-gray-400">Carregando projeto...</div>;
     }
@@ -1037,4 +994,13 @@ const TaskDetailWrapper = ({ tasks, ...props }: any) => {
     }
 
     return <TaskDetailView task={task} {...props} />;
+};
+
+// [NOVO] O App principal agora é apenas um Wrapper com o Provider
+export const App = () => {
+  return (
+    <AuthProvider>
+       <AppContent />
+    </AuthProvider>
+  );
 };

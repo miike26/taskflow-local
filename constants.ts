@@ -2,7 +2,9 @@
 import type { Category, Tag, Task, Status, Activity, View, Habit, HabitTemplate, Project } from './types';
 import { BriefcaseIcon, UserIcon, AcademicCapIcon, ClipboardDocumentCheckIcon, FolderIcon, SunIcon } from './components/icons';
 
-export const LOGO_URL = 'https://cdn-icons-png.flaticon.com/512/906/906334.png';
+export const SIDEBAR_LOGO_URL = '/images/sidebaricon.png';
+export const LOGIN_LOGO_URL = '/images/login.png';
+export const APP_ICON_URL = '/images/icon.png';
 
 export const VIEW_TITLES: Record<View, string> = {
   dashboard: 'Dashboard',

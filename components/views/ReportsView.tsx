@@ -1516,21 +1516,43 @@ const ReportsView: React.FC<ReportsViewProps> = ({ tasks, tags, categories, onSe
                         ) : (
                             // List View
                             <div className="space-y-6">
-                                <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
-                                    <div>
-                                        <h3 className="text-2xl font-bold mb-2">Resumos Inteligentes</h3>
-                                        <p className="text-indigo-100 max-w-lg">
-                                            Utilize a IA para gerar análises detalhadas de produtividade, reviews semanais e relatórios de impacto com um clique.
-                                        </p>
-                                    </div>
-                                    <button 
-                                        onClick={() => setIsCreatingSummary(true)}
-                                        className="px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2 whitespace-nowrap"
-                                    >
-                                        <SparklesIcon className="w-5 h-5" />
-                                        Novo Resumo
-                                    </button>
-                                </div>
+                                {/* Container de Novo Resumo (Condicional) */}
+{appSettings?.enableAi ? (
+    // SE ATIVO: Mostra o bloco Roxo normal
+    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+            <h3 className="text-2xl font-bold mb-2">Resumos Inteligentes</h3>
+            <p className="text-indigo-100 max-w-lg">
+                Utilize a IA para gerar análises detalhadas de produtividade, reviews semanais e relatórios de impacto com um clique.
+            </p>
+        </div>
+        <button 
+            onClick={() => setIsCreatingSummary(true)}
+            className="px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2 whitespace-nowrap"
+        >
+            <SparklesIcon className="w-5 h-5" />
+            Novo Resumo
+        </button>
+    </div>
+) : (
+    // SE DESATIVADO: Mostra bloco cinza bloqueado
+    <div className="bg-gray-100 dark:bg-[#161B22] border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 opacity-80">
+        <div className="flex items-center gap-4">
+            <div className="p-3 bg-gray-200 dark:bg-gray-800 rounded-full text-gray-400">
+                <SparklesIcon className="w-8 h-8" />
+            </div>
+            <div>
+                <h3 className="text-xl font-bold text-gray-600 dark:text-gray-300 mb-1">Resumos Inteligentes (Desativado)</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-sm max-w-lg">
+                    Ative os recursos de IA nas configurações para gerar análises automáticas e insights de produtividade.
+                </p>
+            </div>
+        </div>
+        <div className="text-sm font-medium text-gray-400 bg-gray-200 dark:bg-gray-800 px-4 py-2 rounded-lg cursor-not-allowed">
+            Recurso Indisponível
+        </div>
+    </div>
+)}
 
                                 <div>
                                     <h4 className="font-bold text-gray-800 dark:text-gray-200 mb-4 text-lg">Documentos Salvos</h4>

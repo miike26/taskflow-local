@@ -1,268 +1,90 @@
 import React, { useState } from 'react';
 // Caminhos relativos mantidos
-import { LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS } from '../constants';
+import { LOGIN_LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS } from '../constants';
 import Sidebar from './Sidebar';
 import DashboardView from './views/DashboardView';
 import { GoogleIcon } from './icons';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import { useAuth } from '../hooks/useAuth'; // <--- Importando a lógica de Auth
+import { useAuth } from '../hooks/useAuth';
 
+// Interface simplificada, pois não precisamos mais de user/pass manuais
 interface LoginScreenProps {
     login: (user: string, pass: string) => Promise<boolean>;
 }
 
-const inputClass = "flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-400 text-sm p-3 transition-all duration-200 hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium";
-
-const SignupModal: React.FC<{ onSignup: (name: string) => void, onClose: () => void }> = ({ onSignup, onClose }) => {
-    const { registerWithGoogle } = useAuth(); // <--- Hook de Auth
-    const [localError, setLocalError] = useState(''); // <--- Erro visual para o modal
-
-    const [formData, setFormData] = useState({
-        fullName: '',
-        nickname: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleRegister = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Em um app real, validação e API call iriam aqui.
-        if (formData.nickname) {
-            onSignup(formData.nickname);
-        }
-    };
-
-    // --- NOVA LÓGICA DE CADASTRO COM GOOGLE ---
-    const handleGoogleConnect = async () => {
-        setLocalError('');
-        try {
-            await registerWithGoogle();
-            onClose(); // Fecha o modal após sucesso (o App.tsx vai redirecionar pelo AuthState)
-        } catch (err: any) {
-            setLocalError(err.message || "Erro ao conectar com Google.");
-        }
-    };
-
-    return (
-        <div className="bg-white dark:bg-[#161B22] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in border border-gray-200 dark:border-gray-800 relative z-50">
-            {/* Header */}
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Crie sua conta</h2>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-            </div>
-
-            <div className="p-6 space-y-6">
-                {/* Social Login */}
-                <button 
-                    onClick={handleGoogleConnect}
-                    className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#21262D] border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm hover:shadow-md"
-                >
-                    <GoogleIcon className="w-5 h-5" />
-                    <span>Conectar com Google</span>
-                </button>
-
-                {/* Exibição de Erro no Modal de Cadastro */}
-                {localError && (
-                    <p className="text-sm text-red-500 text-center">{localError}</p>
-                )}
-
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 border-t border-gray-200 dark:border-gray-700"></div>
-                    <span className="relative bg-white dark:bg-[#161B22] px-3 text-xs text-gray-500 uppercase tracking-wide font-medium">ou preencha seus dados</span>
-                </div>
-
-                {/* Form */}
-                <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            name="fullName"
-                            placeholder="Nome Completo"
-                            required
-                            className={inputClass}
-                            value={formData.fullName}
-                            onChange={handleInputChange}
-                        />
-                        <input
-                            type="text"
-                            name="nickname"
-                            placeholder="Como quer ser chamado (Apelido)"
-                            required
-                            className={inputClass}
-                            value={formData.nickname}
-                            onChange={handleInputChange}
-                        />
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="E-mail"
-                            required
-                            className={inputClass}
-                            value={formData.email}
-                            onChange={handleInputChange}
-                        />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input
-                                type="password"
-                                name="password"
-                                placeholder="Senha"
-                                required
-                                className={inputClass}
-                                value={formData.password}
-                                onChange={handleInputChange}
-                            />
-                            <input
-                                type="password"
-                                name="confirmPassword"
-                                placeholder="Repita a senha"
-                                required
-                                className={inputClass}
-                                value={formData.confirmPassword}
-                                onChange={handleInputChange}
-                            />
-                        </div>
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="w-full py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-lg shadow-lg shadow-primary-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                    >
-                        Cadastrar
-                    </button>
-                </form>
-            </div>
-            
-            <div className="p-4 bg-gray-50 dark:bg-[#0D1117]/50 border-t border-gray-100 dark:border-gray-800 text-center">
-                <button onClick={onClose} className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium">
-                    Já tem uma conta? Faça login
-                </button>
-            </div>
-        </div>
-    );
-};
-
-const LoginModal: React.FC<{ login: (u: string, p: string) => Promise<boolean>, onToggleMode: () => void }> = ({ login, onToggleMode }) => {
-    const { loginWithGoogle } = useAuth(); // <--- Hook de Auth
-    const [username, setUsername] = useState(''); 
-    const [password, setPassword] = useState('');
+const AuthModal: React.FC = () => {
+    const { loginWithGoogle } = useAuth();
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleLoginSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        
-        // Fallback para desenvolvimento local: se vazio, tenta credenciais padrão
-        const u = username || 'admin';
-        const p = password || 'admin';
-        
-        // Chama a função de login (que pode ser a do Google ou a legada)
-        const success = await login(u, p);
-        if (!success) {
-            // O erro geralmente é tratado via alert no hook useAuth, mas podemos setar aqui
-            // setError('Falha no login');
-        }
-    };
-
-    // --- NOVA LÓGICA DE LOGIN COM GOOGLE ---
     const handleGoogleConnect = async () => {
         setError('');
+        setIsLoading(true);
         try {
-            // Tenta logar e verificar no Firestore
+            // Essa função do seu hook deve lidar tanto com login quanto com registro (signInWithPopup)
             await loginWithGoogle();
         } catch (err: any) {
-            // Remove prefixo feio do Firebase se existir
-            const msg = err.message ? err.message.replace('Firebase: ', '') : "Erro ao entrar.";
+            const msg = err.message ? err.message.replace('Firebase: ', '') : "Erro ao conectar.";
             setError(msg);
+            setIsLoading(false);
         }
     };
 
     return (
-        <div className="bg-white dark:bg-[#161B22] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in border border-gray-200 dark:border-gray-800 relative z-50">
-             {/* Header */}
-            <div className="p-6 border-b border-gray-100 dark:border-gray-800 text-center">
-                 <img src={LOGO_URL} alt="FlowTask Logo" className="h-10 mx-auto mb-3 object-contain" />
-                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta!</h2>
+        <div className="bg-white dark:bg-[#161B22] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-scale-in border border-gray-200 dark:border-gray-800 relative z-50">
+            {/* Header com Logo */}
+            <div className="pt-10 pb-6 px-6 text-center">
+                <img 
+                    src={LOGIN_LOGO_URL} 
+                    alt="FlowTask Logo" 
+                    className="h-56 mx-auto mb-6 object-contain drop-shadow-sm" 
+                />
+                <h2 className="text-xl font-medium text-gray-700 dark:text-gray-100 mb-2">
+                    Bem-vindo ao FlowTask
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+                    Gerencie seus hábitos, tarefas e projetos<br/> com a ajuda da Inteligência Artificial.
+                </p>
             </div>
 
-            <div className="p-6 space-y-6">
-                 {/* Social Login */}
+            {/* Corpo com Botão Único */}
+            <div className="px-8 pb-10 space-y-6">
+                
+                {error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-300 text-xs p-3 rounded-lg text-center">
+                        {error}
+                    </div>
+                )}
+
                 <button 
                     onClick={handleGoogleConnect}
-                    className="w-full flex items-center justify-center gap-3 bg-white dark:bg-[#21262D] border border-gray-300 dark:border-gray-700 rounded-xl py-3 px-4 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm hover:shadow-md"
+                    disabled={isLoading}
+                    className="group w-full flex items-center justify-center gap-3 bg-white dark:bg-[#21262D] border border-gray-300 dark:border-gray-700 rounded-xl py-3.5 px-4 text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-[#30363d] hover:border-gray-400 dark:hover:border-gray-600 transition-all shadow-sm hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                    <GoogleIcon className="w-5 h-5" />
-                    <span>Entrar com Google</span>
-                </button>
-
-                <div className="relative flex items-center justify-center">
-                    <div className="absolute inset-0 border-t border-gray-200 dark:border-gray-700"></div>
-                    <span className="relative bg-white dark:bg-[#161B22] px-3 text-xs text-gray-500 uppercase tracking-wide font-medium">ou entre com usuário</span>
-                </div>
-
-                <form className="space-y-4" onSubmit={handleLoginSubmit}>
-                    <div className="space-y-4">
-                        <div>
-                            <label htmlFor="username" className="sr-only">Usuário</label>
-                            <input
-                                id="username"
-                                name="username"
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                className={inputClass}
-                                placeholder="Usuário (admin)"
-                            />
-                        </div>
-                        <div>
-                            <label htmlFor="password-input" className="sr-only">Senha</label>
-                            <input
-                                id="password-input"
-                                name="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className={inputClass}
-                                placeholder="Senha (admin)"
-                            />
-                        </div>
-                    </div>
-                    
-                    {error && (
-                        <p className="text-sm text-red-500 text-center">{error}</p>
+                    {isLoading ? (
+                         <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                    ) : (
+                        <GoogleIcon className="w-5 h-5 transition-transform group-hover:scale-110" />
                     )}
-
-                    <div>
-                        <button
-                            type="submit"
-                            className="w-full py-3.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-bold text-lg shadow-lg shadow-primary-500/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                            Entrar
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <div className="p-4 bg-gray-50 dark:bg-[#0D1117]/50 border-t border-gray-100 dark:border-gray-800 text-center">
-                <button 
-                    onClick={onToggleMode}
-                    className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium hover:underline"
-                >
-                    Novo por aqui? Clique aqui para criar sua conta
+                    <span>
+                        {isLoading ? 'Conectando...' : 'Continuar com Google'}
+                    </span>
                 </button>
+
+                <div className="text-center">
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 max-w-xs mx-auto leading-tight">
+                        Ao clicar em continuar, você cria sua conta automaticamente e aceita nossos <span className="underline cursor-pointer hover:text-gray-600 dark:hover:text-gray-300">Termos de Uso</span> e <span className="underline cursor-pointer hover:text-gray-600 dark:hover:text-gray-300">Política de Privacidade</span>.
+                    </p>
+                </div>
             </div>
+            
+            {/* Barra inferior decorativa */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
         </div>
-    )
+    );
 }
 
+// --- Fundo Mantido Exatamente Igual ---
 const DemoDashboardBackground = () => {
-    // Dados estáticos para o fundo visual
     const habitsWithStatus = DEFAULT_HABITS.map(h => ({ ...h, isCompleted: false }));
     const [appSettings] = useState({ 
       disableOverdueColor: false, 
@@ -312,19 +134,9 @@ const DemoDashboardBackground = () => {
     );
 };
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
-    const [isSignupMode, setIsSignupMode] = useState(false);
+const LoginScreen: React.FC<LoginScreenProps> = () => {
+    // Não precisamos mais de estados de Signup/Login, pois é um modal único
     
-    // Armazena o nome apenas localmente para a experiência de "boas-vindas"
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const [_, setStoredUserName] = useLocalStorage('userName', 'Admin');
-
-    const handleSignupSuccess = (name: string) => {
-        setStoredUserName(name);
-        // Tenta logar (se estiver com Firebase Auth, o fluxo real será disparado pelo botão Google)
-        login('admin', 'admin'); 
-    };
-
     return (
         <div className="relative min-h-screen bg-ice-blue dark:bg-[#0D1117] flex items-center justify-center overflow-hidden">
             
@@ -336,12 +148,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ login }) => {
             {/* Overlay escuro */}
             <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-10"></div>
 
+            {/* Modal Central */}
             <div className="relative z-20 w-full flex items-center justify-center p-4">
-                {isSignupMode ? (
-                    <SignupModal onSignup={handleSignupSuccess} onClose={() => setIsSignupMode(false)} />
-                ) : (
-                    <LoginModal login={login} onToggleMode={() => setIsSignupMode(true)} />
-                )}
+                <AuthModal />
             </div>
         </div>
     );

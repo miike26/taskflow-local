@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import type { View, Task, Category, Status } from '../types';
 import { DashboardIcon, CalendarIcon, ListIcon, SettingsIcon, BarChartIcon, BellIcon, UserCircleIcon, PinIcon, BroomIcon, FolderIcon, ChevronLeftIcon, ChevronRightIcon, Cog6ToothIcon, ClockIcon } from './icons';
-import { LOGO_URL } from '../constants';
+import { SIDEBAR_LOGO_URL, APP_ICON_URL } from '../constants';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 
@@ -160,10 +160,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
             {/* Header: Logo Only (Button moved to bottom) */}
             <div className={`flex items-center justify-center pt-6 pb-6 flex-shrink-0 min-h-[80px]`}>
                 {!isCollapsed ? (
-                    <img src={LOGO_URL} alt="FlowTask Logo" className="w-32 animate-fade-in object-contain" />
+                    <img src={SIDEBAR_LOGO_URL} alt="FlowTask Logo" className="w-32 animate-fade-in object-contain" />
                 ) : (
                     // Show mini logo or nothing when fully collapsed to save space for icons
-                    <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-bold text-xs">FT</div>
+                    <img 
+            src={APP_ICON_URL} 
+            alt="FT" 
+            className="h-8 w-8 object-contain" // Ajuste o tamanho (h-8 w-8) conforme necessário
+        />
                 )}
             </div>
             

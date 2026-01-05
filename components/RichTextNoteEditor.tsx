@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { BoldIcon, ItalicIcon, LinkIcon, ListBulletIcon, SparklesIcon } from './icons';
 import { GoogleGenAI } from "@google/genai";
@@ -34,7 +33,7 @@ const LinkModal: React.FC<{
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70]" onClick={handleBackdropClick}>
-            <div className="bg-white dark:bg-[#212D] rounded-xl p-6 shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+            <div className="bg-white dark:bg-[#21262D] rounded-xl p-6 shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Adicionar Hyperlink</h3>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Insira a URL para o texto selecionado.</p>
                 <div className="mt-4">
@@ -47,7 +46,7 @@ const LinkModal: React.FC<{
                         onChange={e => setUrl(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleConfirm()}
                         placeholder="https://exemplo.com"
-                        className="block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-sm bg-ice-blue dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 p-2.5 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
+                        className="block w-full rounded-lg border-gray-300 dark:border-gray-700 shadow-sm bg-gray-50 dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 p-2.5 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
                     />
                 </div>
                 <div className="mt-6 flex justify-end space-x-3">
@@ -67,7 +66,8 @@ const RichTextNoteEditor: React.FC<{
     onCancel: () => void;
     isLoading?: boolean;
     isAiHighlighted?: boolean;
-}> = ({ value, onChange, placeholder, onAdd, onCancel, isLoading, isAiHighlighted }) => {
+    enableAi?: boolean; // [MODIFICADO] Nova prop para controle
+}> = ({ value, onChange, placeholder, onAdd, onCancel, isLoading, isAiHighlighted, enableAi = true }) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isFormatting, setIsFormatting] = useState(false);
@@ -201,24 +201,26 @@ const RichTextNoteEditor: React.FC<{
                     <button onMouseDown={(e) => handleMouseDown(e, handleLinkModalOpen)} className={toolbarButtonClass} title="Link" disabled={isBusy}><LinkIcon className="w-5 h-5" /></button>
                     <button onMouseDown={(e) => handleMouseDown(e, () => execFormat('insertUnorderedList'))} className={toolbarButtonClass} title="Lista" disabled={isBusy}><ListBulletIcon className="w-5 h-5" /></button>
                     
-                    {/* Smart Format Button */}
-                    <button 
-                        onMouseDown={(e) => handleMouseDown(e, handleSmartFormat)} 
-                        className={`ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 
-                            ${isFormatting 
-                                ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 cursor-wait' 
-                                : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
-                            }`}
-                        title="Formatação Inteligente (Organizar texto com IA)"
-                        disabled={isBusy}
-                    >
-                        <SparklesIcon className={`w-4 h-4 ${isFormatting ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Formatar</span>
-                    </button>
+                    {/* [MODIFICADO] Renderização Condicional do Botão de IA */}
+                    {enableAi && (
+                        <button 
+                            onMouseDown={(e) => handleMouseDown(e, handleSmartFormat)} 
+                            className={`ml-auto flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold transition-all duration-200 
+                                ${isFormatting 
+                                    ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 cursor-wait' 
+                                    : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                                }`}
+                            title="Formatação Inteligente (Organizar texto com IA)"
+                            disabled={isBusy}
+                        >
+                            <SparklesIcon className={`w-4 h-4 ${isFormatting ? 'animate-spin' : ''}`} />
+                            <span className="hidden sm:inline">Formatar</span>
+                        </button>
+                    )}
                 </div>
                 
                 <div className="relative min-h-[120px] max-h-[300px] overflow-hidden">
-                    {/* Loading Overlay - Rendered when busy, covers the editor */}
+                    {/* Loading Overlay */}
                     {isBusy && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 bg-white dark:bg-[#0D1117] text-indigo-500 dark:text-indigo-400 cursor-wait">
                             <SparklesIcon className="w-6 h-6 animate-spin mb-3" />
@@ -228,7 +230,7 @@ const RichTextNoteEditor: React.FC<{
                         </div>
                     )}
                     
-                    {/* Editor - Maintained in DOM but invisible when busy to preserve height */}
+                    {/* Editor */}
                     <div
                         ref={editorRef}
                         contentEditable
