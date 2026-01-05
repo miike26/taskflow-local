@@ -21,11 +21,12 @@ import SuccessOverlay from './components/SuccessOverlay.tsx';
 import OnboardingWizard from './components/OnboardingWizard';
 import { useLocalStorage } from './hooks/useLocalStorage.ts';
 import { useFirestore } from './hooks/useFirestore.ts';
-import { useAuth, AuthProvider } from './hooks/useAuth'; // [NOVO] Import do AuthProvider
+import { useAuth, AuthProvider } from './hooks/useAuth';
 import { useUserDocument } from './hooks/useUserDocument.ts'; 
 import { writeBatch, doc } from 'firebase/firestore'; 
 import { db } from './lib/firebase';
 import FeatureTourModal from './components/FeatureTourModal';
+import LandingPage from './components/LandingPage';
 import { FEATURE_TOUR_STEPS } from './constants/tours';
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
@@ -978,8 +979,10 @@ const ProjectDetailWrapper = ({ projects, ...props }: any) => {
     return (
         <ProjectDetailView 
             project={project} 
+            projects={projects} // [CORREÇÃO] Devolvendo a lista de projetos
             {...props} 
             tasks={props.tasks.filter((t: Task) => t.projectId === project.id)}
+            allTasks={props.tasks} // [SUGESTÃO] Passar todas as tarefas caso precise para notificações
         />
     );
 };
@@ -993,14 +996,42 @@ const TaskDetailWrapper = ({ tasks, ...props }: any) => {
         return <div className="flex h-full items-center justify-center text-gray-400">Carregando tarefa...</div>;
     }
 
-    return <TaskDetailView task={task} {...props} />;
+    return (
+        <TaskDetailView 
+            task={task} 
+            tasks={tasks} // [CORREÇÃO CRÍTICA] Adicionando a lista de tarefas de volta!
+            {...props} 
+        />
+    );
 };
 
-// [NOVO] O App principal agora é apenas um Wrapper com o Provider
+// [NOVO] O App principal agora age como um Roteador de Domínio
 export const App = () => {
-  return (
-    <AuthProvider>
-       <AppContent />
-    </AuthProvider>
-  );
+  const hostname = window.location.hostname;
+  
+  // Verifica se existe o parâmetro ?mode=landing na URL (para testes locais)
+  const searchParams = new URLSearchParams(window.location.search);
+  const forceLanding = searchParams.get('mode') === 'landing';
+
+  // 2. Verifica se estamos no ambiente do "Sistema"
+  const isAppEnvironment = 
+    (hostname.startsWith('app.') || 
+    hostname.includes('localhost') || 
+    hostname.includes('firebaseapp.com') ||
+    hostname.includes('web.app')) && 
+    !forceLanding; // <--- AQUI ESTÁ O TRUQUE: Se forçar landing, vira falso.
+
+  // CENÁRIO A: Estamos no subdomínio (app...) OU localhost padrão
+  if (isAppEnvironment) {
+    return (
+      <AuthProvider>
+         <AppContent />
+      </AuthProvider>
+    );
+  }
+
+  // CENÁRIO B: Domínio raiz OU localhost forçado (?mode=landing)
+  return <LandingPage />;
 };
+
+export default App;

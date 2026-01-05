@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { Project, Task, Category, Tag, Status, Notification, Habit, Activity, AppSettings, SubTask, ConfirmationToastData } from '../../types';
+// Adicionei os ícones que estavam faltando baseados no Header.tsx
 import { 
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
-    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon, BriefcaseIcon, UserCircleIcon
+    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon, BriefcaseIcon, UserCircleIcon, ListIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -13,19 +14,21 @@ import DateRangeCalendar from '../DateRangeCalendar';
 import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
 
-// --- HELPER: Recupera ícones de categorias ---
+// --- HELPER: Recupera ícones de categorias (Sincronizado com Header.tsx) ---
 const getCategoryIcon = (category?: Category) => {
-    if (!category) return FolderIcon; 
-    if (category.icon) return category.icon; // Se tiver na memória local
+    if (!category) return BellIcon; // Ícone padrão para notificação genérica
+    if (category.icon) return category.icon; // Se por acaso tiver ícone salvo
 
+    // Mapeamento manual igual ao Header
     switch (category.id) {
         case 'cat-1': return BriefcaseIcon;      // Trabalho
         case 'cat-2': return UserCircleIcon;     // Pessoal
-        case 'cat-3': return ListBulletIcon;     // Estudo / Lista
+        case 'cat-3': return ListIcon;           // Estudo / Lista
         default: return FolderIcon;              // Personalizadas
     }
 };
 
+// --- HELPER: Formatação de Tempo (Sincronizado com Header.tsx) ---
 const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') => {
     const date = new Date(dateString);
     const now = new Date();
@@ -44,6 +47,7 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
 };
 
+// --- COMPONENT: NotificationCard (Sincronizado com Header.tsx) ---
 const NotificationCard: React.FC<{
   notification: Notification;
   task?: Task;
@@ -161,6 +165,7 @@ const NotificationCard: React.FC<{
     );
 };
 
+// --- COMPONENT: NotificationBell (Sincronizado com Header.tsx) ---
 const NotificationBell: React.FC<{
   notifications: Notification[];
   unreadNotifications: Notification[];
@@ -172,7 +177,18 @@ const NotificationBell: React.FC<{
   onMarkAllAsRead: () => void;
   onClearAllNotifications: () => void;
   timeFormat: '12h' | '24h';
-}> = ({ notifications, unreadNotifications, tasks, categories, onNotificationClick, onSnooze, onMarkHabitComplete, onMarkAllAsRead, onClearAllNotifications, timeFormat }) => {
+}> = ({ 
+    notifications, 
+    unreadNotifications, 
+    tasks = [], // Proteção contra undefined (importante)
+    categories = [], // Proteção contra undefined
+    onNotificationClick, 
+    onSnooze, 
+    onMarkHabitComplete, 
+    onMarkAllAsRead, 
+    onClearAllNotifications, 
+    timeFormat 
+}) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     
@@ -1626,26 +1642,26 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                 {/* Actions Container - Revealed on hover */}
                                 {currentProject && !isProjectDropdownOpen && (
                                     <div className="flex items-center gap-1 overflow-hidden w-0 group-hover:w-auto opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pl-1">
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onOpenProject(currentProject);
-                                            }}
-                                            className="p-2 text-gray-400 hover:text-primary-500 transition-colors bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
-                                            title="Abrir Projeto"
-                                        >
-                                            <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                                        </button>
-                                        <button 
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleUnlinkProject();
-                                            }}
-                                            className="p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
-                                            title="Desvincular Projeto"
-                                        >
-                                            <LinkIcon className="w-4 h-4" /> 
-                                        </button>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onOpenProject(currentProject);
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-primary-500 transition-colors bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                                title="Abrir Projeto"
+                                            >
+                                                <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleUnlinkProject();
+                                                }}
+                                                className="p-2 text-gray-400 hover:text-red-500 transition-colors bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                title="Desvincular Projeto"
+                                            >
+                                                <LinkIcon className="w-4 h-4" /> 
+                                            </button>
                                     </div>
                                 )}
                             </div>

@@ -12,8 +12,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     build: {
       sourcemap: false,
-      minify: 'esbuild', // Padrão do Vite
-      // Adicione esta configuração para remover logs
+      minify: 'esbuild',
       esbuild: {
         drop: ['console', 'debugger'],
       },

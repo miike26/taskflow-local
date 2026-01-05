@@ -5,6 +5,7 @@ import { BriefcaseIcon, UserIcon, AcademicCapIcon, ClipboardDocumentCheckIcon, F
 export const SIDEBAR_LOGO_URL = '/images/sidebaricon.png';
 export const LOGIN_LOGO_URL = '/images/login.png';
 export const APP_ICON_URL = '/images/icon.png';
+export const LP_ICON_URL = '/images/landingpage.png';
 
 export const VIEW_TITLES: Record<View, string> = {
   dashboard: 'Dashboard',
