@@ -1777,7 +1777,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                     <button
                                         onClick={() => setIsSummaryDropdownOpen(prev => !prev)}
                                         disabled={isSummarizing}
-                                        className="group flex items-center justify-center p-2 rounded-full bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-400 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:bg-gradient-to-r hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:text-white hover:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-purple-400 hover:ring-offset-2 dark:hover:ring-offset-[#161B22]"
+                                        className="group flex items-center justify-center p-2 rounded-full bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-100 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:bg-gradient-to-r hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:text-white hover:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-purple-400 hover:ring-offset-2 dark:hover:ring-offset-[#161B22]"
                                     >
                                         <SparklesIcon className={`w-4 h-4 flex-shrink-0 ${isSummarizing ? 'animate-spin' : ''}`} />
                                         <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap ml-0 group-hover:ml-2 text-xs font-medium">
@@ -1877,6 +1877,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                         }}
                                         isLoading={isSummarizing}
                                         isAiHighlighted={isAiGenerated}
+                                        enableAi={appSettings.enableAi}
                                     />
                                 </div>
                             ) : (
