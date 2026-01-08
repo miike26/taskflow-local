@@ -12,6 +12,7 @@ interface CalendarViewProps {
   onToggleComplete: (taskId: string) => void;
   appSettings?: AppSettings;
   projects: Project[];
+  onDateSelect?: (date: Date) => void;
 }
 
 const taskSortFunction = (a: Task, b: Task) => {
@@ -29,7 +30,7 @@ const taskSortFunction = (a: Task, b: Task) => {
 };
 
 
-const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, appSettings, projects}) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, onDateSelect, appSettings, projects}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
@@ -161,7 +162,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, on
             return (
               <div
                 key={i}
-                onClick={() => setSelectedDate(d)}
+                onClick={() => {setSelectedDate(d); if (onDateSelect) onDateSelect(d);}}
                 className={`p-2 h-28 flex flex-col cursor-pointer transition-colors border-t border-l border-gray-200 dark:border-gray-800
                   ${isCurrentMonth ? 'bg-white dark:bg-[#161B22]' : 'bg-gray-50 dark:bg-[#0D1117] text-gray-400 dark:text-gray-600'}
                   ${isSelected ? 'bg-primary-50 dark:bg-primary-900/50' : 'hover:bg-gray-100 dark:hover:bg-white/5'}

@@ -28,6 +28,7 @@ interface TaskSheetProps {
   zIndex?: number;
   appSettings?: AppSettings;
   defaultProjectId?: string;
+  defaultDate?: Date | null;
 }
 
 const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
@@ -54,7 +55,7 @@ const getCategoryIcon = (category?: Category) => {
     }
 };
 
-const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, defaultProjectId, appSettings, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
+const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, defaultProjectId, defaultDate, appSettings, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
   const [taskData, setTaskData] = useState<Task | null>(null);
   const [newSubTask, setNewSubTask] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -99,12 +100,19 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
             const now = new Date();
             const tomorrow = new Date();
             tomorrow.setDate(now.getDate() + 1);
+            let initialDateToUse = tomorrow;
+            if (defaultDate) {
+                initialDateToUse = new Date(defaultDate);
+                // Ajusta para final do dia (opcional, mas recomendado para prazos)
+                initialDateToUse.setHours(23, 59, 59);
+            };
+            
             setTaskData({
               id: Date.now().toString(),
               title: '',
               description: '',
               dateTime: now.toISOString(),
-              dueDate: tomorrow.toISOString(),
+              dueDate: initialDateToUse.toISOString(),
               categoryId: categories[0]?.id || '',
               tagId: tags[1]?.id || '',
               status: 'Pendente',
@@ -113,12 +121,12 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
               tags: [],
               projectId: defaultProjectId || '',
             });
-            setCalendarDisplayDate(tomorrow);
+            setCalendarDisplayDate(initialDateToUse);
         }
     } else {
         setTaskData(null);
     }
-  }, [isOpen, initialData, categories, tags, defaultProjectId]);
+  }, [isOpen, initialData, categories, tags, defaultProjectId, defaultDate]);
 
   const tasksByDueDate = useMemo(() => {
     return tasks.reduce((acc, task) => {
