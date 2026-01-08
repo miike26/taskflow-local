@@ -1,6 +1,5 @@
-
 import React, { useState, useMemo } from 'react';
-import type { Task, Category, Tag, Status, AppSettings } from '../../types';
+import type { Task, Category, Tag, Status, AppSettings, Project } from '../../types';
 import { ChevronLeftIcon, ChevronRightIcon } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS } from '../../constants';
@@ -12,6 +11,7 @@ interface CalendarViewProps {
   onSelectTask: (task: Task) => void;
   onToggleComplete: (taskId: string) => void;
   appSettings?: AppSettings;
+  projects: Project[];
 }
 
 const taskSortFunction = (a: Task, b: Task) => {
@@ -29,7 +29,7 @@ const taskSortFunction = (a: Task, b: Task) => {
 };
 
 
-const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, appSettings }) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, appSettings, projects}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
@@ -52,14 +52,22 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, on
   
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+  // --- CORREÇÃO AQUI ---
+  // Antes usava task.dateTime (criação), agora usa task.dueDate (vencimento)
   const tasksByDate = tasks.reduce((acc, task) => {
-    const date = new Date(task.dateTime).toDateString();
+    // Se a tarefa não tem data de vencimento, não mostramos no calendário
+    if (!task.dueDate) return acc;
+
+    // Usamos dueDate para agrupar
+    const date = new Date(task.dueDate).toDateString();
+    
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(task);
     return acc;
   }, {} as Record<string, Task[]>);
+  // ---------------------
 
   const selectedDayTasksByStatus = useMemo(() => {
     if (!selectedDate) return null;
@@ -115,6 +123,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, on
                       isOverdue={isOverdue}
                       variant="compact"
                       disableOverdueColor={appSettings?.disableOverdueColor}
+                      project={projects.find(p => p.id === task.projectId)}
+                      showProject={appSettings?.showProjectOnCard}
+                      onlyProjectIcon={appSettings?.onlyProjectIcon}
                     />
                   )
                 })}

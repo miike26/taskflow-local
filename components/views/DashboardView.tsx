@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
-import type { Task, Category, Tag, Status, Habit, Activity, AppSettings } from '../../types';
+import type { Task, Category, Tag, Status, Habit, Activity, AppSettings, Project } from '../../types';
 import TaskCard from '../TaskCard';
 import { 
     CheckCircleIcon, PlayCircleIcon, StopCircleIcon, ClockIcon, 
@@ -406,10 +406,13 @@ const KanbanColumn: React.FC<{
     tasks: Task[];
     categories: Category[];
     tags: Tag[];
+    projects: Project[];
     isOverdueColumn?: boolean;
     onSelectTask: (task: Task) => void;
     disableOverdueColor?: boolean;
-}> = ({ title, tasks, categories, tags, onSelectTask, isOverdueColumn = false, disableOverdueColor }) => {
+    showProject?: boolean;
+    onlyProjectIcon?: boolean;
+    }> = ({ title, tasks, categories, tags, projects, appSettings, onSelectTask, isOverdueColumn = false, disableOverdueColor, showProject, onlyProjectIcon }) => {
     
     const getCategory = (id: string) => categories.find(c => c.id === id);
     const getTag = (id: string) => tags.find(t => t.id === id);
@@ -429,9 +432,12 @@ const KanbanColumn: React.FC<{
                             variant="compact"
                             category={getCategory(task.categoryId)}
                             tag={getTag(task.tagId)}
+                            project={projects.find(p => p.id === task.projectId)}
                             onSelect={onSelectTask}
                             isOverdue={isOverdueColumn || (task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Concluída')}
                             disableOverdueColor={disableOverdueColor}
+                            showProject={showProject}
+                            onlyProjectIcon={onlyProjectIcon}
                         />
                     ))
                 ) : (
@@ -545,6 +551,7 @@ interface DashboardViewProps {
   tasks: Task[];
   categories: Category[];
   tags: Tag[];
+  projects: Project[];
   onSelectTask: (task: Task) => void;
   habits: (Habit & { isCompleted: boolean })[];
   onToggleHabit: (habitId: string) => void;
@@ -554,7 +561,7 @@ interface DashboardViewProps {
   onReorderHabits: (from: number, to: number) => void;
 }
 
-const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, onSelectTask, habits, onToggleHabit, appSettings, setAppSettings, isDemoMode = false, onReorderHabits }) => {
+const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, projects, onSelectTask, habits, onToggleHabit, appSettings, setAppSettings, isDemoMode = false, onReorderHabits }) => {
   const [overviewViewMode, setOverviewViewMode] = useState<'status' | 'deadline'>('status');
   const [attentionFilter, setAttentionFilter] = useState<'all' | 'overdue' | 'today' | 'tomorrow'>('all');
   
@@ -799,6 +806,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
                     variant="list-item"
                     category={getCategory(task.categoryId)}
                     tag={getTag(task.tagId)}
+                    project={projects.find(p => p.id === task.projectId)}
                     onSelect={onSelectTask}
                     isOverdue={isOverdue}
                     disableOverdueColor={appSettings?.disableOverdueColor}
@@ -874,9 +882,9 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
                     <div className="flex-1 min-h-0 relative">
                         {overviewViewMode === 'status' ? (
                             <div className="flex flex-col md:flex-row gap-4 h-full overflow-y-hidden overflow-x-auto pb-2">
-                                <KanbanColumn title="Pendente" tasks={pendingTasks} categories={categories} tags={tags} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} />
-                                <KanbanColumn title="Em andamento" tasks={inProgressTasks} categories={categories} tags={tags} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} />
-                                <KanbanColumn title="Concluída" tasks={completedTasks} categories={categories} tags={tags} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} />
+                                <KanbanColumn title="Pendente" tasks={pendingTasks} categories={categories} tags={tags} projects={projects} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon} />
+                                <KanbanColumn title="Em andamento" tasks={inProgressTasks} categories={categories} tags={tags} projects={projects} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon}/>
+                                <KanbanColumn title="Concluída" tasks={completedTasks} categories={categories} tags={tags} projects={projects} onSelectTask={onSelectTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon} />
                             </div>
                         ) : (
                             <div className="flex flex-col h-full overflow-hidden">

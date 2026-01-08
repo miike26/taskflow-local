@@ -84,6 +84,8 @@ export interface AppSettings {
   weekStart: 'sunday' | 'monday'; // New
   enableAi: boolean; // New
   enableAnimations: boolean; // New
+  showProjectOnCard?: boolean;
+  onlyProjectIcon?: boolean;
 }
 
 export interface Task {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { Task, Category, Tag, Status, SubTask, Activity, Project } from '../types';
+import type { Task, Category, Tag, Status, SubTask, Activity, Project, AppSettings } from '../types';
 import { 
     XIcon, TrashIcon, PlusIcon, CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon,
     ChevronDownIcon, CheckCircleIcon, FolderIcon, SearchIcon,
@@ -26,6 +26,7 @@ interface TaskSheetProps {
   onSelectTask: (task: Task) => void;
   onViewTaskFromCalendar?: (task: Task) => void;
   zIndex?: number;
+  appSettings?: AppSettings;
 }
 
 const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
@@ -52,7 +53,7 @@ const getCategoryIcon = (category?: Category) => {
     }
 };
 
-const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
+const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, appSettings, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
   const [taskData, setTaskData] = useState<Task | null>(null);
   const [newSubTask, setNewSubTask] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -307,6 +308,9 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                                     tag={tags.find(t => t.id === task.tagId)}
                                                     onSelect={onViewTaskFromCalendar || onSelectTask}
                                                     variant="compact"
+                                                    project={projects.find(p => p.id === task.projectId)}
+                                                    showProject={appSettings?.showProjectOnCard}
+                                                    onlyProjectIcon={appSettings?.onlyProjectIcon}
                                                 />
                                             ))}
                                         </div>
@@ -327,6 +331,9 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                                                     tag={tags.find(t => t.id === task.tagId)}
                                                     onSelect={onViewTaskFromCalendar || onSelectTask}
                                                     variant="compact"
+                                                    project={projects.find(p => p.id === task.projectId)}                                
+                                                    showProject={appSettings?.showProjectOnCard}
+                                                    onlyProjectIcon={appSettings?.onlyProjectIcon}
                                                 />
                                             ))}
                                         </div>

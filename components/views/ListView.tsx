@@ -607,6 +607,9 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                                 onDragStart={handleDragStart}
                                 variant={isCompactMode ? 'compact' : 'full'}
                                 disableOverdueColor={appSettings?.disableOverdueColor}
+                                project={projects.find(p => p.id === task.projectId)}
+                                showProject={appSettings?.showProjectOnCard}
+                                onlyProjectIcon={appSettings?.onlyProjectIcon}
                              />
                         ))
                     }

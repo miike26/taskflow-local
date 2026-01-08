@@ -47,6 +47,41 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
 };
 
+// --- HELPER: Componente para Renderizar Links e Quebras de Linha ---
+const LinkifiedText: React.FC<{ text: string; className?: string }> = ({ text, className = "" }) => {
+    if (!text) return null;
+
+    // Expressão regular para encontrar URLs (http/https)
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    return (
+        <div className={className}>
+            {text.split('\n').map((line, lineIndex) => (
+                <p key={lineIndex} className="min-h-[1.2em]">
+                    {line.split(urlRegex).map((part, partIndex) => {
+                        if (part.match(urlRegex)) {
+                            return (
+                                <a 
+                                    key={partIndex} 
+                                    href={part} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="text-primary-500 hover:text-primary-600 underline break-all relative z-20 cursor-pointer"
+                                    onClick={(e) => e.stopPropagation()} // Impede que o clique no link ative a edição
+                                >
+                                    {part}
+                                </a>
+                            );
+                        }
+                        return part;
+                    })}
+                </p>
+            ))}
+        </div>
+    );
+};
+
+
 // --- COMPONENT: NotificationCard (Sincronizado com Header.tsx) ---
 const NotificationCard: React.FC<{
   notification: Notification;
@@ -817,6 +852,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
     const [taskData, setTaskData] = useState<Task>(task);
     useEffect(() => setTaskData(task), [task]);
 
+    const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [newSubTask, setNewSubTask] = useState('');
     const [newNote, setNewNote] = useState('');
     const [newTag, setNewTag] = useState('');
@@ -1421,13 +1457,33 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-8 gap-6 min-h-0">
                 {/* Col 1 */}
                 <div className="lg:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar px-2 pb-2">
-                    <textarea 
-                        value={taskData.description || ''} 
-                        onChange={e => handleLocalUpdate({description: e.target.value})} 
-                        onBlur={e => onUpdate(taskData.id, {description: e.target.value})} 
-                        className="block w-full rounded-lg bg-transparent text-base font-semibold text-gray-500 dark:text-gray-400 p-4 h-auto min-h-[6rem] transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-white dark:focus:bg-[#0D1117] focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500 resize-y"
-                        placeholder="Adicionar uma descrição..."
-                    />
+                    {/* Lógica de Visualização vs Edição da Descrição */}
+<div className="relative group">
+    {isEditingDescription ? (
+        <textarea 
+            autoFocus
+            value={taskData.description || ''} 
+            onChange={e => handleLocalUpdate({description: e.target.value})} 
+            onBlur={e => {
+                onUpdate(taskData.id, {description: e.target.value});
+                setIsEditingDescription(false); // Sai do modo edição ao clicar fora
+            }} 
+            className="block w-full rounded-lg bg-white dark:bg-[#0D1117] border border-primary-500 text-base font-semibold text-gray-900 dark:text-gray-200 p-4 h-auto min-h-[8rem] focus:outline-none focus:ring-2 focus:ring-primary-500/20 resize-y"
+            placeholder="Adicionar uma descrição..."
+        />
+    ) : (
+        <div 
+            onClick={() => setIsEditingDescription(true)}
+            className="block w-full rounded-lg bg-transparent text-base font-semibold text-gray-500 dark:text-gray-400 p-4 min-h-[8rem] cursor-text transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-white/5 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+        >
+            {taskData.description ? (
+                <LinkifiedText text={taskData.description} className="whitespace-pre-wrap leading-relaxed" />
+            ) : (
+                <span className="text-gray-400 italic">Adicionar uma descrição...</span>
+            )}
+        </div>
+    )}
+</div>
                     
                     {/* Status Slider */}
                     <div>

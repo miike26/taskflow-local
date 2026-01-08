@@ -843,6 +843,14 @@ useEffect(() => {
 
   const isFixedLayout = ['dashboard', 'projectDetail', 'taskDetail', 'calendar', 'reminders', 'list', 'settings'].includes(currentView);
 
+  const activeTask = useMemo(() => {
+    if (location.pathname.startsWith('/tasks/')) {
+        const taskId = location.pathname.split('/')[2]; // Pega o ID da URL /tasks/123
+        return tasks.find(t => t.id === taskId) || null;
+    }
+    return null;
+  }, [location.pathname, tasks]);
+
   const commonProps = {
     tasks: filteredTasks,
     categories,
@@ -872,7 +880,7 @@ useEffect(() => {
       <ConfirmationDialog state={confirmationState} setState={setConfirmationState} />
       
       <div className="flex gap-4 h-[calc(100vh-2rem)]">
-        <Sidebar currentView={currentView} setCurrentView={navigateToView} recentTaskIds={recentTaskIds} pinnedTaskIds={pinnedTaskIds} tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onPinTask={handlePinTask} selectedTask={null} onClearRecents={handleClearRecentTasks} userName={userName} onLogout={handleCompleteLogout} />
+        <Sidebar currentView={currentView} setCurrentView={navigateToView} recentTaskIds={recentTaskIds} pinnedTaskIds={pinnedTaskIds} tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onPinTask={handlePinTask} selectedTask={activeTask} onClearRecents={handleClearRecentTasks} userName={userName} onLogout={handleCompleteLogout} />
         
         <main className="flex-1 flex flex-col overflow-hidden">
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (
@@ -881,9 +889,9 @@ useEffect(() => {
           
           <div key={currentView} className={`flex-1 overflow-x-hidden h-full animate-slide-up-fade-in ${isFixedLayout ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
             <Routes>
-                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} onToggleHabit={handleToggleHabit} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
-                <Route path="/calendar" element={<CalendarView {...commonProps} />} />
-                <Route path="/list" element={<ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} projects={projects} />} />
+                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} projects={projects} onToggleHabit={handleToggleHabit} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
+                <Route path="/calendar" element={<CalendarView {...commonProps} projects={projects} appSettings={appSettings} />} />
+                <Route path="/list" element={<ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} projects={projects} appSettings={appSettings} />} />
                 <Route path="/reminders" element={<RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>} />
                 <Route path="/reports" element={<ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>} />
                 <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />} />
@@ -961,7 +969,7 @@ useEffect(() => {
           </div>
         </main>
       </div>
-      <TaskSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} onSaveNew={handleSaveNewTask} onUpdate={() => {}} onDelete={() => {}} onDeleteActivity={() => {}} initialData={initialDataForSheet} categories={categories} tags={tags} tasks={tasks} projects={projects} onSelectTask={() => {}} />
+      <TaskSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} onSaveNew={handleSaveNewTask} onUpdate={() => {}} onDelete={() => {}} onDeleteActivity={() => {}} initialData={initialDataForSheet} categories={categories} tags={tags} tasks={tasks} projects={projects} onSelectTask={() => {}} appSettings={appSettings} />
       <HabitSettingsModal isOpen={isHabitSettingsOpen} onClose={() => setIsHabitSettingsOpen(false)} habits={habits} templates={HABIT_TEMPLATES} onSave={handleSaveHabits} />
     </div>
   );

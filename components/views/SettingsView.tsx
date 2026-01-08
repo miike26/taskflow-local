@@ -326,6 +326,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                             />
 
                             <SettingToggle 
+                                label="Exibir projeto nos cards" 
+                                description="Mostra a identificação do projeto vinculado." 
+                                checked={appSettings.showProjectOnCard !== false}
+                                onChange={(v) => setAppSettings(s => ({...s, showProjectOnCard: v}))} 
+                            />
+
+                            {appSettings.showProjectOnCard !== false && (
+                                <div className="ml-6 pl-4 border-l-2 border-gray-100 dark:border-gray-800 mt-2">
+                                    <SettingToggle 
+                                        label="Exibir apenas ícone" 
+                                        description="Economiza espaço mostrando apenas o símbolo do projeto." 
+                                        checked={!!appSettings.onlyProjectIcon} 
+                                        onChange={(v) => setAppSettings(s => ({...s, onlyProjectIcon: v}))} 
+                                    />
+                                </div>
+                            )}
+                            
+                            
+                            <SettingToggle 
                                 label="Destacar atrasos" 
                                 description="Tarefas atrasadas ficam com fundo vermelho." 
                                 checked={!appSettings.disableOverdueColor} 

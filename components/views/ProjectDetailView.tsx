@@ -1540,7 +1540,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                             <div className="relative" onMouseEnter={() => handleFilterMouseEnter('creationDate')} onMouseLeave={handleFilterMouseLeave}>
                                 <button className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${creationDateRangeFilter.startDate ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-[#21262D] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`}>
                                     <CalendarDaysIcon className="w-4 h-4" />
-                                    <span className="truncate max-w-[100px]">{creationDateFilterLabel}</span>
+                                    <span className="truncate">{creationDateFilterLabel}</span>
                                     <ChevronDownIcon className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${openFilter === 'creationDate' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openFilter === 'creationDate' && (

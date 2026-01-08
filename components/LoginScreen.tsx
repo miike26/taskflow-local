@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 // Caminhos relativos mantidos
-import { LOGIN_LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS } from '../constants';
+import { LOGIN_LOGO_URL, DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, DEFAULT_PROJECTS } from '../constants';
 import Sidebar from './Sidebar';
 import DashboardView from './views/DashboardView';
 import { GoogleIcon } from './icons';
@@ -127,6 +127,7 @@ const DemoDashboardBackground = () => {
                         setAppSettings={() => {}}
                         isDemoMode={true}
                         onReorderHabits={() => {}}
+                        projects={DEFAULT_PROJECTS || []}
                     />
                 </div>
             </div>
