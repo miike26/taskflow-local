@@ -27,6 +27,7 @@ interface TaskSheetProps {
   onViewTaskFromCalendar?: (task: Task) => void;
   zIndex?: number;
   appSettings?: AppSettings;
+  defaultProjectId?: string;
 }
 
 const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
@@ -53,7 +54,7 @@ const getCategoryIcon = (category?: Category) => {
     }
 };
 
-const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, appSettings, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
+const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpdate, onDelete, onDeleteActivity, initialData, defaultProjectId, appSettings, categories, tags, tasks, projects, onSelectTask, onViewTaskFromCalendar, zIndex = 40 }) => {
   const [taskData, setTaskData] = useState<Task | null>(null);
   const [newSubTask, setNewSubTask] = useState('');
   const [newTag, setNewTag] = useState('');
@@ -110,14 +111,14 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
               subTasks: [],
               activity: [],
               tags: [],
-              projectId: '',
+              projectId: defaultProjectId || '',
             });
             setCalendarDisplayDate(tomorrow);
         }
     } else {
         setTaskData(null);
     }
-  }, [isOpen, initialData, categories, tags]);
+  }, [isOpen, initialData, categories, tags, defaultProjectId]);
 
   const tasksByDueDate = useMemo(() => {
     return tasks.reduce((acc, task) => {

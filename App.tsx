@@ -76,6 +76,13 @@ const AppContent = () => {
     return path.substring(1) as View; 
   }, [location.pathname]);
 
+  const activeProjectId = useMemo(() => {
+    if (location.pathname.startsWith('/projects/')) {
+        return location.pathname.split('/')[2]; // Pega o ID da URL /projects/123
+    }
+    return undefined;
+  }, [location.pathname]);
+
   const { user, loading: authLoading, logout } = useAuth();
   const { data: userData, updateDocument: updateUserDoc } = useUserDocument();
 
@@ -969,7 +976,7 @@ useEffect(() => {
           </div>
         </main>
       </div>
-      <TaskSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} onSaveNew={handleSaveNewTask} onUpdate={() => {}} onDelete={() => {}} onDeleteActivity={() => {}} initialData={initialDataForSheet} categories={categories} tags={tags} tasks={tasks} projects={projects} onSelectTask={() => {}} appSettings={appSettings} />
+      <TaskSheet isOpen={isSheetOpen} onClose={() => setIsSheetOpen(false)} onSaveNew={handleSaveNewTask} onUpdate={() => {}} onDelete={() => {}} onDeleteActivity={() => {}} initialData={initialDataForSheet} defaultProjectId={activeProjectId} categories={categories} tags={tags} tasks={tasks} projects={projects} onSelectTask={() => {}} appSettings={appSettings} />
       <HabitSettingsModal isOpen={isHabitSettingsOpen} onClose={() => setIsHabitSettingsOpen(false)} habits={habits} templates={HABIT_TEMPLATES} onSave={handleSaveHabits} />
     </div>
   );
