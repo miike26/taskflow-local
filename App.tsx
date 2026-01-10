@@ -28,8 +28,10 @@ import { db } from './lib/firebase';
 import FeatureTourModal from './components/FeatureTourModal';
 import LandingPage from './components/LandingPage';
 import { FEATURE_TOUR_STEPS } from './constants/tours';
+import ChangelogModal from './components/ChangelogModal'; // Importe
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
+import { CHANGELOG_DATA } from './constants/changelog';
 
 
 interface ConfirmationDialogState {
@@ -87,15 +89,25 @@ const AppContent = () => {
 
   useEffect(() => {
     if (currentView !== 'calendar') {
-        setCalendarSelectedDate(null);
+      setCalendarSelectedDate(null);
     }
-}, [currentView]);
+  }, [currentView]);
+
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
   const { user, loading: authLoading, logout } = useAuth();
   const { data: userData, updateDocument: updateUserDoc } = useUserDocument();
 
   const userName = userData?.displayName || user?.displayName || 'Usuário';
   const hasCompletedOnboarding = userData?.hasCompletedOnboarding === true;
+
+  const latestVersion = CHANGELOG_DATA[0].version;
+  const [lastSeenVersion, setLastSeenVersion] = useLocalStorage<string>('changelog_last_seen', '');
+  const hasNewUpdate = lastSeenVersion !== latestVersion;
+  const handleOpenChangelog = () => {
+    setIsChangelogOpen(true);
+    setLastSeenVersion(latestVersion); // Atualiza a memória para a versão atual
+};
 
   const getLocalISODate = useCallback(() => {
     const d = new Date();
@@ -882,6 +894,7 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-ice-blue dark:bg-[#0D1117] text-gray-800 dark:text-gray-200 font-sans p-4">
 
+      <ChangelogModal isOpen={isChangelogOpen} onClose={() => setIsChangelogOpen(false)} />
       <OnboardingWizard isOpen={userData !== undefined && !hasCompletedOnboarding} userName={userName} setUserName={handleUpdateUserName} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} theme={theme} setTheme={setTheme} onComplete={handleSyncOnboardingData} />
       <FeatureTourModal isOpen={isTourOpen} onClose={() => setIsTourOpen(false)} steps={FEATURE_TOUR_STEPS} />
         
@@ -895,7 +908,7 @@ useEffect(() => {
       <ConfirmationDialog state={confirmationState} setState={setConfirmationState} />
       
       <div className="flex gap-4 h-[calc(100vh-2rem)]">
-        <Sidebar currentView={currentView} setCurrentView={navigateToView} recentTaskIds={recentTaskIds} pinnedTaskIds={pinnedTaskIds} tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onPinTask={handlePinTask} selectedTask={activeTask} onClearRecents={handleClearRecentTasks} userName={userName} onLogout={handleCompleteLogout} />
+        <Sidebar currentView={currentView} setCurrentView={navigateToView} hasNewUpdate={hasNewUpdate} recentTaskIds={recentTaskIds} pinnedTaskIds={pinnedTaskIds} tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onPinTask={handlePinTask} selectedTask={activeTask} onClearRecents={handleClearRecentTasks} userName={userName} onLogout={handleCompleteLogout} />
         
         <main className="flex-1 flex flex-col overflow-hidden">
           {currentView !== 'taskDetail' && currentView !== 'projectDetail' && (
@@ -910,8 +923,8 @@ useEffect(() => {
                 <Route path="/reminders" element={<RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>} />
                 <Route path="/reports" element={<ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>} />
                 <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />} />
-                <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={() => setIsTourOpen(true)}/>} />
-                
+                <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onOpenChangelog={handleOpenChangelog} hasNewUpdate={hasNewUpdate} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={() => setIsTourOpen(true)}/>} />
+        
                 <Route path="/projects/:projectId" element={
                     <ProjectDetailWrapper 
                         projects={projects}

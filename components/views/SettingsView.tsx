@@ -11,6 +11,7 @@ interface SettingsViewProps {
   categories: Category[];
   onAddCategory: (category: Category) => void;
   onDeleteCategory: (id: string) => void;
+  onOpenChangelog: () => void;
   
   tags: Tag[];
   onAddTag: (tag: Tag) => void;
@@ -24,6 +25,7 @@ interface SettingsViewProps {
   userName: string;
   setUserName: (name: string) => void;
   onOpenTour: () => void;
+  hasNewUpdate?: boolean;
 }
 
 type SettingsTab = 'general' | 'notifications' | 'organization' | 'account';
@@ -159,7 +161,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     tags, onAddTag, onDeleteTag,
     notificationSettings, setNotificationSettings,
     appSettings, setAppSettings,
-    onLogout, userName, setUserName, onOpenTour
+    onLogout, userName, setUserName, onOpenTour, onOpenChangelog, hasNewUpdate
 }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
@@ -381,6 +383,32 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     <div className="text-xs text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-black/20 p-2 rounded border border-indigo-100 dark:border-indigo-800/50">
                                         <strong>Nota de Privacidade:</strong> Ao ativar, os dados das tarefas são processados pela API do Google Gemini. Recomendamos evitar incluir informações sensíveis ou confidenciais (como senhas ou dados financeiros) nos títulos e descrições.                                    </div>
                                  </div>
+                            </div>
+                        </div>
+                        <div className="space-y-2 pt-6 border-t border-gray-100 dark:border-gray-800">
+                            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Sobre o Sistema</h4>
+                            
+                            <div className="bg-white dark:bg-[#0D1117] p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Novidades e Atualizações</h4>                              
+                                        {hasNewUpdate && (
+                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse">
+                                                NOVO
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Veja o histórico de versões e o que mudou recentemente.</p>
+                                </div>
+                                <button
+                                    onClick={onOpenChangelog}
+                                    className={`px-4 py-2 rounded-lg transition-colors text-xs font-bold border ${hasNewUpdate
+                                            ? 'bg-primary-500 text-white hover:bg-primary-600 border-transparent shadow-md shadow-primary-500/20' // Botão destacado se tiver novidade
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
+                                        }`}
+                                >
+                                    Ver Changelog
+                                </button>
                             </div>
                         </div>
                     </div>

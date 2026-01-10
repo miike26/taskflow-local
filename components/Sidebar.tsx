@@ -19,6 +19,7 @@ interface SidebarProps {
   selectedTask: Task | null;
   onClearRecents: () => void;
   userName: string;
+  hasNewUpdate?: boolean;
 }
 
 const NavItem: React.FC<{
@@ -29,7 +30,8 @@ const NavItem: React.FC<{
   onClick: (view: View) => void;
   hoverColorClass: string;
   showLabel: boolean;
-}> = ({ viewName, label, icon, currentView, onClick, hoverColorClass, showLabel }) => {
+  hasBadge?: boolean;
+}> = ({ viewName, label, icon, currentView, onClick, hoverColorClass, showLabel, hasBadge }) => {
   const isActive = currentView === viewName;
   return (
     <li>
@@ -48,9 +50,17 @@ const NavItem: React.FC<{
           ${!showLabel ? 'justify-center' : ''}
         `}
       >
-        <span className={`transition-colors duration-200 flex-shrink-0 ${isActive ? 'text-white' : `text-gray-500 group-hover:${hoverColorClass}`}`}>
+        <div className="relative">
+          <span className={`transition-colors duration-200 flex-shrink-0 ${isActive ? 'text-white' : `text-gray-500 group-hover:${hoverColorClass}`}`}>
             {icon}
-        </span>
+          </span>
+          {hasBadge && (
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-white dark:border-[#161B22]"></span>
+            </span>
+          )}
+        </div>
         <span className={`ml-3 font-medium whitespace-nowrap transition-all duration-300 overflow-hidden ${showLabel ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 ml-0'}`}>
             {label}
         </span>
@@ -118,7 +128,7 @@ const RecentTaskItem: React.FC<{
   );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTaskIds, pinnedTaskIds, tasks, categories, onSelectTask, onPinTask, selectedTask, onClearRecents, userName }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTaskIds, pinnedTaskIds, tasks, categories, onSelectTask, onPinTask, selectedTask, onClearRecents, userName, hasNewUpdate }) => {
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebar.collapsed', false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -286,6 +296,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                             onClick={setCurrentView}
                             hoverColorClass="text-cyan-500"
                             showLabel={showFull}
+                            hasBadge={hasNewUpdate}
                         />
                     </ul>
 
