@@ -2,6 +2,7 @@ import React from 'react';
 import type { Task, Category, Tag, Project } from '../types';
 import { BriefcaseIcon, ListBulletIcon, FolderIcon, UserCircleIcon, ListIcon, RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon } from './icons';
 import { STATUS_COLORS } from '../constants';
+import OverdueIndicator from './OverdueIndicator'; // <--- 1. IMPORT NOVO
 
 interface TaskCardProps {
   task: Task;
@@ -9,6 +10,8 @@ interface TaskCardProps {
   tag?: Tag;
   project?: Project;
   onSelect: (task: Task) => void;
+  // 👇 2. ADICIONADO onUpdate NA INTERFACE
+  onUpdate?: (taskId: string, updates: Partial<Task>) => void; 
   isDraggable?: boolean;
   variant?: 'full' | 'compact' | 'list-item';
   isOverdue?: boolean;
@@ -169,6 +172,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   tag,
   project,
   onSelect,
+  onUpdate, // <--- 2. RECEBE A FUNÇÃO DE ATUALIZAR
   isDraggable = false,
   variant = 'full',
   isOverdue = false,
@@ -196,6 +200,33 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (onDrop) onDrop(e, undefined, id);
+  };
+
+  const handleUpdateDate = (newDate: string) => {
+      if (onUpdate) {
+          // 1. Formata as datas para o histórico ficar legível
+          const oldDateFormatted = task.dueDate 
+              ? new Date(task.dueDate).toLocaleDateString('pt-BR') 
+              : 'Sem prazo';
+          const newDateFormatted = new Date(newDate).toLocaleDateString('pt-BR');
+
+          // 2. Cria o registro da atividade (History Log)
+          const activityEntry = {
+              id: `act-${Date.now()}`,
+              type: 'property_change' as const, // 'as const' evita erro de tipagem
+              timestamp: new Date().toISOString(),
+              property: 'Prazo Final',
+              from: oldDateFormatted,
+              to: newDateFormatted,
+              user: 'Você', // Usamos "Você" pois o Card não recebe o nome do usuário atual (para simplificar)
+          };
+
+          // 3. Envia a atualização COMPLETA: Data nova + Histórico novo
+          onUpdate(id, { 
+              dueDate: newDate,
+              activity: [...(task.activity || []), activityEntry] 
+          });
+      }
   };
   
   const statusColor = STATUS_COLORS[status];
@@ -234,12 +265,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                     {title}
                 </p>
                 
-                {isOverdue && (
-                    <span className="relative flex h-2 w-2 flex-shrink-0" title="Atrasado">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                )}
+                {/* Removi a bolinha antiga daqui */}
             </div>
 
             {tag && (
@@ -248,7 +274,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </div>
             )}
 
-            {dueDate && <DueDateDisplay dueDate={dueDate} listItem />}
+            {/* Agrupamento da data com o indicador */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+                {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                {dueDate && <DueDateDisplay dueDate={dueDate} listItem />}
+            </div>
         </div>
       );
   }
@@ -278,17 +308,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
                       </div>
                     )}
                     
-                    {/* AQUI ESTAVA FALTANDO O '&& showProject' */}
                     {project && showProject && <ProjectPill project={project} size="small" onlyIcon={onlyProjectIcon} />}
 
-                    {isOverdue && (
-                      <span className="relative flex h-2 w-2 flex-shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                      </span>
-                    )}
+                    {/* Removi a bolinha antiga daqui */}
                 </div>
-                {dueDate && <DueDateDisplay dueDate={dueDate} compact />}
+                
+                {/* Agrupamento da data com o indicador */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                    {dueDate && <DueDateDisplay dueDate={dueDate} compact />}
+                </div>
             </div>
 
             <div className="flex-grow flex flex-col justify-center">
@@ -313,7 +342,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 )}
             </div>
         </div>
-    );
+      );
   }
 
   // --- MODO FULL ---
@@ -340,17 +369,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   </div>
                 )}
                 
-                {/* AQUI TAMBÉM ESTAVA FALTANDO O '&& showProject' */}
                 {project && showProject && <ProjectPill project={project} size="normal" onlyIcon={onlyProjectIcon} />}
 
-                {isOverdue && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                  </span>
-                )}
+                {/* Removi a bolinha antiga daqui */}
             </div>
-            {dueDate && <DueDateDisplay dueDate={dueDate} />}
+            
+            {/* Agrupamento da data com o indicador */}
+            <div className="flex items-center gap-2">
+                {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                {dueDate && <DueDateDisplay dueDate={dueDate} />}
+            </div>
         </div>
 
         <div className="flex-grow flex flex-col items-start justify-center text-left py-3 overflow-hidden">

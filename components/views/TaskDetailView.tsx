@@ -1166,7 +1166,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             to: 'Nenhum',
             user: userName
         };
-        onUpdate(taskData.id, { projectId: undefined, activity: [...taskData.activity, activityEntry] });
+        onUpdate(taskData.id, { projectId: "", activity: [...taskData.activity, activityEntry] });
     };
 
     const handleRemoveTag = (tagToRemove: string) => {

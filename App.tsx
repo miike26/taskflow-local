@@ -917,7 +917,7 @@ useEffect(() => {
           
           <div key={currentView} className={`flex-1 overflow-x-hidden h-full animate-slide-up-fade-in ${isFixedLayout ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
             <Routes>
-                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} projects={projects} onToggleHabit={handleToggleHabit} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
+                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} projects={projects} onToggleHabit={handleToggleHabit} onUpdateTask={handleUpdateTask} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
                 <Route path="/calendar" element={<CalendarView {...commonProps} projects={projects} appSettings={appSettings} onDateSelect={setCalendarSelectedDate} />} />
                 <Route path="/list" element={<ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} projects={projects} appSettings={appSettings} />} />
                 <Route path="/reminders" element={<RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>} />
