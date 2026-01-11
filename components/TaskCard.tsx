@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Task, Category, Tag, Project } from '../types';
-import { BriefcaseIcon, ListBulletIcon, FolderIcon, UserCircleIcon, ListIcon, RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon } from './icons';
+import { BriefcaseIcon, ListBulletIcon, FolderIcon, UserCircleIcon, ListIcon, RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, PauseIcon, PlayIcon } from './icons';
 import { STATUS_COLORS } from '../constants';
 import OverdueIndicator from './OverdueIndicator'; // <--- 1. IMPORT NOVO
 
@@ -19,6 +19,7 @@ interface TaskCardProps {
   onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLDivElement>, status?: string, targetTaskId?: string) => void;
   disableOverdueColor?: boolean;
+  userName?: string;
   
   // Configurações de Exibição
   showProject?: boolean;
@@ -172,7 +173,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
   tag,
   project,
   onSelect,
-  onUpdate, // <--- 2. RECEBE A FUNÇÃO DE ATUALIZAR
+  onUpdate,
+  userName,
   isDraggable = false,
   variant = 'full',
   isOverdue = false,
@@ -183,7 +185,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   showProject = true,
   onlyProjectIcon = false
 }) => {
-  const { title, description, id, dueDate, status, subTasks } = task;
+  const { title, description, id, dueDate, status, subTasks, onHold} = task;
 
   const completedSubTasks = subTasks ? subTasks.filter(st => st.completed).length : 0;
   const totalSubTasks = subTasks ? subTasks.length : 0;
@@ -218,7 +220,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               property: 'Prazo Final',
               from: oldDateFormatted,
               to: newDateFormatted,
-              user: 'Você', // Usamos "Você" pois o Card não recebe o nome do usuário atual (para simplificar)
+              user: userName, // Usamos "Você" pois o Card não recebe o nome do usuário atual (para simplificar)
           };
 
           // 3. Envia a atualização COMPLETA: Data nova + Histórico novo
@@ -229,13 +231,48 @@ const TaskCard: React.FC<TaskCardProps> = ({
       }
   };
   
+    // Função para alternar o Pause direto do Card
+    const handleToggleHold = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onUpdate) {
+          const newOnHoldState = !onHold;
+
+          // 1. Cria o registro da atividade (Padronizado com a TaskDetailView)
+          const activityEntry = {
+              id: `act-${Date.now()}`,
+              type: 'status_change' as const, 
+              timestamp: new Date().toISOString(),
+              from: onHold ? 'Em espera' : 'Ativo',
+              to: newOnHoldState ? 'Em espera' : 'Ativo',
+              user: userName,
+              note: newOnHoldState 
+                  ? '⏸️ <strong>Pausou a tarefa</strong> (aguardando terceiros/bloqueio).' 
+                  : '▶️ <strong>Retomou a tarefa</strong>.'
+          };
+
+          // 2. Envia a atualização
+          onUpdate(id, { 
+              onHold: newOnHoldState,
+              activity: [...(task.activity || []), activityEntry] 
+          });
+      }
+    };
+
   const statusColor = STATUS_COLORS[status];
   const CategoryIcon = getCategoryIcon(category);
   const applyOverdueStyle = isOverdue && !disableOverdueColor;
 
-  const baseCardClasses = applyOverdueStyle 
-    ? 'bg-red-50/40 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' 
-    : 'bg-white dark:bg-[#161B22] border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700';
+    // 👇 Lógica de Prioridade de Cores: Pausado > Atrasado > Normal
+    let baseCardClasses = 'bg-white dark:bg-[#161B22] border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 transition-colors duration-300';
+
+    if (onHold) {
+        // Se estiver pausado, fica Amarelo (mesmo que esteja atrasado)
+        baseCardClasses = 'bg-yellow-400/5 dark:bg-yellow-500/10 border-yellow-300 dark:border-yellow-900/40 hover:border-yellow-200 dark:hover:border-yellow-500/50';
+    } else if (applyOverdueStyle) {
+        // Se não estiver pausado e estiver atrasado, fica Vermelho
+        baseCardClasses = 'bg-red-100/40 dark:bg-red-900/15 border-red-200 dark:border-red-900/30 hover:border-red-300 dark:hover:border-red-500/30';
+    }
+    
 
   // --- MODO LISTA ---
   if (variant === 'list-item') {
@@ -246,7 +283,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             onClick={() => onSelect(task)}
-            className={`
+            className={` 
                 group relative rounded-xl border p-3 flex items-center gap-3
                 transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)]
                 hover:shadow-md hover:scale-[1.002]
@@ -275,11 +312,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
             )}
 
             {/* Agrupamento da data com o indicador */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-                {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
-                {dueDate && <DueDateDisplay dueDate={dueDate} listItem />}
-            </div>
-        </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                      onClick={handleToggleHold}
+                      className={`group/pause relative w-5 h-5 flex items-center justify-center outline-none transition-all
+                            ${onHold ? 'text-yellow-600 dark:text-yellow-500 opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:text-yellow-600'}
+                        `}
+                      title={onHold ? "Retomar tarefa" : "Pausar tarefa (On Hold)"}
+                  >
+                      {onHold ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
+                  </button>
+                  {isOverdue && dueDate && !onHold && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                  {dueDate && <DueDateDisplay dueDate={dueDate} listItem />}
+              </div>
+          </div>
       );
   }
 
@@ -314,11 +360,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </div>
                 
                 {/* Agrupamento da data com o indicador */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
-                    {dueDate && <DueDateDisplay dueDate={dueDate} compact />}
-                </div>
-            </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <button
+                          onClick={handleToggleHold}
+                          className={`group/pause relative w-5 h-5 flex items-center justify-center outline-none transition-all
+                        ${onHold ? 'text-yellow-600 dark:text-yellow-500 opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:text-yellow-600'}
+                    `}
+                          title={onHold ? "Retomar tarefa" : "Pausar tarefa (On Hold)"}
+                      >
+                          {onHold ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
+                      </button>
+                      {isOverdue && dueDate && !onHold && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                      {dueDate && <DueDateDisplay dueDate={dueDate} compact />}
+                  </div>
+              </div>
 
             <div className="flex-grow flex flex-col justify-center">
                 <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200 line-clamp-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-snug">
@@ -375,11 +430,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
             
             {/* Agrupamento da data com o indicador */}
-            <div className="flex items-center gap-2">
-                {isOverdue && dueDate && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
-                {dueDate && <DueDateDisplay dueDate={dueDate} />}
-            </div>
-        </div>
+              <div className="flex items-center gap-2">
+                  <button
+                      onClick={handleToggleHold}
+                      className={`group/pause relative w-5 h-5 flex items-center justify-center outline-none transition-all
+                        ${onHold ? 'text-yellow-600 dark:text-yellow-500 opacity-100' : 'text-gray-400 opacity-0 group-hover:opacity-100 hover:text-yellow-600'}
+                    `}
+                      title={onHold ? "Retomar tarefa" : "Pausar tarefa (On Hold)"}
+                  >
+                      {onHold ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
+                  </button>
+                  {isOverdue && dueDate && !onHold && <OverdueIndicator dueDate={dueDate} onUpdateDate={handleUpdateDate} />}
+                  {dueDate && <DueDateDisplay dueDate={dueDate} />}
+              </div>
+          </div>
 
         <div className="flex-grow flex flex-col items-start justify-center text-left py-3 overflow-hidden">
             <h3 className="font-semibold text-base text-gray-800 dark:text-gray-100 line-clamp-3 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-snug">

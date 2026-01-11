@@ -13,6 +13,8 @@ interface CalendarViewProps {
   appSettings?: AppSettings;
   projects: Project[];
   onDateSelect?: (date: Date) => void;
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
+  userName: string;
 }
 
 const taskSortFunction = (a: Task, b: Task) => {
@@ -30,7 +32,7 @@ const taskSortFunction = (a: Task, b: Task) => {
 };
 
 
-const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, onDateSelect, appSettings, projects}) => {
+const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, onSelectTask, onDateSelect, appSettings, projects, onUpdateTask, userName}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
@@ -127,6 +129,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ tasks, categories, tags, on
                       project={projects.find(p => p.id === task.projectId)}
                       showProject={appSettings?.showProjectOnCard}
                       onlyProjectIcon={appSettings?.onlyProjectIcon}
+                      onUpdate={onUpdateTask}
+                      userName={userName}
                     />
                   )
                 })}

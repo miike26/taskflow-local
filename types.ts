@@ -102,6 +102,7 @@ export interface Task {
   tags?: string[];
   projectId?: string;
   isPinned?: boolean;
+  onHold?: boolean;
 }
 
 export interface ConfirmationToastData {
@@ -157,3 +158,4 @@ export interface SavedSummary {
         period: PeriodOption;
     };
 }
+

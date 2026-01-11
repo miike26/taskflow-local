@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import type { Project, Task, Category, Tag, Status, Notification, Habit, Activity, AppSettings } from '../../types';
-import { 
+import {
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
     DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon,
@@ -21,14 +21,14 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     const isTomorrow = new Date(now.setDate(now.getDate() + 1)).toDateString() === date.toDateString();
-    
-    const timeOptions: Intl.DateTimeFormatOptions = { 
-        hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
-        minute: '2-digit', 
-        hour12: timeFormat === '12h' 
+
+    const timeOptions: Intl.DateTimeFormatOptions = {
+        hour: timeFormat === '12h' ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        hour12: timeFormat === '12h'
     };
     const time = date.toLocaleTimeString('pt-BR', timeOptions);
-    
+
     if (isToday) return `Hoje, ${time}`;
     if (isTomorrow) return `Amanhã, ${time}`;
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
@@ -49,18 +49,18 @@ const getCategoryIcon = (category?: Category) => {
 };
 
 const NotificationCard: React.FC<{
-  notification: Notification;
-  task?: Task;
-  category?: Category;
-  onClick: () => void;
-  onSnooze: () => void;
-  onMarkHabitComplete: (habitId: string) => void;
-  isRead?: boolean;
-  timeFormat: '12h' | '24h';
+    notification: Notification;
+    task?: Task;
+    category?: Category;
+    onClick: () => void;
+    onSnooze: () => void;
+    onMarkHabitComplete: (habitId: string) => void;
+    isRead?: boolean;
+    timeFormat: '12h' | '24h';
 }> = ({ notification, task, category, onClick, onSnooze, onMarkHabitComplete, isRead, timeFormat }) => {
     const [isSnoozing, setIsSnoozing] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
-    
+
     const isHabitReminder = notification.taskId.startsWith('habit-');
 
     if (!task && !isHabitReminder) return null;
@@ -73,10 +73,10 @@ const NotificationCard: React.FC<{
         CategoryIcon = getCategoryIcon(category);
     }
 
-    const bgClass = isRead 
-        ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' 
+    const bgClass = isRead
+        ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100'
         : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
-    
+
     const borderClass = isRead
         ? 'border-gray-100 dark:border-gray-800'
         : 'border-blue-100 dark:border-blue-900/30';
@@ -95,7 +95,7 @@ const NotificationCard: React.FC<{
         onMarkHabitComplete(habitId);
         setIsCompleted(true);
     };
-    
+
     const handleCardClick = () => {
         if (!isHabitReminder) {
             onClick();
@@ -104,7 +104,7 @@ const NotificationCard: React.FC<{
 
     return (
         <li className="mb-2 last:mb-0">
-             <div 
+            <div
                 onClick={handleCardClick}
                 className={`relative group w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${bgClass} ${borderClass}`}
             >
@@ -131,29 +131,27 @@ const NotificationCard: React.FC<{
                         </p>
                         <div className="flex items-center gap-3 mt-3">
                             {isHabitReminder ? (
-                                <button 
-                                    onClick={handleCompleteHabit} 
+                                <button
+                                    onClick={handleCompleteHabit}
                                     disabled={isCompleted}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                        isCompleted
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
-                                        : 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-                                    }`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isCompleted
+                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
+                                            : 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'
+                                        }`}
                                 >
                                     {isCompleted ? <CheckIcon className="w-3.5 h-3.5" /> : <CheckCircleIcon className="w-3.5 h-3.5" />}
                                     {isCompleted ? 'Concluído' : 'Marcar Feito'}
                                 </button>
                             ) : (
-                                <button 
-                                    onClick={handleSnooze} 
+                                <button
+                                    onClick={handleSnooze}
                                     disabled={isSnoozing}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                                        isSnoozing
-                                        ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                                    }`}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSnoozing
+                                            ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default'
+                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
                                 >
-                                    <ClockIcon className="w-3.5 h-3.5"/>
+                                    <ClockIcon className="w-3.5 h-3.5" />
                                     {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
                                 </button>
                             )}
@@ -166,21 +164,21 @@ const NotificationCard: React.FC<{
 };
 
 const NotificationBell: React.FC<{
-  notifications: Notification[];
-  unreadNotifications: Notification[];
-  tasks: Task[];
-  categories: Category[];
-  onNotificationClick: (notification: Notification) => void;
-  onSnooze: (notification: Notification) => void;
-  onMarkHabitComplete: (habitId: string) => void;
-  onMarkAllAsRead: () => void;
-  onClearAllNotifications: () => void;
-  timeFormat: '12h' | '24h';
+    notifications: Notification[];
+    unreadNotifications: Notification[];
+    tasks: Task[];
+    categories: Category[];
+    onNotificationClick: (notification: Notification) => void;
+    onSnooze: (notification: Notification) => void;
+    onMarkHabitComplete: (habitId: string) => void;
+    onMarkAllAsRead: () => void;
+    onClearAllNotifications: () => void;
+    timeFormat: '12h' | '24h';
 }> = ({ notifications, unreadNotifications, tasks, categories, onNotificationClick, onSnooze, onMarkHabitComplete, onMarkAllAsRead, onClearAllNotifications, timeFormat }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    
-    const readNotifications = useMemo(() => 
+
+    const readNotifications = useMemo(() =>
         notifications.filter(n => !unreadNotifications.some(un => un.id === n.id)),
         [notifications, unreadNotifications]
     );
@@ -194,7 +192,7 @@ const NotificationBell: React.FC<{
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-    
+
     return (
         <div ref={dropdownRef} className="relative">
             <button onClick={() => setIsOpen(prev => !prev)} className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors">
@@ -213,9 +211,9 @@ const NotificationBell: React.FC<{
                             </p>
                         </div>
                         {unreadNotifications.length > 0 ? (
-                           <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">
+                            <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">
                                 Marcar lidas
-                           </button>
+                            </button>
                         ) : notifications.length > 0 ? (
                             <button onClick={onClearAllNotifications} title="Limpar todas" className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
                                 <BroomIcon className="w-4 h-4" />
@@ -246,7 +244,7 @@ const NotificationBell: React.FC<{
                                     })}
                                 </>
                             )}
-                             {readNotifications.length > 0 && (
+                            {readNotifications.length > 0 && (
                                 <>
                                     <li className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-2">Anteriores</li>
                                     {readNotifications.map(n => {
@@ -285,10 +283,10 @@ const NotificationBell: React.FC<{
 };
 
 interface ConfirmationDialogState {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  onConfirm: () => void;
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
 }
 
 const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: React.Dispatch<React.SetStateAction<ConfirmationDialogState>> }> = ({ state, setState }) => {
@@ -312,9 +310,9 @@ const ConfirmationDialog: React.FC<{ state: ConfirmationDialogState; setState: R
 
 // ... (statusConfig, ReminderModal, formatActivityTimestamp, StatusSpan, PROJECT_ICONS, HabitWithStatus, activityConfig, ActivityItem - MANTIDOS IGUAIS) ...
 const statusConfig: Record<Status, { icon: React.ReactNode; color: string; text: string }> = {
-    'Pendente': { icon: <StopCircleIcon className="w-5 h-5"/>, color: 'border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50', text: 'Pendente' },
-    'Em andamento': { icon: <PlayCircleIcon className="w-5 h-5"/>, color: 'border-yellow-500 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50', text: 'Em Andamento' },
-    'Concluída': { icon: <CheckCircleIcon className="w-5 h-5"/>, color: 'border-green-500 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50', text: 'Concluída' },
+    'Pendente': { icon: <StopCircleIcon className="w-5 h-5" />, color: 'border-blue-500 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50', text: 'Pendente' },
+    'Em andamento': { icon: <PlayCircleIcon className="w-5 h-5" />, color: 'border-yellow-500 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50', text: 'Em Andamento' },
+    'Concluída': { icon: <CheckCircleIcon className="w-5 h-5" />, color: 'border-green-500 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50', text: 'Concluída' },
 };
 
 interface ReminderModalProps {
@@ -333,32 +331,32 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
     const modalRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if(isOpen) {
+        if (isOpen) {
             const initialDate = initialData?.notifyAt ? new Date(initialData.notifyAt) : new Date();
-            if(!initialData) { // Set tomorrow 9am for new reminders
+            if (!initialData) { // Set tomorrow 9am for new reminders
                 initialDate.setDate(initialDate.getDate() + 1);
                 initialDate.setHours(9, 0, 0, 0);
             }
             setDate(initialDate);
             setCalendarDisplayDate(initialDate);
-            setTime(initialDate.toTimeString().substring(0,5));
+            setTime(initialDate.toTimeString().substring(0, 5));
             setMessage(initialData?.note || '');
         }
     }, [isOpen, initialData]);
-    
+
     const formattedDateTime = useMemo(() => {
-      const [hours, minutes] = time.split(':').map(Number);
-      const combinedDate = new Date(date);
-      combinedDate.setHours(hours, minutes, 0, 0);
-      return combinedDate.toLocaleString('pt-BR', { 
-          weekday: 'long', 
-          day: 'numeric', 
-          month: 'long', 
-          year: 'numeric',
-          hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
-          minute: '2-digit', 
-          hour12: timeFormat === '12h' 
-      });
+        const [hours, minutes] = time.split(':').map(Number);
+        const combinedDate = new Date(date);
+        combinedDate.setHours(hours, minutes, 0, 0);
+        return combinedDate.toLocaleString('pt-BR', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: timeFormat === '12h' ? 'numeric' : '2-digit',
+            minute: '2-digit',
+            hour12: timeFormat === '12h'
+        });
     }, [date, time, timeFormat]);
 
     if (!isOpen) return null;
@@ -369,14 +367,14 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
         notifyAtDate.setHours(hours, minutes, 0, 0);
         onSave({ notifyAt: notifyAtDate.toISOString(), message });
     };
-    
+
     const setPreset = (days: number, hours: number, minutes: number) => {
-      const newDate = new Date();
-      if (days > 0) newDate.setDate(newDate.getDate() + days);
-      newDate.setHours(hours, minutes, 0, 0);
-      setDate(newDate);
-      setTime(newDate.toTimeString().substring(0, 5));
-      setCalendarDisplayDate(newDate);
+        const newDate = new Date();
+        if (days > 0) newDate.setDate(newDate.getDate() + days);
+        newDate.setHours(hours, minutes, 0, 0);
+        setDate(newDate);
+        setTime(newDate.toTimeString().substring(0, 5));
+        setCalendarDisplayDate(newDate);
     };
 
     return (
@@ -384,7 +382,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
             <div ref={modalRef} className="bg-white dark:bg-[#161B22] rounded-2xl p-6 shadow-2xl w-full max-w-4xl mx-4 flex gap-8 animate-scale-in">
                 <div className="flex-1 flex flex-col">
                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Configurar Lembrete</h3>
-                    
+
                     <div className="space-y-4">
                         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Horário</label>
@@ -399,7 +397,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
                             </div>
                         </div>
 
-                          <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Opções Rápidas</label>
                             <div className="grid grid-cols-2 gap-2 mt-2">
                                 <button onClick={() => setPreset(0, new Date().getHours() + 2, new Date().getMinutes())} className="text-sm p-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Daqui 2 horas</button>
@@ -408,7 +406,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
                                 <button onClick={() => setPreset(7, 9, 0)} className="text-sm p-2 bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">Próxima semana</button>
                             </div>
                         </div>
-                        
+
                         <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
                             <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Mensagem</label>
                             <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3}
@@ -417,12 +415,12 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
                             />
                         </div>
                     </div>
-                    
+
                     <div className="mt-auto pt-6 text-center">
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        O lembrete será enviado em:
-                      </p>
-                      <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">{formattedDateTime}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                            O lembrete será enviado em:
+                        </p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-200 text-lg">{formattedDateTime}</p>
                     </div>
 
                     <div className="mt-6 flex justify-end space-x-3">
@@ -430,8 +428,8 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onSave, 
                         <button onClick={handleSave} className="px-5 py-2.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 font-semibold text-sm transition-all duration-200 shadow-sm hover:ring-2 hover:ring-offset-2 hover:ring-primary-400 dark:hover:ring-offset-[#161B22]">Salvar Lembrete</button>
                     </div>
                 </div>
-                 <Calendar 
-                    selectedDate={date} 
+                <Calendar
+                    selectedDate={date}
                     onSelectDate={setDate}
                     displayDate={calendarDisplayDate}
                     onDisplayDateChange={setCalendarDisplayDate}
@@ -447,13 +445,13 @@ const formatActivityTimestamp = (timestamp: string, timeFormat: '12h' | '24h'): 
 
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-    
+
     const activityDateNoTime = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
 
-    const timeOptions: Intl.DateTimeFormatOptions = { 
-        hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
-        minute: '2-digit', 
-        hour12: timeFormat === '12h' 
+    const timeOptions: Intl.DateTimeFormatOptions = {
+        hour: timeFormat === '12h' ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        hour12: timeFormat === '12h'
     };
     const dateFormat: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit', year: 'numeric' };
 
@@ -470,7 +468,7 @@ const StatusSpan: React.FC<{ status: Status | string }> = ({ status }) => {
     return <strong>{status}</strong>;
 };
 
-const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
+const PROJECT_ICONS: Record<string, React.FC<{ className?: string }>> = {
     folder: FolderIcon,
     rocket: RocketLaunchIcon,
     code: CodeBracketIcon,
@@ -484,7 +482,7 @@ interface HabitWithStatus extends Habit {
     isCompleted: boolean;
 }
 
-const activityConfig: Record<Activity['type'], { icon: React.FC<{className?: string}>; classes: string }> = {
+const activityConfig: Record<Activity['type'], { icon: React.FC<{ className?: string }>; classes: string }> = {
     note: {
         icon: ChatBubbleLeftEllipsisIcon,
         classes: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300'
@@ -521,37 +519,37 @@ const ActivityItem: React.FC<{ act: Activity, onDelete: (id: string, type: Activ
     const isAi = act.isAiGenerated;
     let config = activityConfig[act.type] || activityConfig.creation;
     const Icon = isAi ? SparklesIcon : config.icon;
-    
+
     const isBulkChange = act.type === 'status_change' && (act.count || 0) > 1 && !!act.affectedTasks;
 
-    const styleClass = isAi 
-        ? 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-purple-600 dark:text-purple-300' 
+    const styleClass = isAi
+        ? 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-purple-600 dark:text-purple-300'
         : config.classes;
 
     return (
         <li className="group flex items-start space-x-3 py-3 border-b border-dashed border-gray-200 dark:border-gray-700 last:border-b-0">
             <div className={`rounded-full p-1.5 mt-1 ${styleClass}`}>
-                <Icon className="w-4 h-4"/>
+                <Icon className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 dark:text-gray-300 break-words">
                     <span className="font-semibold">{act.user}</span>{' '}
-                    
+
                     {act.type === 'creation' && !act.taskTitle && 'criou este projeto.'}
                     {act.type === 'creation' && act.taskTitle && (
                         <>
                             {(act.note?.includes('removida') || act.note?.includes('desvinculada')) ? 'removeu' : 'adicionou'} a tarefa <strong>{act.taskTitle}</strong>.
                         </>
                     )}
-                    
+
                     {act.type === 'project' && act.taskTitle && (
                         act.action === 'added' ? <>adicionou a tarefa <strong>{act.taskTitle}</strong> a este projeto.</> :
-                        act.action === 'removed' ? <>removeu a tarefa <strong>{act.taskTitle}</strong> deste projeto.</> :
-                        'atualizou o projeto.'
+                            act.action === 'removed' ? <>removeu a tarefa <strong>{act.taskTitle}</strong> deste projeto.</> :
+                                'atualizou o projeto.'
                     )}
-                    
+
                     {act.type === 'note' && (isAi ? 'sumarizou anotações com IA:' : 'adicionou uma nota ao projeto:')}
-                    
+
                     {isBulkChange ? (
                         <>
                             alterou <strong>{act.count} tarefas</strong> de <StatusSpan status={act.from!} /> para <StatusSpan status={act.to!} />
@@ -568,7 +566,7 @@ const ActivityItem: React.FC<{ act: Activity, onDelete: (id: string, type: Activ
                     )}
 
                     {act.type === 'property_change' && (
-                         <>alterou {act.property} de <strong>{act.oldValue}</strong> para <strong>{act.newValue}</strong>.</>
+                        <>alterou {act.property} de <strong>{act.oldValue}</strong> para <strong>{act.newValue}</strong>.</>
                     )}
                 </p>
 
@@ -583,9 +581,9 @@ const ActivityItem: React.FC<{ act: Activity, onDelete: (id: string, type: Activ
                 )}
 
                 {act.type === 'note' && act.note && (
-                    <div className={`mt-1 p-2 border rounded-md text-sm note-content break-words ${isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50'}`} dangerouslySetInnerHTML={{ __html: act.note }}/>
+                    <div className={`mt-1 p-2 border rounded-md text-sm note-content break-words ${isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50'}`} dangerouslySetInnerHTML={{ __html: act.note }} />
                 )}
-                
+
                 {act.type === 'reminder' && act.notifyAt && (
                     <div className="mt-1 p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900/50 text-sm">
                         <p className="font-semibold">
@@ -597,7 +595,7 @@ const ActivityItem: React.FC<{ act: Activity, onDelete: (id: string, type: Activ
 
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{time}</p>
             </div>
-            
+
             {(act.type === 'note' || act.type === 'reminder') && (
                 <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onDelete(act.id, act.type)} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
@@ -615,6 +613,7 @@ interface ProjectDetailViewProps {
     tags: Tag[];
     onBack: () => void;
     onSelectTask: (task: Task) => void;
+    onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
     onUpdateTaskStatus: (taskId: string, status: Status) => void;
     onAddTask: () => void;
     theme: 'light' | 'dark';
@@ -637,6 +636,7 @@ interface ProjectDetailViewProps {
     onBulkDelete: (taskIds: string[]) => void;
     appSettings: AppSettings;
     setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+
 }
 
 type TableSortKey = 'title' | 'categoryId' | 'tagId' | 'dueDate' | 'status';
@@ -663,7 +663,7 @@ const defaultTableSort = (a: Task, b: Task) => {
 
     if (aIsOverdue && !bIsOverdue) return -1;
     if (!aIsOverdue && bIsOverdue) return 1;
-    
+
     const aStatusOrder = statusOrder[a.status];
     const bStatusOrder = statusOrder[b.status];
     if (aStatusOrder !== bStatusOrder) {
@@ -672,7 +672,7 @@ const defaultTableSort = (a: Task, b: Task) => {
 
     const aDueDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
     const bDueDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-    
+
     if (aIsOverdue && bIsOverdue) {
         return aDueDate - bDueDate;
     }
@@ -689,7 +689,9 @@ const KanbanColumn: React.FC<{
     onDrop: (e: React.DragEvent<HTMLDivElement>, status: Status) => void;
     onDragStart: (e: React.DragEvent<HTMLDivElement>, taskId: string) => void;
     disableOverdueColor: boolean;
-}> = ({ title, tasks, categories, tags, onSelectTask, onDrop, onDragStart, disableOverdueColor }) => {
+    onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
+    userName: string;
+}> = ({ title, tasks, categories, tags, onSelectTask, onDrop, onDragStart, disableOverdueColor, onUpdateTask, userName }) => {
     const [isOver, setIsOver] = useState(false);
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -700,7 +702,7 @@ const KanbanColumn: React.FC<{
     const handleDragLeave = () => {
         setIsOver(false);
     };
-    
+
     const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
         e.preventDefault();
         setIsOver(false);
@@ -708,7 +710,7 @@ const KanbanColumn: React.FC<{
     };
 
     return (
-        <div 
+        <div
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -716,7 +718,7 @@ const KanbanColumn: React.FC<{
         >
             <h3 className="flex items-center gap-2 flex-shrink-0 font-semibold text-xl text-gray-800 dark:text-gray-200 p-4 pb-2">
                 <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[title as Status]}`}></span>
-                {title} 
+                {title}
                 <span className="text-sm font-normal text-gray-500">({tasks.length})</span>
             </h3>
             <div className="flex-1 space-y-3 overflow-y-auto p-2 custom-scrollbar">
@@ -732,6 +734,8 @@ const KanbanColumn: React.FC<{
                         variant="compact"
                         disableOverdueColor={disableOverdueColor}
                         isOverdue={task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Concluída'}
+                        onUpdate={onUpdateTask}
+                        userName={userName}
                     />
                 ))}
             </div>
@@ -739,14 +743,15 @@ const KanbanColumn: React.FC<{
     );
 };
 
-const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({ 
-    project, 
-    tasks, 
+const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
+    project,
+    tasks,
     allTasks,
-    categories, 
-    tags, 
-    onBack, 
-    onSelectTask, 
+    categories,
+    tags,
+    onBack,
+    onSelectTask,
+    onUpdateTask,
     onUpdateTaskStatus,
     onAddTask,
     theme,
@@ -787,7 +792,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     const [activityFilter, setActivityFilter] = useState<'all' | 'notes' | 'changes' | 'reminders'>('all');
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
     const filterDropdownRef = useRef<HTMLDivElement>(null);
-    const [confirmationState, setConfirmationState] = useState<ConfirmationDialogState>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
+    const [confirmationState, setConfirmationState] = useState<ConfirmationDialogState>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [isAiGenerated, setIsAiGenerated] = useState(false);
     const [isSummaryDropdownOpen, setIsSummaryDropdownOpen] = useState(false);
@@ -803,7 +808,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     const [tableSortConfig, setTableSortConfig] = useState<{ key: TableSortKey; direction: 'asc' | 'desc' } | null>(null);
     const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
     const [isSmallScreen, setIsSmallScreen] = useState(false);
-    
+
     // New state for Export Modal
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
@@ -830,7 +835,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             const categoryMatch = filterCategories.length === 0 || filterCategories.includes(task.categoryId);
             const tagMatch = filterTags.length === 0 || filterTags.includes(task.tagId);
             const statusMatch = filterStatuses.length === 0 || filterStatuses.includes(task.status);
-            
+
             const creationDateMatch = (() => {
                 if (!creationDateRangeFilter.startDate || !creationDateRangeFilter.endDate) return true;
                 const taskDate = new Date(task.dateTime);
@@ -895,10 +900,34 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         e.dataTransfer.setData('taskId', taskId);
         e.dataTransfer.effectAllowed = 'move';
     };
-    
+
     const handleKanbanDrop = (e: React.DragEvent<HTMLDivElement>, newStatus: Status) => {
         const taskId = e.dataTransfer.getData('taskId');
-        if (taskId) onUpdateTaskStatus(taskId, newStatus);
+        const task = tasks.find(t => t.id === taskId);
+
+        if (task && task.status !== newStatus) {
+            // Se for mover para 'Concluída' e estiver em OnHold, remove o OnHold
+            if (newStatus === 'Concluída' && task.onHold) {
+                const activityEntry = {
+                    id: `act-${Date.now()}`,
+                    type: 'status_change' as const, // Força a tipagem
+                    timestamp: new Date().toISOString(),
+                    from: task.status,
+                    to: newStatus,
+                    user: userName,
+                    note: '✅ <strong>Concluída</strong> (Pausa removida via Kanban).'
+                };
+
+                onUpdateTask(taskId, {
+                    status: newStatus,
+                    onHold: false,
+                    activity: [...(task.activity || []), activityEntry]
+                });
+            } else {
+                // Comportamento padrão (usa a função simples existente ou a nova, tanto faz, mas a nova é mais completa)
+                onUpdateTaskStatus(taskId, newStatus);
+            }
+        }
     };
 
     const handleTableSort = (key: TableSortKey) => {
@@ -1008,16 +1037,16 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             grouped['Pendente'] = [];
             grouped['Em andamento'] = [];
             grouped['Concluída'] = [];
-            
+
             const filteredSearchTasks = tasks.filter(
-              (task) =>
-                task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                task.description?.toLowerCase().includes(searchQuery.toLowerCase())
+                (task) =>
+                    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    task.description?.toLowerCase().includes(searchQuery.toLowerCase())
             );
 
             filteredSearchTasks.forEach((task) => {
                 if (grouped[task.status]) {
-                  grouped[task.status].push(task);
+                    grouped[task.status].push(task);
                 }
             });
             return grouped;
@@ -1034,14 +1063,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
     const handleFilterMouseEnter = (filterName: string) => {
         if (closeTimer.current) {
-          clearTimeout(closeTimer.current);
+            clearTimeout(closeTimer.current);
         }
         setOpenFilter(filterName);
     };
-    
+
     const handleFilterMouseLeave = () => {
         closeTimer.current = window.setTimeout(() => {
-          setOpenFilter(null);
+            setOpenFilter(null);
         }, 200);
     };
 
@@ -1065,7 +1094,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     const creationDateFilterLabel = creationDateRangeFilter.startDate && creationDateRangeFilter.endDate
         ? `Criação: ${formatDateShort(creationDateRangeFilter.startDate)} - ${formatDateShort(creationDateRangeFilter.endDate)}`
         : 'Data de Criação';
-        
+
     const dueDateFilterLabel = dueDateRangeFilter.startDate && dueDateRangeFilter.endDate
         ? `Prazo: ${formatDateShort(dueDateRangeFilter.startDate)} - ${formatDateShort(dueDateRangeFilter.endDate)}`
         : 'Prazo Final';
@@ -1073,13 +1102,13 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     const filterCheckboxClass = "appearance-none h-4 w-4 rounded-md border-2 border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-primary-500 dark:bg-gray-700 dark:border-gray-600";
     const checkboxClass = "appearance-none h-4 w-4 rounded-md border-2 border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:focus:ring-offset-gray-800";
 
-    const areFiltersActive = useMemo(() => 
-        filterCategories.length > 0 || 
-        filterTags.length > 0 || 
-        filterStatuses.length > 0 || 
-        creationDateRangeFilter.startDate || 
-        dueDateRangeFilter.startDate, 
-    [filterCategories, filterTags, filterStatuses, creationDateRangeFilter, dueDateRangeFilter]);
+    const areFiltersActive = useMemo(() =>
+        filterCategories.length > 0 ||
+        filterTags.length > 0 ||
+        filterStatuses.length > 0 ||
+        creationDateRangeFilter.startDate ||
+        dueDateRangeFilter.startDate,
+        [filterCategories, filterTags, filterStatuses, creationDateRangeFilter, dueDateRangeFilter]);
 
     const handleClearFilters = () => {
         setFilterCategories([]);
@@ -1092,10 +1121,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     const handleAddNote = () => {
         if (!newNote.replace(/<[^>]*>/g, '').trim()) return;
         const activityEntry: Activity = {
-            id: `proj-act-${Date.now()}`, 
-            type: 'note', 
-            timestamp: new Date().toISOString(), 
-            note: newNote, 
+            id: `proj-act-${Date.now()}`,
+            type: 'note',
+            timestamp: new Date().toISOString(),
+            note: newNote,
             user: userName,
             isAiGenerated: isAiGenerated
         };
@@ -1119,7 +1148,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
     const filteredActivity = useMemo(() => {
         if (!project.activity) return [];
-        switch(activityFilter) {
+        switch (activityFilter) {
             case 'notes': return project.activity.filter(a => a.type === 'note');
             case 'reminders': return project.activity.filter(a => a.type === 'reminder');
             case 'changes': return project.activity.filter(a => a.type === 'status_change' || a.type === 'creation' || a.type === 'property_change' || a.type === 'project');
@@ -1143,12 +1172,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
         setIsSummarizing(true);
         setIsNoteEditorExpanded(true);
         setIsAiGenerated(true);
-        
+
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
+
             let context = `Project: ${project.name}\nDescription: ${project.description || 'N/A'}\n\nTimeline of Events:\n`;
-            
+
             let allActivities: { timestamp: string, text: string }[] = [];
 
             const projectActivities = project.activity || [];
@@ -1159,12 +1188,12 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                 else if (act.type === 'creation') text = `[Projeto] Criado por ${act.user}`;
                 else if (act.type === 'status_change') text = `[Projeto] Status de tarefa "${act.taskTitle}" alterado para ${act.to}`;
                 else if (act.type === 'project') {
-                     if (act.action === 'added') text = `[Projeto] Tarefa "${act.taskTitle}" adicionada`;
-                     else if (act.action === 'removed') text = `[Projeto] Tarefa "${act.taskTitle}" removida`;
+                    if (act.action === 'added') text = `[Projeto] Tarefa "${act.taskTitle}" adicionada`;
+                    else if (act.action === 'removed') text = `[Projeto] Tarefa "${act.taskTitle}" removida`;
                 }
 
                 if (text && (mode === 'full' || act.type === 'note')) {
-                     allActivities.push({ timestamp: act.timestamp, text: `[${dateStr}] ${text}` });
+                    allActivities.push({ timestamp: act.timestamp, text: `[${dateStr}] ${text}` });
                 }
             });
 
@@ -1177,7 +1206,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         if (act.type === 'note') text = `[Tarefa: ${task.title}] Nota: ${act.note?.replace(/<[^>]*>/g, '')}`;
                         else if (act.type === 'status_change') text = `[Tarefa: ${task.title}] Status alterado de ${act.from} para ${act.to}`;
                         else if (act.type === 'creation') text = `[Tarefa: ${task.title}] Criada`;
-                        
+
                         if (text) {
                             allActivities.push({ timestamp: act.timestamp, text: `[${dateStr}] ${text}` });
                         }
@@ -1194,7 +1223,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             }
 
             context += allActivities.map(a => a.text).join('\n');
-            
+
             const prompt = `Atue como um assistente de gerenciamento de projetos. Resuma o contexto fornecido abaixo em Português do Brasil.
             Regras estritas:
             1. Baseie-se APENAS nas informações fornecidas. Não invente fatos.
@@ -1202,7 +1231,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             3. Destaque pontos importantes, decisões e o progresso geral.
             
             ${context}`;
-            
+
             const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
             setNewNote(response.text || '');
         } catch (e) {
@@ -1227,7 +1256,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
     return (
         <div className="flex flex-col h-full p-4 overflow-hidden gap-6">
             <ConfirmationDialog state={confirmationState} setState={setConfirmationState} />
-            
+
             {/* Edit Project Modal ... */}
             {isEditModalOpen && (
                 <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-fade-in" onClick={() => setIsEditModalOpen(false)}>
@@ -1265,16 +1294,16 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             <header className="flex items-center justify-between pb-4 gap-4 flex-shrink-0">
                 {/* Left: Project Info ... */}
                 <div className="flex-1 flex items-center gap-4 min-w-0">
-                    <button 
-                        onClick={onBack} 
+                    <button
+                        onClick={onBack}
                         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors flex-shrink-0"
                     >
                         <ChevronLeftIcon className="w-6 h-6" />
                     </button>
-                    
+
                     <div className="flex items-center gap-3 flex-1 min-w-0 group/title relative">
                         <div ref={iconPickerRef} className="relative flex-shrink-0">
-                            <button 
+                            <button
                                 onClick={() => setIsIconPickerOpen(true)}
                                 className={`p-1.5 rounded-lg ${project.color} bg-opacity-20 flex-shrink-0 hover:bg-opacity-30 transition-all cursor-pointer`}
                                 title="Alterar ícone e cor"
@@ -1326,7 +1355,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
                 {/* Right: Controls */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    
+
                     <div ref={searchContainerRef} className="relative hidden md:block">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <SearchIcon className="w-5 h-5 text-gray-400" />
@@ -1362,7 +1391,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                     {(Object.keys(searchResults) as string[]).map((groupKey) => {
                                         const tasksInGroup = searchResults[groupKey];
                                         if (tasksInGroup.length === 0) return null;
-                                        
+
                                         const statusColor = STATUS_COLORS[groupKey as Status];
 
                                         return (
@@ -1378,7 +1407,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                                                 task={task}
                                                                 category={getCategory(task.categoryId)}
                                                                 tag={getTag(task.tagId)}
-                                                                onSelect={() => {}} 
+                                                                onSelect={() => { }}
                                                                 variant="compact"
                                                             />
                                                         </div>
@@ -1390,7 +1419,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </div>
                             </div>
                         )}
-                         {isSearchOpen && !hasResults && searchQuery && (
+                        {isSearchOpen && !hasResults && searchQuery && (
                             <div className="absolute top-full right-0 mt-2 w-[480px] bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-20 p-6 text-center text-sm text-gray-500">
                                 Nenhum resultado encontrado neste projeto.
                             </div>
@@ -1414,7 +1443,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         />
                     </div>
 
-                    <NotificationBell 
+                    <NotificationBell
                         notifications={notifications}
                         unreadNotifications={unreadNotifications}
                         tasks={allTasks}
@@ -1442,14 +1471,14 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         title="Editar Projeto"
                         className="flex items-center justify-center p-2.5 rounded-lg bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-gray-400 dark:hover:ring-offset-[#0D1117]"
                     >
-                        <PencilIcon className="w-5 h-5"/>
+                        <PencilIcon className="w-5 h-5" />
                     </button>
 
                     <button
                         onClick={() => onDeleteProject(project.id)}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-md hover:shadow-lg hover:shadow-red-400/30 duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-red-400 dark:hover:ring-offset-[#0D1117]"
                     >
-                        <TrashIcon className="w-5 h-5"/>
+                        <TrashIcon className="w-5 h-5" />
                         <span className="hidden sm:inline">Excluir Projeto</span>
                     </button>
 
@@ -1465,10 +1494,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
             {/* Main Content Area - Tasks Left, Activity Right */}
             <div className="flex flex-1 min-h-0 gap-6">
-                
+
                 {/* Left: Tasks Container (Flex-1 to take available space) */}
                 <div className="flex-1 bg-white dark:bg-[#161B22] p-6 rounded-2xl shadow-lg flex flex-col min-w-0 animate-slide-up-fade-in">
-                    
+
                     {/* Tasks Header */}
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6 flex-shrink-0">
                         {/* Filters */}
@@ -1482,17 +1511,17 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'category' && (
                                     <div className="absolute top-full left-0 mt-2 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
-                                            {categories.map(cat => {
-                                                // Correção AQUI: Usamos a função auxiliar para resolver o ícone
-                                                const CategoryIcon = getCategoryIcon(cat);
-                                                return (
-                                                    <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
-                                                        <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass}/>
-                                                        <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
-                                                    </label>
-                                                )
-                                            })}
+                                        {categories.map(cat => {
+                                            // Correção AQUI: Usamos a função auxiliar para resolver o ícone
+                                            const CategoryIcon = getCategoryIcon(cat);
+                                            return (
+                                                <label key={cat.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
+                                                    <input type="checkbox" checked={filterCategories.includes(cat.id)} onChange={() => handleMultiSelectFilterChange(setFilterCategories)(cat.id)} className={filterCheckboxClass} />
+                                                    <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
+                                                </label>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1508,7 +1537,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                     <div className="absolute top-full left-0 mt-2 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
                                         {tags.map(tag => (
                                             <label key={tag.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
-                                                <input type="checkbox" checked={filterTags.includes(tag.id)} onChange={() => handleMultiSelectFilterChange(setFilterTags)(tag.id)} className={filterCheckboxClass}/>
+                                                <input type="checkbox" checked={filterTags.includes(tag.id)} onChange={() => handleMultiSelectFilterChange(setFilterTags)(tag.id)} className={filterCheckboxClass} />
                                                 <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${tag.bgColor} ${tag.color}`}>{tag.name}</span>
                                             </label>
                                         ))}
@@ -1527,7 +1556,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                     <div className="absolute top-full left-0 mt-2 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-60 space-y-1">
                                         {STATUS_OPTIONS.map(status => (
                                             <label key={status} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer">
-                                                <input type="checkbox" checked={filterStatuses.includes(status)} onChange={() => handleMultiSelectFilterChange(setFilterStatuses)(status)} className={filterCheckboxClass}/>
+                                                <input type="checkbox" checked={filterStatuses.includes(status)} onChange={() => handleMultiSelectFilterChange(setFilterStatuses)(status)} className={filterCheckboxClass} />
                                                 <div className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[status]}`}></div>
                                                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{status}</span>
                                             </label>
@@ -1545,11 +1574,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'creationDate' && (
                                     <div className="absolute top-full left-0 mt-2 bg-transparent z-20">
-                                            <DateRangeCalendar
-                                                range={creationDateRangeFilter}
-                                                onApply={(range) => { setCreationDateRangeFilter(range); setOpenFilter(null); }}
-                                                onClear={() => { setCreationDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
-                                            />
+                                        <DateRangeCalendar
+                                            range={creationDateRangeFilter}
+                                            onApply={(range) => { setCreationDateRangeFilter(range); setOpenFilter(null); }}
+                                            onClear={() => { setCreationDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -1563,11 +1592,11 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </button>
                                 {openFilter === 'dueDate' && (
                                     <div className="absolute top-full left-0 mt-2 bg-transparent z-20">
-                                            <DateRangeCalendar
-                                                range={dueDateRangeFilter}
-                                                onApply={(range) => { setDueDateRangeFilter(range); setOpenFilter(null); }}
-                                                onClear={() => { setDueDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
-                                            />
+                                        <DateRangeCalendar
+                                            range={dueDateRangeFilter}
+                                            onApply={(range) => { setDueDateRangeFilter(range); setOpenFilter(null); }}
+                                            onClear={() => { setDueDateRangeFilter({ startDate: null, endDate: null }); setOpenFilter(null); }}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -1584,15 +1613,15 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
                         {/* View Toggle */}
                         <div className="flex items-center bg-gray-100 dark:bg-[#0D1117] p-1 rounded-lg">
-                            <button 
-                                onClick={() => setViewMode('kanban')} 
+                            <button
+                                onClick={() => setViewMode('kanban')}
                                 className={`p-1.5 rounded-md transition-all duration-200 ${viewMode === 'kanban' ? 'bg-white dark:bg-[#21262D] shadow text-primary-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                                 title="Visualização Kanban"
                             >
                                 <KanbanIcon className="w-5 h-5" />
                             </button>
-                            <button 
-                                onClick={() => setViewMode('list')} 
+                            <button
+                                onClick={() => setViewMode('list')}
                                 className={`p-1.5 rounded-md transition-all duration-200 ${viewMode === 'list' ? 'bg-white dark:bg-[#21262D] shadow text-primary-500' : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'}`}
                                 title="Visualização Tabela"
                             >
@@ -1644,18 +1673,18 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                         <tr>
                                             <th scope="col" className="p-4">
                                                 <div className="flex items-center">
-                                                    <input id="checkbox-all" type="checkbox" 
-                                                    onChange={handleSelectAll} 
-                                                    checked={filteredAndSortedTasks.length > 0 && selectedTaskIds.size === filteredAndSortedTasks.length}
-                                                    className={checkboxClass} />
+                                                    <input id="checkbox-all" type="checkbox"
+                                                        onChange={handleSelectAll}
+                                                        checked={filteredAndSortedTasks.length > 0 && selectedTaskIds.size === filteredAndSortedTasks.length}
+                                                        className={checkboxClass} />
                                                     <label htmlFor="checkbox-all" className="sr-only">checkbox</label>
                                                 </div>
                                             </th>
-                                            { (['title', 'status', 'categoryId', 'tagId', 'dueDate'] as TableSortKey[]).map(key => (
+                                            {(['title', 'status', 'categoryId', 'tagId', 'dueDate'] as TableSortKey[]).map(key => (
                                                 <th key={key} scope="col" className="px-6 py-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" onClick={() => handleTableSort(key)}>
                                                     <div className="flex items-center">
-                                                    { {title: 'Nome', status: 'Status', categoryId: 'Categoria', tagId: 'Prioridade', dueDate: 'Prazo'}[key] }
-                                                    { tableSortConfig?.key === key && (<span>{tableSortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>) }
+                                                        {{ title: 'Nome', status: 'Status', categoryId: 'Categoria', tagId: 'Prioridade', dueDate: 'Prazo' }[key]}
+                                                        {tableSortConfig?.key === key && (<span>{tableSortConfig.direction === 'asc' ? ' ▲' : ' ▼'}</span>)}
                                                     </div>
                                                 </th>
                                             ))}
@@ -1666,15 +1695,24 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                             filteredAndSortedTasks.map(task => {
                                                 const tag = getTag(task.tagId);
                                                 const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Concluída';
-                                                const showOverdueStyle = isOverdue && !appSettings.disableOverdueColor;
+
+                                                // 👇 LÓGICA DE CORES DA TABELA (OnHold > Atrasado > Padrão)
+                                                let rowClass = 'bg-white dark:bg-[#161B22]'; // Cor padrão do Projeto
+
+                                                if (task.onHold) {
+                                                    rowClass = 'bg-yellow-50 dark:bg-yellow-900/10'; // Amarelo (Pausado)
+                                                } else if (isOverdue && !appSettings.disableOverdueColor) {
+                                                    rowClass = 'bg-red-50 dark:bg-red-900/10'; // Vermelho (Atrasado)
+                                                }
+
                                                 return (
-                                                    <tr key={task.id} className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 ${showOverdueStyle ? 'bg-red-50 dark:bg-red-900/10' : 'bg-white dark:bg-[#161B22]'}`}>
+                                                    <tr key={task.id} className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors ${rowClass}`}>
                                                         <td className="w-4 p-4">
                                                             <div className="flex items-center">
                                                                 <input id={`checkbox-${task.id}`} type="checkbox"
-                                                                checked={selectedTaskIds.has(task.id)}
-                                                                onChange={() => handleSelectOne(task.id)}
-                                                                className={checkboxClass} />
+                                                                    checked={selectedTaskIds.has(task.id)}
+                                                                    onChange={() => handleSelectOne(task.id)}
+                                                                    className={checkboxClass} />
                                                                 <label htmlFor={`checkbox-${task.id}`} className="sr-only">checkbox</label>
                                                             </div>
                                                         </td>
@@ -1716,35 +1754,41 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         </div>
                     ) : (
                         <div className="flex-1 flex gap-6 overflow-x-auto pb-2 min-h-0">
-                            <KanbanColumn 
-                                title="Pendente" 
-                                tasks={pendingTasks} 
-                                categories={categories} 
-                                tags={tags} 
+                            <KanbanColumn
+                                title="Pendente"
+                                tasks={pendingTasks}
+                                categories={categories}
+                                tags={tags}
                                 onSelectTask={onSelectTask}
                                 onDrop={handleKanbanDrop}
                                 onDragStart={handleDragStart}
                                 disableOverdueColor={appSettings.disableOverdueColor}
+                                onUpdateTask={onUpdateTask}
+                                userName={userName}
                             />
-                            <KanbanColumn 
-                                title="Em andamento" 
-                                tasks={inProgressTasks} 
-                                categories={categories} 
-                                tags={tags} 
+                            <KanbanColumn
+                                title="Em andamento"
+                                tasks={inProgressTasks}
+                                categories={categories}
+                                tags={tags}
                                 onSelectTask={onSelectTask}
                                 onDrop={handleKanbanDrop}
                                 onDragStart={handleDragStart}
                                 disableOverdueColor={appSettings.disableOverdueColor}
+                                onUpdateTask={onUpdateTask}
+                                userName={userName}
                             />
-                            <KanbanColumn 
-                                title="Concluída" 
-                                tasks={completedTasks} 
-                                categories={categories} 
-                                tags={tags} 
+                            <KanbanColumn
+                                title="Concluída"
+                                tasks={completedTasks}
+                                categories={categories}
+                                tags={tags}
                                 onSelectTask={onSelectTask}
                                 onDrop={handleKanbanDrop}
                                 onDragStart={handleDragStart}
                                 disableOverdueColor={appSettings.disableOverdueColor}
+                                onUpdateTask={onUpdateTask}
+                                userName={userName}
                             />
                         </div>
                     )}
@@ -1752,7 +1796,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
                 {/* Right: Activity Log */}
                 {isHistoryCollapsed ? (
-                    <div 
+                    <div
                         onClick={() => setIsHistoryCollapsed(false)}
                         className="w-12 flex-shrink-0 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
                         title="Expandir Histórico"
@@ -1787,13 +1831,13 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                     </button>
                                     {isSummaryDropdownOpen && (
                                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 overflow-hidden animate-scale-in">
-                                            <button 
+                                            <button
                                                 onClick={() => handleSummarizeProject('project')}
                                                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
                                             >
                                                 Do projeto
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleSummarizeProject('full')}
                                                 className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
                                             >
@@ -1805,27 +1849,25 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 <div ref={filterDropdownRef} className="relative">
                                     <button
                                         onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${
-                                            activityFilter !== 'all'
-                                            ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-700 dark:text-primary-300'
-                                            : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
-                                        }`}
+                                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${activityFilter !== 'all'
+                                                ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-700 dark:text-primary-300'
+                                                : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
+                                            }`}
                                     >
                                         <span>{currentFilterLabel}</span>
                                         <ChevronDownIcon className={`w-3 h-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
                                     </button>
-                                    
+
                                     {isFilterDropdownOpen && (
                                         <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-[#21262D] p-1 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 space-y-0.5 animate-scale-in">
                                             {activityFilterOptions.map(option => (
                                                 <button
                                                     key={option.value}
                                                     onClick={() => { setActivityFilter(option.value); setIsFilterDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${
-                                                        activityFilter === option.value
-                                                        ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                    }`}
+                                                    className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${activityFilter === option.value
+                                                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
+                                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                        }`}
                                                 >
                                                     {option.label}
                                                     {activityFilter === option.value && <CheckCircleIcon className="w-3 h-3" />}
@@ -1836,9 +1878,9 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                 </div>
                             </div>
                         </div>
-                        
+
                         {isSummarizing && (
-                           <div className="px-2 pb-3 flex-shrink-0">
+                            <div className="px-2 pb-3 flex-shrink-0">
                                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
                                     <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-1 rounded-full animate-pulse-glow w-full"></div>
                                 </div>
@@ -1849,9 +1891,9 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                             {filteredActivity.length > 0 ? (
                                 <ul className="space-y-0">
                                     {filteredActivity.slice().reverse().map(act => (
-                                        <ActivityItem 
-                                            key={act.id} 
-                                            act={act} 
+                                        <ActivityItem
+                                            key={act.id}
+                                            act={act}
                                             onDelete={handleDeleteActivity}
                                             timeFormat={appSettings.timeFormat}
                                         />
@@ -1865,7 +1907,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
                             {isNoteEditorExpanded ? (
                                 <div className="transition-all duration-300 ease-in-out">
-                                    <RichTextNoteEditor 
+                                    <RichTextNoteEditor
                                         value={newNote}
                                         onChange={setNewNote}
                                         placeholder="Adicionar nota ao projeto..."
@@ -1892,7 +1934,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                     </div>
                 )}
             </div>
-            
+
             {/* Export Modal */}
             {isExportModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60]" onClick={() => setIsExportModalOpen(false)}>

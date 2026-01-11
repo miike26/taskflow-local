@@ -5,7 +5,7 @@ import type { Project, Task, Category, Tag, Status, Notification, Habit, Activit
 import { 
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
-    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon, BriefcaseIcon, UserCircleIcon, ListIcon
+    DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon, BriefcaseIcon, UserCircleIcon, ListIcon, PlayIcon, PauseIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -1073,6 +1073,16 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
 
     const handleStatusChange = (newStatus: string) => {
         if (taskData.status !== newStatus) {
+            
+            // 1. Prepara o objeto de atualização com o novo status
+            const updates: Partial<Task> = { status: newStatus as Status };
+            
+            // 2. Se o novo status for 'Concluída', forçamos onHold para false
+            if (newStatus === 'Concluída' && taskData.onHold) {
+                updates.onHold = false;
+            }
+
+            // 3. Registro de atividade padrão (sem notas extras)
             const activityEntry: Activity = {
                 id: `act-${Date.now()}`,
                 type: 'status_change',
@@ -1081,7 +1091,12 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 to: newStatus as Status,
                 user: userName
             };
-            onUpdate(taskData.id, { status: newStatus as Status, activity: [...taskData.activity, activityEntry] });
+
+            // 4. Envia tudo junto
+            onUpdate(taskData.id, { 
+                ...updates, 
+                activity: [...taskData.activity, activityEntry] 
+            });
         }
     };
 
@@ -1518,8 +1533,55 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                             })}
                         </div>
                     </div>
+
+                    {/* 👇 NOVO BOTÃO DE PAUSA (ON HOLD) 👇 */}
+                    <div className="mt-0">
+                        <button
+                            onClick={() => {
+                                const newOnHoldState = !taskData.onHold;
+                                
+                                const activityEntry: Activity = {
+                                    id: `act-${Date.now()}`,
+                                    type: 'status_change',
+                                    timestamp: new Date().toISOString(),
+                                    from: taskData.onHold ? 'Em espera' : 'Ativo',
+                                    to: newOnHoldState ? 'Em espera' : 'Ativo',
+                                    user: userName,
+                                    note: newOnHoldState 
+                                        ? '<strong>Pausou a tarefa</strong> (aguardando terceiros/bloqueio).' 
+                                        : '<strong>Retomou a tarefa</strong>.'
+                                };
+
+                                onUpdate(taskData.id, { 
+                                    onHold: newOnHoldState,
+                                    activity: [...taskData.activity, activityEntry]
+                                });
+                                handleLocalUpdate({ onHold: newOnHoldState });
+                            }}
+                            className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200
+                                ${taskData.onHold 
+                                    // ESTILO ATIVO: Amarelo Sólido + Sombra + Ring (Estilo de Destaque)
+                                    ? 'bg-yellow-500 text-white shadow-md hover:bg-yellow-600 hover:shadow-lg hover:ring-2 hover:ring-offset-2 hover:ring-yellow-400 dark:hover:ring-offset-[#161B22] border border-transparent' 
+                                    
+                                    // ESTILO NORMAL: Idêntico ao botão "Cancelar" do Modal (Transparente + Borda Cinza)
+                                    : 'relative bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-primary-400'
+                                }`}
+                        >
+                            {taskData.onHold ? (
+                                <>
+                                    <PlayIcon className="w-5 h-5" />
+                                    Retomar Tarefa
+                                </>
+                            ) : (
+                                <>
+                                    <PauseIcon className="w-5 h-5" />
+                                    Pausar tarefa (On Hold)
+                                </>
+                            )}
+                        </button>
+                    </div>
                     
-                    <div className="flex flex-col gap-6 px-4 pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col gap-6 px-4 pt-6 mt-2 border-t border-gray-200 dark:border-gray-700">
                         <div ref={dueDateRef} className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                             <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 xl:mb-0">Prazo Final</label>
                              <button type="button" onClick={() => setIsDueDateCalendarOpen(prev => !prev)} 

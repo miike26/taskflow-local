@@ -917,12 +917,12 @@ useEffect(() => {
           
           <div key={currentView} className={`flex-1 overflow-x-hidden h-full animate-slide-up-fade-in ${isFixedLayout ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
             <Routes>
-                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} projects={projects} onToggleHabit={handleToggleHabit} onUpdateTask={handleUpdateTask} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
-                <Route path="/calendar" element={<CalendarView {...commonProps} projects={projects} appSettings={appSettings} onDateSelect={setCalendarSelectedDate} />} />
-                <Route path="/list" element={<ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} onBulkStatusChange={handleBulkStatusChange} onBulkDelete={handleBulkDelete} projects={projects} appSettings={appSettings} />} />
+                <Route path="/" element={<DashboardView {...commonProps} habits={habitsWithStatus} userName={userName} projects={projects} onToggleHabit={handleToggleHabit} onUpdateTask={handleUpdateTask} setAppSettings={handleUpdateAppSettings} onReorderHabits={handleReorderHabits} />} />
+                <Route path="/calendar" element={<CalendarView {...commonProps} projects={projects} onUpdateTask={handleUpdateTask} userName={userName} appSettings={appSettings} onDateSelect={setCalendarSelectedDate} />} />
+                <Route path="/list" element={<ListView {...commonProps} setTasks={() => {}} onStatusChange={handleTaskStatusChange} userName={userName} onBulkStatusChange={handleBulkStatusChange} onUpdateTask={handleUpdateTask} onBulkDelete={handleBulkDelete} projects={projects} appSettings={appSettings} />} />
                 <Route path="/reminders" element={<RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} appSettings={appSettings}/>} />
                 <Route path="/reports" element={<ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>} />
-                <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} />} />
+                <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} userName={userName} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} onUpdateTask={handleUpdateTask} />} />
                 <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onOpenChangelog={handleOpenChangelog} hasNewUpdate={hasNewUpdate} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={() => setIsTourOpen(true)}/>} />
         
                 <Route path="/projects/:projectId" element={
@@ -956,6 +956,7 @@ useEffect(() => {
                         onDeleteProject={handleDeleteProject}
                         onBulkStatusChange={handleBulkStatusChange}
                         onBulkDelete={handleBulkDelete}
+                        onUpdateTask={handleUpdateTask}
                     />
                 } />
 

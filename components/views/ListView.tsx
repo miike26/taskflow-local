@@ -55,12 +55,14 @@ interface ListViewProps {
   categories: Category[];
   tags: Tag[];
   onSelectTask: (task: Task) => void;
+  onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onToggleComplete: (taskId: string) => void;
   onStatusChange: (taskId: string, newStatus: Status) => void;
   onBulkStatusChange: (taskIds: string[], newStatus: Status) => void;
   onBulkDelete: (taskIds: string[]) => void;
   appSettings?: AppSettings;
   projects?: Project[]; // [NOVO] Adicionado prop de projetos
+  userName: string;
 }
 
 type ViewMode = 'kanban' | 'detailed-list';
@@ -151,7 +153,7 @@ const KanbanColumn: React.FC<{
     );
 };
 
-const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTask, onStatusChange, onBulkStatusChange, onBulkDelete, appSettings, projects }) => {
+const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, onSelectTask, onUpdateTask, onStatusChange, onBulkStatusChange, onBulkDelete, appSettings, projects }) => {
   const [filterCategories, setFilterCategories] = useLocalStorage<string[]>('listview.filters.categories', []);
   const [filterTags, setFilterTags] = useLocalStorage<string[]>('listview.filters.tags', []);
   const [filterStatuses, setFilterStatuses] = useLocalStorage<Status[]>('listview.filters.statuses', []);
@@ -306,7 +308,20 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
   
   const handleKanbanDrop = (e: React.DragEvent<HTMLDivElement>, newStatus: string) => {
     const taskId = e.dataTransfer.getData('taskId');
-    if (taskId) onStatusChange(taskId, newStatus as Status);
+    if (taskId) {
+        // Se o novo status for 'Concluída', forçamos a remoção do onHold
+        if (newStatus === 'Concluída') {
+            const task = tasks.find(t => t.id === taskId);
+            // Só chama o update complexo se realmente estiver em onHold, para economizar processamento
+            if (task?.onHold) {
+                onUpdateTask(taskId, { status: newStatus as Status, onHold: false });
+            } else {
+                onStatusChange(taskId, newStatus as Status);
+            }
+        } else {
+            onStatusChange(taskId, newStatus as Status);
+        }
+    }
   };
 
   const handleTableSort = (key: TableSortKey) => {
@@ -610,6 +625,8 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                                 project={projects.find(p => p.id === task.projectId)}
                                 showProject={appSettings?.showProjectOnCard}
                                 onlyProjectIcon={appSettings?.onlyProjectIcon}
+                                onUpdate={onUpdateTask}
+                                userName={userName}
                              />
                         ))
                     }
@@ -647,10 +664,19 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, onSelectTa
                                 const tag = getTag(task.tagId);
                                 const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Concluída';
                                 // Apply logic to table rows too
-                                const showOverdueStyle = isOverdue && !appSettings?.disableOverdueColor;
+                                // 👇 LÓGICA DE CORES DA TABELA (PRIORIDADES)
+                                let rowClass = 'bg-white dark:bg-gray-800'; // Cor padrão
+                                
+                                if (task.onHold) {
+                                    // 1. Prioridade Máxima: Amarelo (Pausado)
+                                    rowClass = 'bg-yellow-50 dark:bg-yellow-900/10';
+                                } else if (isOverdue && !appSettings?.disableOverdueColor) {
+                                    // 2. Prioridade Média: Vermelho (Atrasado)
+                                    rowClass = 'bg-red-50 dark:bg-red-900/10';
+                                }
 
                                 return (
-                                <tr key={task.id} className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 ${showOverdueStyle ? 'bg-red-50 dark:bg-red-900/10' : 'bg-white dark:bg-gray-800'}`}>
+                                <tr key={task.id} className={`border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors ${rowClass}`}>
                                             <td className="w-4 p-4">
                                                 <div className="flex items-center">
                                                     <input id={`checkbox-${task.id}`} type="checkbox"
