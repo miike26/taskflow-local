@@ -160,3 +160,12 @@ export interface SavedSummary {
     };
 }
 
+export interface Notification {
+  id: string; 
+  taskId: string;
+  taskTitle: string;
+  message: string;
+  notifyAt: string;
+  // 👇 NOVO: Lista de IDs para notificações agrupadas
+  relatedTaskIds?: string[]; 
+}

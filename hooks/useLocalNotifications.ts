@@ -41,7 +41,7 @@ export const useLocalNotifications = (
             // =========================================================================
             // 1. RESUMO MATINAL (Agrupado) - Roda às 09:00
             // =========================================================================
-            if (settings.taskReminders && now.getHours() === 9 && now.getMinutes() === 0) {
+            if (settings.taskReminders && now.getHours() === 1 && now.getMinutes() === 57) {
                 
                 // A. Agrupar Tarefas que vencem HOJE
                 const tasksDueToday = tasks.filter(t => 
@@ -108,6 +108,27 @@ export const useLocalNotifications = (
                         });
                         notifiedRef.current.add(groupKeySoon);
                     }
+                }
+
+                // C. Agrupar Tarefas ATRASADAS (Novo no Push)
+                const tasksOverdue = tasks.filter(t => {
+                    if (t.status === 'Concluída' || !t.dueDate) return false;
+                    const d = new Date(t.dueDate);
+                    d.setHours(0,0,0,0);
+                    const today = new Date(now);
+                    today.setHours(0,0,0,0);
+                    return d < today; // Data menor que hoje = Atrasada
+                });
+
+                const groupKeyOverdue = `summary-overdue-${todayStr}`;
+
+                if (tasksOverdue.length > 0 && !notifiedRef.current.has(groupKeyOverdue)) {
+                    new Notification(`⚠️ Atenção: ${tasksOverdue.length} Tarefas Atrasadas`, {
+                        body: 'Não deixe acumular! Clique para resolver.',
+                        icon: '/favicon.ico',
+                        tag: groupKeyOverdue
+                    });
+                    notifiedRef.current.add(groupKeyOverdue);
                 }
             }
 

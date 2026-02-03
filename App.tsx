@@ -360,29 +360,73 @@ useEffect(() => {
         const todayStr = getLocalISODate();
 
         // --- 1. GERAÇÃO (MANTIDA IGUAL) ---
-        if (notificationSettings.enabled && notificationSettings.taskReminders) {
+       if (notificationSettings.enabled && notificationSettings.taskReminders) {
           const startOfToday = new Date();
           startOfToday.setHours(0, 0, 0, 0);
-
+          
+          // Arrays para agrupar
+          const dueTodayTasks: Task[] = [];
+          const overdueTasks: Task[] = [];
+          
           tasks.forEach(task => {
             if (task.status !== 'Concluída' && task.dueDate) {
               const dueDate = new Date(task.dueDate);
               const startOfDueDate = new Date(dueDate);
               startOfDueDate.setHours(0, 0, 0, 0);
 
-              if (startOfDueDate.getTime() < startOfToday.getTime()) {
-                  generated.push({ id: `${task.id}-overdue`, taskId: task.id, taskTitle: task.title, message: `Atrasada desde ${dueDate.toLocaleDateString('pt-BR')}`, notifyAt: task.dueDate });
-              } else {
-                  const calendarDaysDiff = (startOfDueDate.getTime() - startOfToday.getTime()) / (1000 * 3600 * 24);
-                  const daysUntilDue = Math.round(calendarDaysDiff);
+              const timeDiff = startOfDueDate.getTime() - startOfToday.getTime();
+              const daysUntilDue = Math.round(timeDiff / (1000 * 3600 * 24));
 
-                  if (daysUntilDue <= notificationSettings.remindDaysBefore) {
-                      const message = daysUntilDue === 0 ? 'Vence hoje.' : daysUntilDue === 1 ? 'Vence amanhã.' : `Vence em ${daysUntilDue} dias.`;
-                      generated.push({ id: `${task.id}-upcoming-${daysUntilDue}`, taskId: task.id, taskTitle: task.title, message: message, notifyAt: task.dueDate });
-                  }
+              if (timeDiff < 0) {
+                 // Atrasada -> Adiciona à lista de atrasadas
+                 overdueTasks.push(task);
+              } else if (daysUntilDue === 0) {
+                 // Vence Hoje -> Adiciona à lista de hoje
+                 dueTodayTasks.push(task);
+              } else if (daysUntilDue <= notificationSettings.remindDaysBefore) {
+                 // Vence em breve (Futuro) -> Mantém individual (ou agrupe se preferir)
+                 const msg = daysUntilDue === 1 ? 'Vence amanhã.' : `Vence em ${daysUntilDue} dias.`;
+                 generated.push({ id: `${task.id}-upcoming-${daysUntilDue}`, taskId: task.id, taskTitle: task.title, message: msg, notifyAt: task.dueDate });
               }
             }
           });
+
+          // A. PROCESSAR "VENCE HOJE" (Agrupado)
+          if (dueTodayTasks.length > 0) {
+             if (dueTodayTasks.length === 1) {
+                const t = dueTodayTasks[0];
+                generated.push({ id: `${t.id}-today`, taskId: t.id, taskTitle: t.title, message: 'Vence hoje.', notifyAt: t.dueDate! });
+             } else {
+                // 👇 MUDANÇA AQUI: Adicionei "-cntX" ao ID
+                generated.push({ 
+                    id: `summary-today-${todayStr}-cnt${dueTodayTasks.length}`, 
+                    taskId: 'summary-group',
+                    taskTitle: 'Tarefas para Hoje', 
+                    message: `Você tem ${dueTodayTasks.length} tarefas vencendo hoje.`, 
+                    notifyAt: new Date().toISOString(),
+                    relatedTaskIds: dueTodayTasks.map(t => t.id)
+                });
+             }
+          }
+
+          // B. PROCESSAR "ATRASADAS" (Agrupado) - NOVO!
+          if (overdueTasks.length > 0) {
+             if (overdueTasks.length === 1) {
+                const t = overdueTasks[0];
+                const d = new Date(t.dueDate!);
+                generated.push({ id: `${t.id}-overdue`, taskId: t.id, taskTitle: t.title, message: `Atrasada desde ${d.toLocaleDateString('pt-BR')}`, notifyAt: t.dueDate! });
+             } else {
+                // 👇 MUDANÇA AQUI: Adicionei "-cntX" ao ID também
+                generated.push({ 
+                    id: `summary-overdue-${todayStr}-cnt${overdueTasks.length}`, 
+                    taskId: 'summary-group', 
+                    taskTitle: 'Tarefas Atrasadas', 
+                    message: `Atenção: ${overdueTasks.length} tarefas estão atrasadas.`, 
+                    notifyAt: new Date().toISOString(),
+                    relatedTaskIds: overdueTasks.map(t => t.id) 
+                });
+             }
+          }
         }
         
         if (notificationSettings.enabled) {
@@ -424,11 +468,17 @@ useEffect(() => {
 
                 if (newNotifications.length > 0) {
                     const unreadNewNotifications = newNotifications.filter(n => !readNotificationIds.includes(n.id));
+                    
                     const toastsToAdd = unreadNewNotifications.map((n): NotificationToastDataType | null => {
                         const taskForToast = tasks.find(t => t.id === n.taskId);
                         const categoryForToast = taskForToast ? categories.find(c => c.id === taskForToast.categoryId) : undefined;
                         const isHabit = n.taskId.startsWith('habit-');
-                        if ((taskForToast && categoryForToast) || isHabit) {
+                        
+                        // 👇 NOVA VERIFICAÇÃO: É um grupo?
+                        const isGroup = n.taskId === 'summary-group';
+
+                        // 👇 ATUALIZADO: Aceita se for Tarefa Válida OU Hábito OU Grupo
+                        if ((taskForToast && categoryForToast) || isHabit || isGroup) {
                             return { notification: n, task: taskForToast, category: categoryForToast, key: n.id };
                         }
                         return null;
