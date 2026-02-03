@@ -32,6 +32,7 @@ import ChangelogModal from './components/ChangelogModal'; // Importe
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
 import { CHANGELOG_DATA } from './constants/changelog';
+import { useLocalNotifications } from './hooks/useLocalNotifications';
 
 
 interface ConfirmationDialogState {
@@ -92,6 +93,21 @@ const AppContent = () => {
       setCalendarSelectedDate(null);
     }
   }, [currentView]);
+
+  useEffect(() => {
+    const requestNotificationPermission = () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    };
+
+    // Adiciona o ouvinte para o primeiro clique em qualquer lugar
+    document.addEventListener('click', requestNotificationPermission, { once: true });
+
+    return () => {
+      document.removeEventListener('click', requestNotificationPermission);
+    };
+  }, []);
 
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
 
@@ -170,7 +186,7 @@ const AppContent = () => {
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
   const DEFAULT_NOTIF_SETTINGS: NotificationSettings = { 
-      enabled: true, remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
+      enabled: true, desktopNotifications: false, remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
   };
   
   const DEFAULT_APP_SETTINGS: AppSettings = { 
@@ -181,6 +197,7 @@ const AppContent = () => {
   const appSettings: AppSettings = userData?.appSettings || DEFAULT_APP_SETTINGS;
   const readNotificationIds: string[] = userData?.readNotificationIds || [];
   const clearedNotificationIds: string[] = userData?.clearedNotificationIds || [];
+  useLocalNotifications(tasks, habits, notificationSettings);
 
   const [confirmationState, setConfirmationState] = useState<ConfirmationDialogState>({
     isOpen: false, title: '', message: '', onConfirm: () => {},

@@ -72,6 +72,7 @@ export interface Notification {
 
 export interface NotificationSettings {
   enabled: boolean;
+  desktopNotifications: boolean;
   remindDaysBefore: number;
   taskReminders: boolean; // New
   habitReminders: boolean; // New

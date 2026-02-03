@@ -217,6 +217,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         }
     };
 
+    const handleDesktopPushToggle = async (newValue: boolean) => {
+        if (newValue) {
+            // Tentando ATIVAR
+            if (!('Notification' in window)) {
+                alert('Este navegador não suporta notificações de desktop.');
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                setNotificationSettings(s => ({ ...s, desktopNotifications: true }));
+                new Notification('Push Ativado! 🔔', { body: 'O navegador está pronto para enviar alertas.' });
+            } else if (Notification.permission === 'denied') {
+                alert('As notificações estão bloqueadas no navegador. Clique no cadeado 🔒 na barra de endereço para permitir.');
+            } else {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    setNotificationSettings(s => ({ ...s, desktopNotifications: true }));
+                    new Notification('Push Ativado! 🔔');
+                } else {
+                    setNotificationSettings(s => ({ ...s, desktopNotifications: false }));
+                }
+            }
+        } else {
+            // Tentando DESATIVAR
+            setNotificationSettings(s => ({ ...s, desktopNotifications: false }));
+        }
+    };
+
     const confirmDisableAi = () => {
         setAppSettings(s => ({...s, enableAi: false}));
         setIsAiConfirmationOpen(false);
@@ -388,10 +416,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="space-y-2 pt-6 border-t border-gray-100 dark:border-gray-800">
                             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Sobre o Sistema</h4>
                             
+                            {/* Bloco 1: Changelog (Já existia) */}
                             <div className="bg-white dark:bg-[#0D1117] p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Novidades e Atualizações</h4>                              
+                                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Novidades e Atualizações</h4>                                     
                                         {hasNewUpdate && (
                                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse">
                                                 NOVO
@@ -403,11 +432,26 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 <button
                                     onClick={onOpenChangelog}
                                     className={`px-4 py-2 rounded-lg transition-colors text-xs font-bold border ${hasNewUpdate
-                                            ? 'bg-primary-500 text-white hover:bg-primary-600 border-transparent shadow-md shadow-primary-500/20' // Botão destacado se tiver novidade
+                                            ? 'bg-primary-500 text-white hover:bg-primary-600 border-transparent shadow-md shadow-primary-500/20'
                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
-                                        }`}
+                                    }`}
                                 >
                                     Ver Changelog
+                                </button>
+                            </div>
+
+                            {/* Bloco 2: Tour (NOVO) - Estilo consistente com o card de cima */}
+                            <div className="bg-white dark:bg-[#0D1117] p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 dark:text-white text-sm">Introdução ao Sistema</h4>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Reveja o tour guiado e conheça as funcionalidades.</p>
+                                </div>
+                                <button
+                                    onClick={onOpenTour}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                                >
+                                    <InformationCircleIcon className="w-4 h-4" />
+                                    Ver Tour
                                 </button>
                             </div>
                         </div>
@@ -419,19 +463,41 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="space-y-8 animate-fade-in">
                         <div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Notificações e Alertas</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Controle o que você quer receber.</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">Controle os alertas do sistema.</p>
                         </div>
 
                         <div className="space-y-2">
+                            {/* 1. Nível Superior: Sistema Geral */}
                             <SettingToggle 
-                                label="Notificações Gerais" 
-                                description="Ativar ou desativar todas as notificações do sistema." 
+                                label="Habilitar Notificações" 
+                                description="Ativa o sistema de alertas dentro do aplicativo." 
                                 checked={notificationSettings.enabled} 
                                 onChange={(v) => setNotificationSettings(s => ({...s, enabled: v}))} 
                             />
 
-                            {notificationSettings.enabled && (
+                            {/* 2. Sub-opções (Identadas) */}
+                            <div className={`transition-all duration-300 ${notificationSettings.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none grayscale'}`}>
                                 <div className="pl-4 ml-2 border-l-2 border-gray-100 dark:border-gray-800 space-y-2 mt-4">
+                                    
+                                    {/* 2.1 Notificações de Desktop (Visual Padrão) */}
+                                    <SettingToggle 
+                                        label="Notificações de Desktop (Push)" 
+                                        description="Receber alertas no Windows/Mac mesmo com a aba minimizada." 
+                                        checked={!!notificationSettings.desktopNotifications} 
+                                        onChange={(v) => handleDesktopPushToggle(v)}
+                                    />
+                                    
+                                    {/* Aviso de Bloqueio (Só aparece se necessário) */}
+                                    {notificationSettings.desktopNotifications && Notification.permission === 'denied' && (
+                                        <div className="flex items-center gap-2 p-3 mb-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
+                                            <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                                            <span>
+                                                O navegador bloqueou as notificações. Clique no cadeado 🔒 na barra de endereço para liberar.
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* 2.2 Lembrete Antecipado */}
                                     <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                         <div>
                                             <p className="font-medium text-gray-900 dark:text-white text-sm">Lembrete Antecipado</p>
@@ -464,7 +530,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         onChange={(v) => setNotificationSettings(s => ({...s, habitReminders: v}))} 
                                     />
 
-                                    <div className="py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
                                         <SettingToggle 
                                             label="Novidades e Dicas" 
                                             description="Receber atualizações sobre novas funcionalidades." 
@@ -472,18 +537,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                             onChange={(v) => setNotificationSettings(s => ({...s, marketingEmails: v}))} 
                                             colorClass="bg-green-500"
                                         />
-                                        <div className="mt-4 pt-2">
-                                            <button 
-                                                onClick={onOpenTour}
-                                                className="flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
-                                            >
-                                                <InformationCircleIcon className="w-4 h-4" />
-                                                Ver Introdução (Tour)
-                                            </button>
-                                        </div>
-                                    </div>
+                                
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 )}

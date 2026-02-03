@@ -10,18 +10,16 @@ export interface ChangeLogItem {
 }
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
-    // {
-    //     version: '1.2.0',
-    //     date: '2026-01-08',
-    //     title: 'Navegação e Usabilidade',
-    //     description: 'Melhorias significativas na navegação entre projetos e calendário.',
-    //     changes: [
-    //         { type: 'feature', text: 'Agora ao criar uma tarefa vindo do Calendário, a data já vem preenchida.' },
-    //         { type: 'feature', text: 'Ao criar tarefa dentro de um Projeto, o projeto já vem selecionado automaticamente.' },
-    //         { type: 'improvement', text: 'Links na descrição das tarefas agora são clicáveis automaticamente.' },
-    //         { type: 'fix', text: 'Correção na exibição de tarefas no calendário (agora considera data de vencimento).' }
-    //     ]
-    // },
+    {
+        version: '1.2.0',
+        date: '2026-01-11',
+        title: 'Novas opções para gerenciar tarefas',
+        description: 'Adição de novas funcionalidades.',
+        changes: [
+            { type: 'improvement', text: 'Prorrogação Rápida de Prazos: Agora você pode alterar a data de vencimento diretamente pelo card da tarefa. Basta clicar no indicador de atraso para acessar opções rápidas como "Amanhã" ou "Próxima Semana"' },
+            { type: 'feature', text: 'Status "Em Espera" (On Hold): Pause tarefas que dependem de terceiros ou bloqueios externos. Tarefas pausadas ganham destaque visual amarelo (removendo o alerta de atraso) e a ação é registrada automaticamente no histórico.' }
+        ]
+    },
     {
         version: '1.1.0',
         date: '2026-01-08',
