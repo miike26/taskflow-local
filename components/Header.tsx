@@ -4,7 +4,7 @@ import {
     ChevronDownIcon, UserCircleIcon, BroomIcon, ClipboardDocumentCheckIcon, 
     CheckCircleIcon, DashboardIcon, CalendarIcon, ListIcon, BarChartIcon, 
     FolderIcon, CheckIcon, Cog6ToothIcon, BriefcaseIcon, 
-    ArrowRightOnRectangleIcon, CalendarDaysIcon // <--- Adicionados
+    ArrowRightOnRectangleIcon, CalendarDaysIcon, SparklesIcon // <--- Adicionados
 } from './icons';
 import type { View, Category, Task, Tag, Status, Notification, Habit, AppSettings } from '../types';
 import TaskCard from './TaskCard';
@@ -65,8 +65,10 @@ const NotificationCard: React.FC<{
     // Detecta se é o nosso novo resumo agrupado
     const isGroupSummary = notification.taskId === 'summary-group' && notification.relatedTaskIds;
 
+    const isChangelog = notification.taskId === 'system-changelog';
+
     // Se não for Tarefa, nem Hábito, nem Grupo, não mostra nada
-    if (!task && !isHabitReminder && !isGroupSummary) return null;
+    if (!task && !isHabitReminder && !isGroupSummary && !isChangelog) return null;
 
     // --- 1. RENDERIZAÇÃO DO MODO GRUPO (Accordion) ---
     if (isGroupSummary && notification.relatedTaskIds && allTasks) {
@@ -142,6 +144,18 @@ const NotificationCard: React.FC<{
     // --- 2. RENDERIZAÇÃO PADRÃO (Card Original) ---
     // (Mantido idêntico ao seu código anterior, apenas identado)
     let CardIcon = BellIcon;
+    if (isChangelog) {
+        CardIcon = SparklesIcon;
+    } else if (isHabitReminder) {
+        CardIcon = ClipboardDocumentCheckIcon;
+    } else {
+        CardIcon = getCategoryIcon(category);
+    }
+
+    
+    if (notification.taskId === 'system-changelog') {
+        CardIcon = SparklesIcon;
+    }
     if (isHabitReminder) {
         CardIcon = ClipboardDocumentCheckIcon;
     } else {

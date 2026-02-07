@@ -68,7 +68,9 @@ const NotificationCard: React.FC<{
     const isHabitReminder = notification.taskId.startsWith('habit-');
     const isGroupSummary = notification.taskId === 'summary-group' && notification.relatedTaskIds;
 
-    if (!task && !isHabitReminder && !isGroupSummary) return null;
+    const isChangelog = notification.taskId === 'system-changelog';
+
+    if (!task && !isHabitReminder && !isGroupSummary && !isChangelog) return null;
 
     // --- MODO GRUPO (Resumo do Dia) ---
     if (isGroupSummary && notification.relatedTaskIds && allTasks) {
@@ -125,6 +127,16 @@ const NotificationCard: React.FC<{
 
     // --- MODO PADRÃO ---
     let CategoryIcon = BellIcon;
+    let CardIcon = BellIcon;
+
+    if (isChangelog) {
+        CardIcon = SparklesIcon; // ✨ Ícone de novidade
+    } else if (isHabitReminder) {
+        CardIcon = ClipboardDocumentCheckIcon;
+    } else {
+        CardIcon = getCategoryIcon(category);
+    }
+    
     if (isHabitReminder) CategoryIcon = ClipboardDocumentCheckIcon;
     else CategoryIcon = getCategoryIcon(category);
 

@@ -11,6 +11,17 @@ export interface ChangeLogItem {
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     {
+        version: '1.2.5',
+        date: '2026-02-06',
+        title: 'Melhorias no sistema de notificações',
+        description: 'Novas possibilidades e configurações para notificações no App.',
+        changes: [
+            { type: 'improvement', text: 'Configure um horário para receber uma notificação de "Resumo do dia", para notificações atrasadas, que vencem "Hoje", e "Amanhã".' },
+            { type: 'feature', text: 'Agora você pode receber notificações push do Navegador (Windows e Mac).' },
+            { type: 'feature', text: 'Habilite um discreto aviso sonoro para as notificações do App.' }
+        ]
+    },
+    {
         version: '1.2.0',
         date: '2026-01-11',
         title: 'Novas opções para gerenciar tarefas',

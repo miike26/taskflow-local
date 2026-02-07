@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Task, Habit, NotificationSettings } from '../types';
+import { CHANGELOG_DATA } from '../constants/changelog';
 
 // Helper para verificar se duas datas estão no mesmo minuto (para alarmes exatos)
 const isSameMinute = (date1: Date, date2: Date) => {
@@ -38,6 +39,30 @@ export const useLocalNotifications = (
 
             const now = new Date();
             const todayStr = now.toISOString().split('T')[0];
+
+
+            // =========================================================================
+            // 0. CHANGELOG / NOVIDADES (Push de Sistema)
+            // =========================================================================
+            if (settings.marketingEmails && CHANGELOG_DATA.length > 0) {
+                const latestVersion = CHANGELOG_DATA[0];
+                const key = `push-changelog-${latestVersion.version}`;
+
+                // Verifica se já notificou essa versão específica nesta sessão
+                if (!notifiedRef.current.has(key)) {
+                    // Opcional: Só envia push se o usuário ainda não viu essa versão nas configs
+                    // (Você pode passar essa prop se quiser ser muito estrito, mas enviar 1 vez é seguro)
+                    
+                    new Notification(`✨ Novidades da Versão ${latestVersion.version}`, {
+                        body: latestVersion.title,
+                        icon: '/favicon.ico',
+                        tag: key
+                    });
+                    
+                    // Não chamamos triggerSound() aqui pq o App.tsx já vai cuidar do som com o Toast
+                    notifiedRef.current.add(key);
+                }
+            }
 
             // =========================================================================
             // 1. RESUMO MATINAL (Agrupado) - Horário dinâmico

@@ -467,6 +467,22 @@ useEffect(() => {
             });
         }
 
+        // 4. NOTIFICAÇÃO DE CHANGELOG (Baseada no constants/changelog.ts)
+        // =========================================================================
+        // Só gera se a opção "Novidades e Dicas" estiver ATIVA e houver dados
+        if (notificationSettings.marketingEmails && CHANGELOG_DATA.length > 0) {
+            const latestVer = CHANGELOG_DATA[0]; // Pega a versão mais recente (topo da lista)
+            const changelogId = `changelog-v${latestVer.version}`;
+
+            generated.push({
+                id: changelogId,
+                taskId: 'system-changelog', // ID especial para identificar clique e ícone
+                taskTitle: `✨ Novidades da Versão ${latestVer.version}`,
+                message: latestVer.title, // Ex: "Novas opções para gerenciar tarefas"
+                notifyAt: latestVer.date ? new Date(latestVer.date).toISOString() : new Date().toISOString()
+            });
+        }
+
         const sortedGenerated = generated.sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime()).filter(n => !clearedNotificationIds.includes(n.id));
 
         // --- 2. VERIFICAÇÃO DE MUDANÇA ---
@@ -487,8 +503,9 @@ useEffect(() => {
                         const isHabit = n.taskId.startsWith('habit-');
 
                         const isGroup = n.taskId === 'summary-group';
+                        const isChangelog = n.taskId === 'system-changelog';
 
-                        if ((taskForToast && categoryForToast) || isHabit || isGroup) {
+                        if ((taskForToast && categoryForToast) || isHabit || isGroup || isChangelog) {
                             return { notification: n, task: taskForToast, category: categoryForToast, key: n.id };
                         }
                         return null;
@@ -864,10 +881,21 @@ useEffect(() => {
   };
   
   const handleNotificationClick = (notification: Notification) => {
+    // 👇 1. NOVO: Se for Changelog, abre o modal e marca como lida
+    if (notification.taskId === 'system-changelog') {
+        setIsChangelogOpen(true); // Abre o modal (garanta que este state existe no App.tsx)
+        setReadNotificationIds(prev => [...new Set([...prev, notification.id])]);
+        setLastSeenVersion(latestVersion);
+        return;
+    }
+
+    // 2. Existente: Hábitos
     if (notification.taskId.startsWith('habit-')) {
         setReadNotificationIds(prev => [...new Set([...prev, notification.id])]);
         return;
     }
+
+    // 3. Existente: Tarefas
     const task = tasks.find(t => t.id === notification.taskId);
     if (task) {
       handleSelectTask(task);
