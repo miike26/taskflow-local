@@ -169,3 +169,14 @@ export interface Notification {
   // 👇 NOVO: Lista de IDs para notificações agrupadas
   relatedTaskIds?: string[]; 
 }
+
+export interface NotificationSettings {
+  enabled: boolean;
+  desktopNotifications: boolean;
+  playNotificationSound: boolean;
+  dailySummaryTime: string;
+  remindDaysBefore: number;
+  taskReminders: boolean;
+  habitReminders: boolean;
+  marketingEmails: boolean;
+}

@@ -479,25 +479,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                             <div className={`transition-all duration-300 ${notificationSettings.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none grayscale'}`}>
                                 <div className="pl-4 ml-2 border-l-2 border-gray-100 dark:border-gray-800 space-y-2 mt-4">
                                     
-                                    {/* 2.1 Notificações de Desktop (Visual Padrão) */}
-                                    <SettingToggle 
-                                        label="Notificações de Desktop (Push)" 
-                                        description="Receber alertas no Windows/Mac mesmo com a aba minimizada." 
-                                        checked={!!notificationSettings.desktopNotifications} 
-                                        onChange={(v) => handleDesktopPushToggle(v)}
-                                    />
-                                    
-                                    {/* Aviso de Bloqueio (Só aparece se necessário) */}
-                                    {notificationSettings.desktopNotifications && Notification.permission === 'denied' && (
-                                        <div className="flex items-center gap-2 p-3 mb-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
-                                            <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
-                                            <span>
-                                                O navegador bloqueou as notificações. Clique no cadeado 🔒 na barra de endereço para liberar.
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {/* 2.2 Lembrete Antecipado */}
+                                    {/* 2.1 [MOVIDO] Lembrete Antecipado (Agora é o primeiro) */}
                                     <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                         <div>
                                             <p className="font-medium text-gray-900 dark:text-white text-sm">Lembrete Antecipado</p>
@@ -515,6 +497,48 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                             <span className="text-sm text-gray-500">dias</span>
                                         </div>
                                     </div>
+
+                                    {/* 2.1.B [NOVO] Horário do Resumo */}
+                                    <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
+                                        <div>
+                                            <p className="font-medium text-gray-900 dark:text-white text-sm">Horário do Resumo</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Quando enviar o resumo diário de tarefas.</p>
+                                        </div>
+                                        <input
+                                            type="time"
+                                            // defaultValue: Deixa o navegador controlar a digitação (sem travar)
+                                            defaultValue={notificationSettings.dailySummaryTime || '09:00'}
+                                            // onBlur: Salva apenas quando você clica fora ou aperta Enter
+                                            onBlur={e => setNotificationSettings(s => ({ ...s, dailySummaryTime: e.target.value }))}
+                                            className="p-1.5 bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-gray-700 rounded-md text-sm font-bold focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none text-gray-900 dark:text-white cursor-pointer"
+                                        />
+                                    </div>
+
+                                    {/* 2.2 Notificações de Desktop (Push) */}
+                                    <SettingToggle 
+                                        label="Notificações de Desktop (Push)" 
+                                        description="Receber alertas no Windows/Mac mesmo com a aba minimizada." 
+                                        checked={!!notificationSettings.desktopNotifications} 
+                                        onChange={(v) => handleDesktopPushToggle(v)}
+                                    />
+                                    
+                                    {/* Aviso de Bloqueio (Só aparece se necessário) */}
+                                    {notificationSettings.desktopNotifications && Notification.permission === 'denied' && (
+                                        <div className="flex items-center gap-2 p-3 mb-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
+                                            <ExclamationTriangleIcon className="w-4 h-4 flex-shrink-0" />
+                                            <span>
+                                                O navegador bloqueou as notificações. Clique no cadeado 🔒 na barra de endereço para liberar.
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* 2.3 [NOVO] Som de Notificação (Logo abaixo do Push) */}
+                                    <SettingToggle 
+                                        label="Som de Notificação" 
+                                        description="Tocar um aviso sonoro ao receber alertas." 
+                                        checked={!!notificationSettings.playNotificationSound} 
+                                        onChange={(v) => setNotificationSettings(s => ({...s, playNotificationSound: v}))}
+                                    />
 
                                     <SettingToggle 
                                         label="Tarefas e Prazos" 
@@ -537,7 +561,6 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                             onChange={(v) => setNotificationSettings(s => ({...s, marketingEmails: v}))} 
                                             colorClass="bg-green-500"
                                         />
-                                
                                 </div>
                             </div>
                         </div>

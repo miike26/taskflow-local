@@ -186,7 +186,7 @@ const AppContent = () => {
   const [globalCategoryFilter, setGlobalCategoryFilter] = useLocalStorage<string>('globalCategoryFilter', '');
   
   const DEFAULT_NOTIF_SETTINGS: NotificationSettings = { 
-      enabled: true, desktopNotifications: false, remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
+      enabled: true, desktopNotifications: false, playNotificationSound: true, dailySummaryTime: '09:00', remindDaysBefore: 1, taskReminders: true, habitReminders: true, marketingEmails: false 
   };
   
   const DEFAULT_APP_SETTINGS: AppSettings = { 
@@ -359,86 +359,100 @@ useEffect(() => {
         const generated: Notification[] = [];
         const todayStr = getLocalISODate();
 
-        // --- 1. GERAÇÃO (MANTIDA IGUAL) ---
-       if (notificationSettings.enabled && notificationSettings.taskReminders) {
-          const startOfToday = new Date();
-          startOfToday.setHours(0, 0, 0, 0);
-          
-          // Arrays para agrupar
-          const dueTodayTasks: Task[] = [];
-          const overdueTasks: Task[] = [];
-          
-          tasks.forEach(task => {
-            if (task.status !== 'Concluída' && task.dueDate) {
-              const dueDate = new Date(task.dueDate);
-              const startOfDueDate = new Date(dueDate);
-              startOfDueDate.setHours(0, 0, 0, 0);
+        // --- 1. GERAÇÃO (COM VERIFICAÇÃO DE HORÁRIO DO RESUMO) ---
+        if (notificationSettings.enabled && notificationSettings.taskReminders) {
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
 
-              const timeDiff = startOfDueDate.getTime() - startOfToday.getTime();
-              const daysUntilDue = Math.round(timeDiff / (1000 * 3600 * 24));
+            // 👇 LÓGICA DE HORÁRIO ADICIONADA AQUI
+            // Se não tiver hora definida, assume 09:00 como fallback
+            const [sumHour, sumMin] = notificationSettings.dailySummaryTime 
+                ? notificationSettings.dailySummaryTime.split(':').map(Number) 
+                : [9, 0];
+            
+            const summaryTimeToday = new Date();
+            summaryTimeToday.setHours(sumHour, sumMin, 0, 0);
 
-              if (timeDiff < 0) {
-                 // Atrasada -> Adiciona à lista de atrasadas
-                 overdueTasks.push(task);
-              } else if (daysUntilDue === 0) {
-                 // Vence Hoje -> Adiciona à lista de hoje
-                 dueTodayTasks.push(task);
-              } else if (daysUntilDue <= notificationSettings.remindDaysBefore) {
-                 // Vence em breve (Futuro) -> Mantém individual (ou agrupe se preferir)
-                 const msg = daysUntilDue === 1 ? 'Vence amanhã.' : `Vence em ${daysUntilDue} dias.`;
-                 generated.push({ id: `${task.id}-upcoming-${daysUntilDue}`, taskId: task.id, taskTitle: task.title, message: msg, notifyAt: task.dueDate });
-              }
+            // Verifica se JÁ PASSOU da hora do resumo
+            const isTimeForSummary = now >= summaryTimeToday;
+
+            // Arrays para agrupar
+            const dueTodayTasks: Task[] = [];
+            const overdueTasks: Task[] = [];
+
+            tasks.forEach(task => {
+                if (task.status !== 'Concluída' && task.dueDate) {
+                    const dueDate = new Date(task.dueDate);
+                    const startOfDueDate = new Date(dueDate);
+                    startOfDueDate.setHours(0, 0, 0, 0);
+
+                    const timeDiff = startOfDueDate.getTime() - startOfToday.getTime();
+                    const daysUntilDue = Math.round(timeDiff / (1000 * 3600 * 24));
+
+                    if (timeDiff < 0) {
+                        // Atrasada -> Só adiciona se já for hora do resumo
+                        if (isTimeForSummary) {
+                            overdueTasks.push(task);
+                        }
+                    } else if (daysUntilDue === 0) {
+                        // Vence Hoje -> Só adiciona se já for hora do resumo
+                        if (isTimeForSummary) {
+                            dueTodayTasks.push(task);
+                        }
+                    } else if (daysUntilDue <= notificationSettings.remindDaysBefore) {
+                        // Vence em breve (Futuro) -> Mantém individual (Lógica padrão)
+                        const msg = daysUntilDue === 1 ? 'Vence amanhã.' : `Vence em ${daysUntilDue} dias.`;
+                        generated.push({ id: `${task.id}-upcoming-${daysUntilDue}`, taskId: task.id, taskTitle: task.title, message: msg, notifyAt: task.dueDate });
+                    }
+                }
+            });
+
+            // A. PROCESSAR "VENCE HOJE" (Agrupado)
+            if (dueTodayTasks.length > 0) {
+                if (dueTodayTasks.length === 1) {
+                    const t = dueTodayTasks[0];
+                    generated.push({ id: `${t.id}-today`, taskId: t.id, taskTitle: t.title, message: 'Vence hoje.', notifyAt: t.dueDate! });
+                } else {
+                    generated.push({
+                        id: `summary-today-${todayStr}-cnt${dueTodayTasks.length}`,
+                        taskId: 'summary-group',
+                        taskTitle: 'Tarefas para Hoje',
+                        message: `Você tem ${dueTodayTasks.length} tarefas vencendo hoje.`,
+                        notifyAt: new Date().toISOString(),
+                        relatedTaskIds: dueTodayTasks.map(t => t.id)
+                    });
+                }
             }
-          });
 
-          // A. PROCESSAR "VENCE HOJE" (Agrupado)
-          if (dueTodayTasks.length > 0) {
-             if (dueTodayTasks.length === 1) {
-                const t = dueTodayTasks[0];
-                generated.push({ id: `${t.id}-today`, taskId: t.id, taskTitle: t.title, message: 'Vence hoje.', notifyAt: t.dueDate! });
-             } else {
-                // 👇 MUDANÇA AQUI: Adicionei "-cntX" ao ID
-                generated.push({ 
-                    id: `summary-today-${todayStr}-cnt${dueTodayTasks.length}`, 
-                    taskId: 'summary-group',
-                    taskTitle: 'Tarefas para Hoje', 
-                    message: `Você tem ${dueTodayTasks.length} tarefas vencendo hoje.`, 
-                    notifyAt: new Date().toISOString(),
-                    relatedTaskIds: dueTodayTasks.map(t => t.id)
-                });
-             }
-          }
-
-          // B. PROCESSAR "ATRASADAS" (Agrupado) - NOVO!
-          if (overdueTasks.length > 0) {
-             if (overdueTasks.length === 1) {
-                const t = overdueTasks[0];
-                const d = new Date(t.dueDate!);
-                generated.push({ id: `${t.id}-overdue`, taskId: t.id, taskTitle: t.title, message: `Atrasada desde ${d.toLocaleDateString('pt-BR')}`, notifyAt: t.dueDate! });
-             } else {
-                // 👇 MUDANÇA AQUI: Adicionei "-cntX" ao ID também
-                generated.push({ 
-                    id: `summary-overdue-${todayStr}-cnt${overdueTasks.length}`, 
-                    taskId: 'summary-group', 
-                    taskTitle: 'Tarefas Atrasadas', 
-                    message: `Atenção: ${overdueTasks.length} tarefas estão atrasadas.`, 
-                    notifyAt: new Date().toISOString(),
-                    relatedTaskIds: overdueTasks.map(t => t.id) 
-                });
-             }
-          }
+            // B. PROCESSAR "ATRASADAS" (Agrupado)
+            if (overdueTasks.length > 0) {
+                if (overdueTasks.length === 1) {
+                    const t = overdueTasks[0];
+                    const d = new Date(t.dueDate!);
+                    generated.push({ id: `${t.id}-overdue`, taskId: t.id, taskTitle: t.title, message: `Atrasada desde ${d.toLocaleDateString('pt-BR')}`, notifyAt: t.dueDate! });
+                } else {
+                    generated.push({
+                        id: `summary-overdue-${todayStr}-cnt${overdueTasks.length}`,
+                        taskId: 'summary-group',
+                        taskTitle: 'Tarefas Atrasadas',
+                        message: `Atenção: ${overdueTasks.length} tarefas estão atrasadas.`,
+                        notifyAt: new Date().toISOString(),
+                        relatedTaskIds: overdueTasks.map(t => t.id)
+                    });
+                }
+            }
         }
-        
+
         if (notificationSettings.enabled) {
             tasks.forEach(task => {
                 task.activity.forEach(act => {
-                    if(act.type === 'reminder' && act.notifyAt && new Date(act.notifyAt) <= now && task.status !== 'Concluída') {
+                    if (act.type === 'reminder' && act.notifyAt && new Date(act.notifyAt) <= now && task.status !== 'Concluída') {
                         generated.push({ id: act.id, taskId: task.id, taskTitle: task.title, message: `Lembrete: ${act.note || new Date(act.notifyAt).toLocaleString('pt-BR')}`, notifyAt: act.notifyAt });
                     }
                 });
             });
         }
-        
+
         if (notificationSettings.enabled && notificationSettings.habitReminders) {
             habits.forEach(habit => {
                 const isCompleted = (habit.type === 'manual' && habit.lastCompletedDate === todayStr) || (habit.overrideDate === todayStr);
@@ -454,30 +468,26 @@ useEffect(() => {
         }
 
         const sortedGenerated = generated.sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime()).filter(n => !clearedNotificationIds.includes(n.id));
-        
+
         // --- 2. VERIFICAÇÃO DE MUDANÇA ---
-        // Verificamos se houve mudança REAL comparando com a referência atual
         const prevNotifications = notificationsRef.current;
         const hasChanged = JSON.stringify(prevNotifications) !== JSON.stringify(sortedGenerated);
 
         if (hasChanged) {
-            // Se já carregou o lote inicial antes, aí sim calculamos os Toasts
             if (hasLoadedInitialNotifications.current) {
                 const currentNotificationIds = new Set(prevNotifications.map(n => n.id));
                 const newNotifications = sortedGenerated.filter(n => !currentNotificationIds.has(n.id));
 
                 if (newNotifications.length > 0) {
                     const unreadNewNotifications = newNotifications.filter(n => !readNotificationIds.includes(n.id));
-                    
+
                     const toastsToAdd = unreadNewNotifications.map((n): NotificationToastDataType | null => {
                         const taskForToast = tasks.find(t => t.id === n.taskId);
                         const categoryForToast = taskForToast ? categories.find(c => c.id === taskForToast.categoryId) : undefined;
                         const isHabit = n.taskId.startsWith('habit-');
-                        
-                        // 👇 NOVA VERIFICAÇÃO: É um grupo?
+
                         const isGroup = n.taskId === 'summary-group';
 
-                        // 👇 ATUALIZADO: Aceita se for Tarefa Válida OU Hábito OU Grupo
                         if ((taskForToast && categoryForToast) || isHabit || isGroup) {
                             return { notification: n, task: taskForToast, category: categoryForToast, key: n.id };
                         }
@@ -488,23 +498,23 @@ useEffect(() => {
                         setNotificationToasts(prev => {
                             const existingKeys = new Set(prev.map(t => t.key));
                             const uniqueNewToasts = toastsToAdd.filter(t => !existingKeys.has(t.key));
+
+                            if (uniqueNewToasts.length > 0 && notificationSettings.playNotificationSound) {
+                                const audio = new Audio('/notification.mp3');
+                                audio.volume = 0.5;
+                                audio.play().catch(e => console.log('Áudio bloqueado:', e));
+                            }
                             return [...prev, ...uniqueNewToasts];
                         });
                     }
                 }
             } else {
-                // Primeira carga com dados: Apenas marcamos como carregado e NÃO mostramos toast
                 if (sortedGenerated.length > 0) {
                     hasLoadedInitialNotifications.current = true;
                 }
             }
 
-            // [FIX CRÍTICO 🛑] 
-            // Atualizamos a REF manualmente AGORA. Não esperamos o useEffect do 'notifications' rodar.
-            // Isso impede que, se esta função rodar 2x seguidas rápido, a segunda vez ache que tudo é novidade.
             notificationsRef.current = sortedGenerated;
-            
-            // Atualizamos o estado visual
             setNotifications(sortedGenerated);
         }
     };

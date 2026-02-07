@@ -29,6 +29,7 @@ export const useLocalNotifications = (
     // Armazena IDs já disparados para evitar repetição (Resetar diariamente seria ideal, mas em SPA isso reinicia no refresh)
     const notifiedRef = useRef<Set<string>>(new Set());
 
+
     useEffect(() => {
         if (!settings.enabled || !settings.desktopNotifications) return;
 
@@ -39,9 +40,13 @@ export const useLocalNotifications = (
             const todayStr = now.toISOString().split('T')[0];
 
             // =========================================================================
-            // 1. RESUMO MATINAL (Agrupado) - Roda às 09:00
+            // 1. RESUMO MATINAL (Agrupado) - Horário dinâmico
             // =========================================================================
-            if (settings.taskReminders && now.getHours() === 1 && now.getMinutes() === 57) {
+            const [summaryHour, summaryMinute] = settings.dailySummaryTime 
+                ? settings.dailySummaryTime.split(':').map(Number) 
+                : [9, 0]; // Fallback para 09:00 se der erro
+
+            if (settings.taskReminders && now.getHours() === summaryHour && now.getMinutes() === summaryMinute) {
                 
                 // A. Agrupar Tarefas que vencem HOJE
                 const tasksDueToday = tasks.filter(t => 
