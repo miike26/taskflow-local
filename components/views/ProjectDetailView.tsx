@@ -5,7 +5,7 @@ import {
     ChevronLeftIcon, KanbanIcon, TableCellsIcon, ActivityIcon, FolderIcon, SearchIcon, ClipboardDocumentCheckIcon, BellIcon, MoonIcon, SunIcon, PlusIcon, BroomIcon, CheckCircleIcon, ClockIcon, ChevronDownIcon, PencilIcon, TrashIcon, CalendarDaysIcon, XIcon, ChatBubbleLeftEllipsisIcon, ArrowRightLeftIcon, PlusCircleIcon, StopCircleIcon, PlayCircleIcon, SparklesIcon,
     RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, ArrowTopRightOnSquareIcon, LinkIcon, CheckIcon, ChevronRightIcon,
     DragHandleIcon, ChatBubbleOvalLeftIcon, DocumentDuplicateIcon, ListBulletIcon, ArrowDownTrayIcon,
-    BriefcaseIcon, UserCircleIcon, ListIcon
+    BriefcaseIcon, UserCircleIcon, ListIcon, ArrowRightOnRectangleIcon
 } from '../icons';
 import TaskCard from '../TaskCard';
 import { STATUS_COLORS, STATUS_OPTIONS } from '../../constants';
@@ -57,36 +57,84 @@ const NotificationCard: React.FC<{
     onMarkHabitComplete: (habitId: string) => void;
     isRead?: boolean;
     timeFormat: '12h' | '24h';
-}> = ({ notification, task, category, onClick, onSnooze, onMarkHabitComplete, isRead, timeFormat }) => {
+    // Novas props para agrupamento
+    allTasks?: Task[];
+    onSelectTaskFromGroup?: (task: Task) => void;
+}> = ({ notification, task, category, onClick, onSnooze, onMarkHabitComplete, isRead, timeFormat, allTasks, onSelectTaskFromGroup }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
     const [isSnoozing, setIsSnoozing] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
 
     const isHabitReminder = notification.taskId.startsWith('habit-');
+    const isGroupSummary = notification.taskId === 'summary-group' && notification.relatedTaskIds;
 
-    if (!task && !isHabitReminder) return null;
+    if (!task && !isHabitReminder && !isGroupSummary) return null;
 
-    // Lógica corrigida de ícone usando o helper
-    let CategoryIcon = BellIcon;
-    if (isHabitReminder) {
-        CategoryIcon = ClipboardDocumentCheckIcon;
-    } else {
-        CategoryIcon = getCategoryIcon(category);
+    // --- MODO GRUPO (Resumo do Dia) ---
+    if (isGroupSummary && notification.relatedTaskIds && allTasks) {
+        const groupedTasks = allTasks.filter(t => notification.relatedTaskIds?.includes(t.id));
+        
+        const groupBgClass = isRead 
+            ? 'bg-white dark:bg-[#21262D] opacity-75' 
+            : 'bg-indigo-50/60 dark:bg-indigo-900/10 border-l-4 border-l-indigo-500';
+        const groupBorderClass = isRead 
+            ? 'border-gray-100 dark:border-gray-800' 
+            : 'border-indigo-100 dark:border-indigo-900/30';
+
+        return (
+            <li className="mb-2 last:mb-0">
+                 <div className={`relative w-full rounded-xl border transition-all duration-200 ${groupBgClass} ${groupBorderClass}`}>
+                    <div onClick={() => setIsExpanded(!isExpanded)} className="p-4 cursor-pointer flex gap-4 select-none group">
+                        <div className="flex-shrink-0 pt-1">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 text-indigo-500 shadow-sm">
+                                <CalendarDaysIcon className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="flex-grow min-w-0">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">Resumo do Dia</span>
+                                {!isRead && <span className="w-2 h-2 rounded-full bg-indigo-500"></span>}
+                            </div>
+                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">{notification.taskTitle}</h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{notification.message}</p>
+                            <div className="mt-2 flex items-center text-xs text-indigo-600 dark:text-indigo-400 font-semibold group-hover:underline">
+                                {isExpanded ? 'Recolher lista' : 'Ver lista de tarefas'}
+                                <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}/>
+                            </div>
+                        </div>
+                    </div>
+                    {isExpanded && (
+                        <div className="border-t border-indigo-100 dark:border-indigo-900/30 bg-white/50 dark:bg-black/20 animate-slide-down">
+                            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                                {groupedTasks.map(t => (
+                                    <li key={t.id} onClick={() => onSelectTaskFromGroup && onSelectTaskFromGroup(t)} className="px-4 py-3 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-white/5 cursor-pointer transition-colors group/item">
+                                        <div className="flex items-center gap-2 overflow-hidden">
+                                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_COLORS[t.status] || 'bg-gray-300'}`}></span>
+                                            <span className="text-sm text-gray-700 dark:text-gray-300 truncate font-medium group-hover/item:text-indigo-600 dark:group-hover/item:text-indigo-400">{t.title}</span>
+                                        </div>
+                                        <ArrowRightOnRectangleIcon className="w-4 h-4 text-gray-300 group-hover/item:text-indigo-500 transition-colors flex-shrink-0" />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                 </div>
+            </li>
+        );
     }
 
-    const bgClass = isRead
-        ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100'
-        : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
+    // --- MODO PADRÃO ---
+    let CategoryIcon = BellIcon;
+    if (isHabitReminder) CategoryIcon = ClipboardDocumentCheckIcon;
+    else CategoryIcon = getCategoryIcon(category);
 
-    const borderClass = isRead
-        ? 'border-gray-100 dark:border-gray-800'
-        : 'border-blue-100 dark:border-blue-900/30';
+    const bgClass = isRead ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
+    const borderClass = isRead ? 'border-gray-100 dark:border-gray-800' : 'border-blue-100 dark:border-blue-900/30';
 
     const handleSnooze = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsSnoozing(true);
-        setTimeout(() => {
-            onSnooze();
-        }, 500);
+        setTimeout(() => { onSnooze(); }, 500);
     };
 
     const handleCompleteHabit = (e: React.MouseEvent) => {
@@ -96,18 +144,11 @@ const NotificationCard: React.FC<{
         setIsCompleted(true);
     };
 
-    const handleCardClick = () => {
-        if (!isHabitReminder) {
-            onClick();
-        }
-    };
+    const handleCardClick = () => { if (!isHabitReminder) onClick(); };
 
     return (
         <li className="mb-2 last:mb-0">
-            <div
-                onClick={handleCardClick}
-                className={`relative group w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${bgClass} ${borderClass}`}
-            >
+            <div onClick={handleCardClick} className={`relative group w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${bgClass} ${borderClass}`}>
                 <div className="flex gap-4">
                     <div className="flex-shrink-0 pt-1">
                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isRead ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' : 'bg-white dark:bg-gray-800 text-primary-500 shadow-sm'}`}>
@@ -116,43 +157,19 @@ const NotificationCard: React.FC<{
                     </div>
                     <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-start mb-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                                {formatNotificationTime(notification.notifyAt, timeFormat)}
-                            </span>
-                            {!isRead && (
-                                <span className="w-2 h-2 rounded-full bg-primary-500"></span>
-                            )}
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{formatNotificationTime(notification.notifyAt, timeFormat)}</span>
+                            {!isRead && <span className="w-2 h-2 rounded-full bg-primary-500"></span>}
                         </div>
-                        <h4 className={`text-sm font-semibold mb-0.5 truncate ${isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>
-                            {notification.taskTitle}
-                        </h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                            {notification.message}
-                        </p>
+                        <h4 className={`text-sm font-semibold mb-0.5 truncate ${isRead ? 'text-gray-700 dark:text-gray-300' : 'text-gray-900 dark:text-white'}`}>{notification.taskTitle}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">{notification.message}</p>
                         <div className="flex items-center gap-3 mt-3">
                             {isHabitReminder ? (
-                                <button
-                                    onClick={handleCompleteHabit}
-                                    disabled={isCompleted}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isCompleted
-                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default'
-                                            : 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'
-                                        }`}
-                                >
-                                    {isCompleted ? <CheckIcon className="w-3.5 h-3.5" /> : <CheckCircleIcon className="w-3.5 h-3.5" />}
-                                    {isCompleted ? 'Concluído' : 'Marcar Feito'}
+                                <button onClick={handleCompleteHabit} disabled={isCompleted} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isCompleted ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default' : 'bg-primary-50 text-primary-700 dark:bg-primary-900/20 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40'}`}>
+                                    {isCompleted ? <CheckIcon className="w-3.5 h-3.5" /> : <CheckCircleIcon className="w-3.5 h-3.5" />} {isCompleted ? 'Concluído' : 'Marcar Feito'}
                                 </button>
                             ) : (
-                                <button
-                                    onClick={handleSnooze}
-                                    disabled={isSnoozing}
-                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSnoozing
-                                            ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default'
-                                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
-                                        }`}
-                                >
-                                    <ClockIcon className="w-3.5 h-3.5" />
-                                    {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
+                                <button onClick={handleSnooze} disabled={isSnoozing} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSnoozing ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}>
+                                    <ClockIcon className="w-3.5 h-3.5"/> {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
                                 </button>
                             )}
                         </div>
@@ -174,7 +191,8 @@ const NotificationBell: React.FC<{
     onMarkAllAsRead: () => void;
     onClearAllNotifications: () => void;
     timeFormat: '12h' | '24h';
-}> = ({ notifications, unreadNotifications, tasks, categories, onNotificationClick, onSnooze, onMarkHabitComplete, onMarkAllAsRead, onClearAllNotifications, timeFormat }) => {
+    onSelectTask: (task: Task) => void; // <--- ADICIONADO
+}> = ({ notifications, unreadNotifications, tasks, categories, onNotificationClick, onSnooze, onMarkHabitComplete, onMarkAllAsRead, onClearAllNotifications, timeFormat, onSelectTask }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -206,18 +224,12 @@ const NotificationBell: React.FC<{
                     <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-[#21262D]">
                         <div>
                             <h3 className="font-bold text-gray-900 dark:text-white text-lg">Notificações</h3>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">
-                                Você tem {unreadNotifications.length} não lidas
-                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5">Você tem {unreadNotifications.length} não lidas</p>
                         </div>
                         {unreadNotifications.length > 0 ? (
-                            <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">
-                                Marcar lidas
-                            </button>
+                            <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">Marcar lidas</button>
                         ) : notifications.length > 0 ? (
-                            <button onClick={onClearAllNotifications} title="Limpar todas" className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
-                                <BroomIcon className="w-4 h-4" />
-                            </button>
+                            <button onClick={onClearAllNotifications} title="Limpar todas" className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"><BroomIcon className="w-4 h-4" /></button>
                         ) : null}
                     </div>
                     {notifications.length > 0 ? (
@@ -230,15 +242,11 @@ const NotificationBell: React.FC<{
                                         const category = task ? categories.find(c => c.id === task.categoryId) : undefined;
                                         return (
                                             <NotificationCard
-                                                key={n.id}
-                                                notification={n}
-                                                task={task}
-                                                category={category}
-                                                onClick={() => onNotificationClick(n)}
-                                                onSnooze={() => onSnooze(n)}
-                                                onMarkHabitComplete={onMarkHabitComplete}
-                                                isRead={false}
-                                                timeFormat={timeFormat}
+                                                key={n.id} notification={n} task={task} category={category}
+                                                onClick={() => onNotificationClick(n)} onSnooze={() => onSnooze(n)}
+                                                onMarkHabitComplete={onMarkHabitComplete} isRead={false} timeFormat={timeFormat}
+                                                allTasks={tasks}
+                                                onSelectTaskFromGroup={(t) => { onNotificationClick(n); onSelectTask(t); }}
                                             />
                                         )
                                     })}
@@ -252,15 +260,11 @@ const NotificationBell: React.FC<{
                                         const category = task ? categories.find(c => c.id === task.categoryId) : undefined;
                                         return (
                                             <NotificationCard
-                                                key={n.id}
-                                                notification={n}
-                                                task={task}
-                                                category={category}
-                                                onClick={() => onNotificationClick(n)}
-                                                onSnooze={() => onSnooze(n)}
-                                                onMarkHabitComplete={onMarkHabitComplete}
-                                                isRead={true}
-                                                timeFormat={timeFormat}
+                                                key={n.id} notification={n} task={task} category={category}
+                                                onClick={() => onNotificationClick(n)} onSnooze={() => onSnooze(n)}
+                                                onMarkHabitComplete={onMarkHabitComplete} isRead={true} timeFormat={timeFormat}
+                                                allTasks={tasks}
+                                                onSelectTaskFromGroup={(t) => onSelectTask(t)}
                                             />
                                         )
                                     })}
@@ -269,9 +273,7 @@ const NotificationBell: React.FC<{
                         </ul>
                     ) : (
                         <div className="flex flex-col items-center justify-center p-12 text-center">
-                            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                                <BellIcon className="w-8 h-8 text-gray-300 dark:text-gray-600" />
-                            </div>
+                            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4"><BellIcon className="w-8 h-8 text-gray-300 dark:text-gray-600" /></div>
                             <p className="text-gray-900 dark:text-white font-semibold">Tudo limpo!</p>
                             <p className="text-gray-500 text-sm mt-1">Você não tem novas notificações.</p>
                         </div>
@@ -1454,6 +1456,7 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                         onMarkAllAsRead={onMarkAllNotificationsAsRead}
                         onClearAllNotifications={onClearAllNotifications}
                         timeFormat={appSettings.timeFormat}
+                        onSelectTask={onSelectTask}
                     />
 
                     <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
