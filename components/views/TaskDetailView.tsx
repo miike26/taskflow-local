@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { GoogleGenAI } from "@google/genai";
 import type { Project, Task, Category, Tag, Status, Notification, Habit, Activity, AppSettings, SubTask, ConfirmationToastData, TaskDocument } from '../../types';
@@ -382,23 +382,25 @@ const LinkAddTooltip: React.FC<{
     linkData: { url: string; title: string; x: number; y: number } | null;
     onAdd: (url: string, title: string) => void;
     onClose: () => void;
-    onCancelClose: () => void;
-}> = ({ linkData, onAdd, onClose, onCancelClose }) => {
+    onMouseEnter: () => void;
+}> = ({ linkData, onAdd, onClose, onMouseEnter }) => {
+
     if (!linkData) return null;
 
     return createPortal(
         <div 
-            className="fixed z-[9999]" // Z-index altíssimo para garantir prioridade
+            className="fixed z-[9999] pt-3 pb-2 px-2" // Padding generoso para capturar o mouse
             style={{ 
-                top: linkData.y, 
+                top: linkData.y, // Posição exata abaixo do link
                 left: linkData.x,
-                transform: 'translateX(-50%)', // Centraliza exato no X
-                paddingTop: '6px' // Pequena área "invisível" para mover o mouse até o botão
+                transform: 'translateX(-50%)',
+                pointerEvents: 'auto'
             }} 
-            onMouseLeave={onClose} 
-            onMouseEnter={onCancelClose}
+            // Eventos CRUCIAIS:
+            onMouseEnter={onMouseEnter} // Cancela timeout
+            onMouseLeave={onClose}      // Inicia timeout
         >
-            <div className="bg-white dark:bg-[#161B22] p-1 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 ring-1 ring-black/5 cursor-auto">
+            <div className="bg-white dark:bg-[#161B22] p-1 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 ring-1 ring-black/5">
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -407,7 +409,7 @@ const LinkAddTooltip: React.FC<{
                     className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 rounded-lg transition-colors whitespace-nowrap"
                 >
                     <PlusCircleIcon className="w-4 h-4 text-primary-500" />
-                    Adicionar aos Documentos
+                    Adicionar à Documentos e Links
                 </button>
             </div>
         </div>,
@@ -809,6 +811,7 @@ const activityConfig: Record<Activity['type'], { icon: React.FC<{ className?: st
     }
 };
 
+// --- COMPONENT: ActivityItem (Versão Final Corrigida) ---
 const ActivityItem: React.FC<{ 
     act: Activity; 
     onDelete: (id: string, type: Activity['type']) => void; 
@@ -816,51 +819,49 @@ const ActivityItem: React.FC<{
     onLinkEnter: (data: { url: string; title: string; x: number; y: number }) => void; 
     onLinkLeave: () => void;
 }> = ({ act, onDelete, timeFormat, onLinkEnter, onLinkLeave }) => {
+    
     const time = formatActivityTimestamp(act.timestamp, timeFormat);
     const isAi = act.isAiGenerated;
-    let config = activityConfig[act.type] || activityConfig.creation;
+    const config = activityConfig[act.type] || activityConfig.creation;
     const Icon = isAi ? SparklesIcon : config.icon;
     const isBulkChange = act.type === 'status_change' && (act.count || 0) > 1 && !!act.affectedTasks;
+    
     const styleClass = isAi 
         ? 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-purple-600 dark:text-purple-300' 
         : config.classes;
 
-    // ✅ LÓGICA DE CLIQUE: Captura o evento na div pai
-    const handleContainerClick = (e: React.MouseEvent) => {
-        const target = e.target as HTMLElement;
-        const anchor = target.closest('a');
-        
-        if (anchor && anchor.href) {
-            // Força a abertura na nova aba
-            e.preventDefault();
-            window.open(anchor.href, '_blank', 'noopener,noreferrer');
-        }
-    };
+    // --- MANIPULADORES DE EVENTO OTIMIZADOS ---
 
-    // ✅ LÓGICA DE HOVER: Nativa para precisão
-    const handleMouseOverNote = (e: React.MouseEvent) => {
+    const handleContainerMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
-        const anchor = target.closest('a');
+        const link = target.closest('a');
 
-        // Se entrou num link que ainda não estamos monitorando
-        if (anchor) {
-            const rect = anchor.getBoundingClientRect();
-            
-            // 1. Mostra o Tooltip
+        if (link) {
+            const rect = link.getBoundingClientRect();
+            // Passamos os dados. A validação para não repetir está no pai (handleLinkEnter)
             onLinkEnter({
-                url: anchor.href,
-                title: anchor.innerText,
-                x: rect.left + (rect.width / 2), // Centro Horizontal
-                y: rect.bottom // Fundo do elemento
+                url: link.getAttribute('href') || '',
+                title: link.innerText,
+                x: rect.left + (rect.width / 2),
+                y: rect.bottom
             });
-
-            // 2. Adiciona ouvinte NATIVO para saber quando sair DESTE link específico
-            // O { once: true } garante que rode apenas uma vez e se autolimpe
-            anchor.addEventListener('mouseleave', () => {
-                onLinkLeave();
-            }, { once: true });
         }
     };
+
+    const handleContainerMouseOut = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const link = target.closest('a');
+        
+        // CORREÇÃO: Só disparar "sair" se realmente saímos do link
+        // e.relatedTarget é o elemento para onde o mouse foi.
+        // Se o mouse foi para dentro de um filho do link, não consideramos saída.
+        if (link && e.relatedTarget && !link.contains(e.relatedTarget as Node)) {
+            onLinkLeave();
+        }
+    };
+
+    // CORREÇÃO: Removemos o onClick handler que dava preventDefault.
+    // Deixamos o link funcionar nativamente.
 
     return (
         <li className="group flex items-start space-x-3 py-3 border-b border-dashed border-gray-200 dark:border-gray-700 last:border-b-0">
@@ -872,13 +873,12 @@ const ActivityItem: React.FC<{
                    <span className="font-semibold">{act.user}</span>{' '}
                    {act.type === 'creation' && !act.taskTitle ? 'criou esta tarefa.' : null}
                    {act.type === 'creation' && act.taskTitle && (
-                        <>
-                            {(act.note?.includes('removida') || act.note?.includes('desvinculada')) ? 'removeu' : 'adicionou'} a tarefa <strong>{act.taskTitle}</strong>.
-                        </>
-                    )}
+                       <>
+                           {(act.note?.includes('removida') || act.note?.includes('desvinculada')) ? 'removeu' : 'adicionou'} a tarefa <strong>{act.taskTitle}</strong>.
+                       </>
+                   )}
                    {act.type === 'project' && 'atualizou o projeto.'}
                    {act.type === 'note' && (isAi ? 'sumarizou anotações com IA:' : 'adicionou uma nota:')}
-                   {/* Adicione suas outras lógicas de texto (status_change, property_change) aqui se necessário */}
                    {act.type === 'status_change' && !isBulkChange && 'alterou o status.'}
                 </p>
 
@@ -892,12 +892,20 @@ const ActivityItem: React.FC<{
                     </div>
                 )}
 
-                {act.type === 'note' && act.note && (
+                {act.note && (
                     <div 
-                        onClick={handleContainerClick}  // Clicou na nota? Verifica se foi link
-                        onMouseOver={handleMouseOverNote} // Passou o mouse? Verifica se é link
-                        className={`mt-1 p-2 border rounded-md text-sm note-content break-words cursor-auto ${isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50'}`} 
-                        dangerouslySetInnerHTML={{ __html: act.note }}
+                        className={`mt-1 p-2 border rounded-md text-sm note-content break-words relative z-10 
+                            ${act.type === 'note' 
+                                ? (isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50') 
+                                : 'bg-transparent border-transparent p-0 mt-0'
+                            }`}
+                        onMouseOver={handleContainerMouseOver}
+                        onMouseOut={handleContainerMouseOut}
+                        // Removemos onClick para restaurar o clique nativo
+                        // Injetamos estilo para garantir cursor pointer e cor azul
+                        dangerouslySetInnerHTML={{ 
+                            __html: act.note.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" style="cursor: pointer; text-decoration: underline; color: #3b82f6;" ') 
+                        }}
                     />
                 )}
                 
@@ -906,7 +914,6 @@ const ActivityItem: React.FC<{
                         <p className="font-semibold">
                             {new Date(act.notifyAt).toLocaleDateString('pt-BR', { dateStyle: 'full' })}, {new Date(act.notifyAt).toLocaleTimeString('pt-BR', { hour: timeFormat === '12h' ? 'numeric' : '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}
                         </p>
-                        {act.note && <p className="mt-1 italic">"{act.note}"</p>}
                     </div>
                 )}
 
@@ -923,44 +930,50 @@ const ActivityItem: React.FC<{
 
 const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelete, onDuplicate, onDeleteActivity, onBack, onSelectTask, categories, tags, tasks, projects, onOpenProject, theme, toggleTheme, notifications, unreadNotifications, onNotificationClick, onSnoozeNotification, onMarkHabitComplete, onMarkAllNotificationsAsRead, onClearAllNotifications, addToast, userName, habitsWithStatus, onToggleHabit, onMarkAllHabitsComplete, onOpenHabitSettings, appSettings, setAppSettings }) => {
     
-// States
+    // States
     const [detectedLink, setDetectedLink] = useState<{ url: string; title: string; x: number; y: number } | null>(null);
-    const linkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+const linkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // 1. Função para cancelar o fechamento (Mouse entrou no link ou no tooltip)
-    const cancelLinkClose = () => {
-        if (linkTimeoutRef.current) {
-            clearTimeout(linkTimeoutRef.current);
-            linkTimeoutRef.current = null;
-        }
-    };
+    // 2. O mouse entrou no Link
+    const handleLinkEnter = useCallback((data: { url: string; title: string; x: number; y: number }) => {
+        // CORREÇÃO: Se já estamos mostrando o tooltip para este link, não fazemos nada.
+        // Isso para os logs excessivos e re-renderizações.
+        setDetectedLink(prev => {
+            if (prev && prev.url === data.url) {
+                return prev; // Mantém o estado atual
+            }
+            
+            // Se é um novo link, cancela timer e atualiza
+            if (linkTimeoutRef.current) {
+                clearTimeout(linkTimeoutRef.current);
+                linkTimeoutRef.current = null;
+            }
+            return data;
+        });
+    }, []);
 
-    // 2. Função para agendar fechamento (Mouse saiu) - Antigo 'onLinkLeave'
-    const scheduleLinkClose = () => {
-        if (linkTimeoutRef.current) clearTimeout(linkTimeoutRef.current);
-        // Delay de 200ms é suficiente para mover o mouse do link para o tooltip
-        linkTimeoutRef.current = setTimeout(() => {
-            setDetectedLink(null);
-        }, 200); 
-    };
+// 3. O mouse saiu do Link OU do Tooltip (Inicia contagem para fechar)
+const handleLinkLeave = useCallback(() => {
+    // Se já tiver um timer rodando, não faz nada
+    if (linkTimeoutRef.current) return;
 
-    // 3. Função de Entrada (Mouse entrou no link) - Antigo 'onLinkEnter'
-    // 🔴 AQUI ESTÁ A FUNÇÃO QUE O VSCODE NÃO ESTAVA ACHANDO
-    const handleLinkEnter = (data: { url: string; title: string; x: number; y: number }) => {
-        // Se entrou num link novo, cancela qualquer fechamento pendente
-        if (linkTimeoutRef.current) {
-            clearTimeout(linkTimeoutRef.current);
-            linkTimeoutRef.current = null;
-        }
-        setDetectedLink(data);
-    };
+    linkTimeoutRef.current = setTimeout(() => {
+        setDetectedLink(null);
+        linkTimeoutRef.current = null;
+    }, 200); // 500ms de tolerância (tempo para mover o mouse)
+}, []);
+
+// 4. O mouse entrou no Tooltip (Cancela o fechamento)
+const handleTooltipEnter = useCallback(() => {
+    if (linkTimeoutRef.current) {
+        clearTimeout(linkTimeoutRef.current);
+        linkTimeoutRef.current = null;
+    }
+}, []);
 
 
     const [taskData, setTaskData] = useState<Task>(task);
     useEffect(() => setTaskData(task), [task]);
-
-    const closeTooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const lastHoveredLinkRef = useRef<string | null>(null);
 
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [newSubTask, setNewSubTask] = useState('');
@@ -1018,23 +1031,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [isAiGenerated, setIsAiGenerated] = useState(false);
 
-    const handleHoverLink = (data: { url: string; title: string; x: number; y: number } | null) => {
-        if (linkTimeoutRef.current) clearTimeout(linkTimeoutRef.current);
-        if (closeTooltipTimeoutRef.current) {
-    clearTimeout(closeTooltipTimeoutRef.current);
-    closeTooltipTimeoutRef.current = null;
-  }
-
-        if (data) {
-            setDetectedLink(data);
-        } else {
-            // Delay pequeno para dar tempo do mouse sair do link e entrar no botão
-            linkTimeoutRef.current = setTimeout(() => {
-                setDetectedLink(null);
-                
-            }, 300);
-        }
-    };
+    
 
     // 👇 3. FUNÇÃO QUE O BOTÃO VAI CHAMAR
     const handleAddDetectedLink = (url: string, title: string) => {
@@ -1534,10 +1531,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             act={act}
             onDelete={onDeleteActivity.bind(null, taskData.id)}
             timeFormat={appSettings.timeFormat}
-            onHoverLink={handleHoverLink}
-            lastHoveredLinkRef={lastHoveredLinkRef}
             onLinkEnter={handleLinkEnter}
-            onLinkLeave={scheduleLinkClose} 
+            onLinkLeave={handleLinkLeave}
         />
     );
 
@@ -1550,8 +1545,8 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             <LinkAddTooltip
                 linkData={detectedLink}
                 onAdd={handleAddDetectedLink}
-                onClose={scheduleLinkClose}
-onCancelClose={cancelLinkClose}     
+                 onClose={handleLinkLeave}      // Se sair do tooltip, tenta fechar
+    onMouseEnter={handleTooltipEnter} // Se entrar no tooltip, cancela o fechamento
             />
 
             <ConfirmationDialog state={confirmationState} setState={setConfirmationState} />
@@ -2084,7 +2079,7 @@ onCancelClose={cancelLinkClose}
                             onClick={() => setIsDocsCollapsed(!isDocsCollapsed)}
                         >
                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                                Documentos
+                                Documentos e Links
                                 <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full">
                                     {(taskData.documents || []).length}
                                 </span>
