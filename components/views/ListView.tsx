@@ -3,11 +3,20 @@ import type { Task, Category, Tag, Status, AppSettings, Project } from '../../ty
 import TaskCard from '../TaskCard';
 import { STATUS_OPTIONS, STATUS_COLORS } from '../../constants';
 // Adicionados os ícones necessários para o mapeamento
-import { KanbanIcon, TableCellsIcon, ChevronDownIcon, CalendarDaysIcon, TrashIcon, ListBulletIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon, FolderIcon, BriefcaseIcon, UserCircleIcon, ListIcon } from '../icons';
+import { SearchIcon, RocketLaunchIcon, CodeBracketIcon, GlobeAltIcon, StarIcon, HeartIcon, ChartPieIcon, KanbanIcon, TableCellsIcon, ChevronDownIcon, CalendarDaysIcon, TrashIcon, ListBulletIcon, ArrowTopRightOnSquareIcon, ArrowDownTrayIcon, FolderIcon, BriefcaseIcon, UserCircleIcon, ListIcon } from '../icons';
 import DateRangeCalendar from '../DateRangeCalendar';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { exportTasksToCSV } from '../../utils/export'; // Ajuste o caminho se necessário
 
+const PROJECT_ICONS: Record<string, React.FC<{className?: string}>> = {
+    folder: FolderIcon,
+    rocket: RocketLaunchIcon,
+    code: CodeBracketIcon,
+    globe: GlobeAltIcon,
+    star: StarIcon,
+    heart: HeartIcon,
+    chart: ChartPieIcon
+};
 
 interface ConfirmationDialogState {
   isOpen: boolean;
@@ -162,6 +171,9 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
   const [rawCreationDateFilter, setRawCreationDateFilter] = useLocalStorage<{ startDate: string | null, endDate: string | null }>('listview.filters.creationDate', { startDate: null, endDate: null });
   const [rawDueDateFilter, setRawDueDateFilter] = useLocalStorage<{ startDate: string | null, endDate: string | null }>('listview.filters.dueDate', { startDate: null, endDate: null });
 
+  const [filterProjects, setFilterProjects] = useLocalStorage<string[]>('listview.filters.projects', []);
+  const [projectFilterSearch, setProjectFilterSearch] = useState('');
+
   // Memoized Date objects for components and logic
   const creationDateRangeFilter = useMemo(() => ({
       startDate: rawCreationDateFilter.startDate ? new Date(rawCreationDateFilter.startDate) : null,
@@ -199,9 +211,14 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
   // New state for Export Modal
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const handleFilterMouseEnter = (filterName: string) => {
     if (closeTimer.current) {
       clearTimeout(closeTimer.current);
+    }
+    if (filterName === 'project' && openFilter !== 'project') {
+        setProjectFilterSearch('');
     }
     setOpenFilter(filterName);
   };
@@ -209,6 +226,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
   const handleFilterMouseLeave = () => {
     closeTimer.current = window.setTimeout(() => {
       setOpenFilter(null);
+      setProjectFilterSearch('');
     }, 200);
   };
 
@@ -220,14 +238,16 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
     filterCategories.length > 0 || 
     filterTags.length > 0 || 
     filterStatuses.length > 0 || 
+    filterProjects.length > 0 ||
     creationDateRangeFilter.startDate ||
     dueDateRangeFilter.startDate, 
-  [filterCategories, filterTags, filterStatuses, creationDateRangeFilter, dueDateRangeFilter]);
+  [filterCategories, filterTags, filterStatuses, filterProjects, creationDateRangeFilter, dueDateRangeFilter]);
 
   const handleClearFilters = () => {
     setFilterCategories([]);
     setFilterTags([]);
     setFilterStatuses([]);
+    setFilterProjects([]);
     setCreationDateRangeFilter({ startDate: null, endDate: null });
     setDueDateRangeFilter({ startDate: null, endDate: null });
   };
@@ -237,6 +257,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
         const categoryMatch = filterCategories.length === 0 || filterCategories.includes(task.categoryId);
         const tagMatch = filterTags.length === 0 || filterTags.includes(task.tagId);
         const statusMatch = filterStatuses.length === 0 || filterStatuses.includes(task.status);
+        const projectMatch = filterProjects.length === 0 || (task.projectId && filterProjects.includes(task.projectId));
         const creationDateMatch = (() => {
             if (!creationDateRangeFilter.startDate || !creationDateRangeFilter.endDate) {
                 return true;
@@ -262,7 +283,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
             endDate.setHours(23, 59, 59, 999);
             return taskDate >= startDate && taskDate <= endDate;
         })();
-        return categoryMatch && tagMatch && statusMatch && creationDateMatch && dueDateMatch;
+        return categoryMatch && tagMatch && statusMatch && projectMatch && creationDateMatch && dueDateMatch;
     });
     
     let sorted = [...filtered];
@@ -299,7 +320,7 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
     }
 
     return sorted;
-  }, [tasks, filterCategories, filterTags, filterStatuses, creationDateRangeFilter, dueDateRangeFilter, tags, categories, viewMode, tableSortConfig]);
+  }, [tasks, filterCategories, filterTags, filterStatuses, filterProjects, creationDateRangeFilter, dueDateRangeFilter, tags, categories, viewMode, tableSortConfig]);
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, taskId: string) => {
     e.dataTransfer.setData('taskId', taskId);
@@ -475,6 +496,59 @@ const ListView: React.FC<ListViewProps> = ({ tasks, categories, tags, userName, 
                                 <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{status}</span>
                             </label>
                         ))}
+                    </div>
+                )}
+            </div>
+
+            {/* 👇 PROJETO FILTER (NOVO) */}
+            <div className="relative" onMouseEnter={() => handleFilterMouseEnter('project')} onMouseLeave={handleFilterMouseLeave}>
+                <button className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${
+                    filterProjects.length > 0 
+                    ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300' 
+                    : 'bg-white dark:bg-[#21262D] border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/10'
+                }`}>
+                    <span>Projetos</span>
+                    {filterProjects.length > 0 && <span className="bg-primary-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">{filterProjects.length}</span>}
+                    <ChevronDownIcon className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${openFilter === 'project' ? 'rotate-180' : ''}`} />
+                </button>
+                 {openFilter === 'project' && (
+                    <div className="absolute top-full mt-2 left-0 bg-white dark:bg-[#21262D] rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 w-64 overflow-hidden flex flex-col">
+                        {/* Barra de Pesquisa */}
+                        <div className="p-2 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-[#161B22]">
+                            <div className="relative">
+                                <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                                <input 
+                                    type="text"
+                                    autoFocus
+                                    ref={searchInputRef}                                    
+                                    placeholder="Buscar projeto..."
+                                    value={projectFilterSearch}
+                                    onChange={(e) => setProjectFilterSearch(e.target.value)}
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-[#0D1117] text-gray-700 dark:text-gray-200 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                                />
+                            </div>
+                        </div>
+                        {/* Lista de Projetos */}
+                        <div className="max-h-60 overflow-y-auto p-1 custom-scrollbar space-y-0.5">
+                            {(projects || [])
+                                .filter(p => p.name.toLowerCase().includes(projectFilterSearch.toLowerCase()))
+                                .map(proj => {
+                                    const Icon = proj.icon && PROJECT_ICONS[proj.icon] ? PROJECT_ICONS[proj.icon] : FolderIcon;
+                                    return (
+                                        <label key={proj.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10 cursor-pointer transition-colors">
+                                            <input type="checkbox" checked={filterProjects.includes(proj.id)} onChange={() => handleMultiSelectFilterChange(setFilterProjects)(proj.id)} className={filterCheckboxClass}/>
+                                            <div className="flex items-center gap-2 overflow-hidden">
+                                                <Icon className={`w-4 h-4 flex-shrink-0 ${proj.color.replace('bg-', 'text-')}`} />
+                                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{proj.name}</span>
+                                            </div>
+                                        </label>
+                                    )
+                                })
+                            }
+                            {(projects || []).filter(p => p.name.toLowerCase().includes(projectFilterSearch.toLowerCase())).length === 0 && (
+                                <p className="text-xs text-center text-gray-400 py-3">Nenhum projeto encontrado</p>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
