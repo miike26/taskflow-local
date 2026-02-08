@@ -99,6 +99,7 @@ export interface Task {
   tagId: string;
   status: Status;
   subTasks: SubTask[];
+  documents?: TaskDocument[];
   activity: Activity[];
   tags?: string[];
   projectId?: string;
@@ -179,4 +180,11 @@ export interface NotificationSettings {
   taskReminders: boolean;
   habitReminders: boolean;
   marketingEmails: boolean;
+}
+
+export interface TaskDocument {
+  id: string;
+  title?: string;
+  url: string;
+  type: 'google-doc' | 'google-sheet' | 'google-slide' | 'google-drive' | 'link';
 }

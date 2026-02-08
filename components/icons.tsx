@@ -390,3 +390,54 @@ export const PlayIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clipRule="evenodd" />
   </svg>
 );
+
+export const GoogleDocsIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path fill="#4285F4" d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+        <path fill="#E0E0E0" d="M14.5 2V7.5H20"/>
+        <path fill="#FFF" d="M8 12h8v1.5H8zm0 3h8v1.5H8zm0 3h5v1.5H8z"/>
+    </svg>
+);
+
+export const GoogleSheetsIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path fill="#0F9D58" d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+        <path fill="#E0E0E0" d="M14.5 2V7.5H20"/>
+        <rect x="7" y="11" width="10" height="1.5" rx="0.5" fill="#FFF"/>
+        <rect x="7" y="14" width="10" height="1.5" rx="0.5" fill="#FFF"/>
+        <rect x="7" y="17" width="10" height="1.5" rx="0.5" fill="#FFF"/>
+        <rect x="11.5" y="11" width="1.5" height="7.5" fill="#0F9D58" opacity="0.3"/>
+    </svg>
+);
+
+export const GoogleSlidesIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path fill="#F4B400" d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+        <path fill="#E0E0E0" d="M14.5 2V7.5H20"/>
+        <rect x="7.5" y="11" width="9" height="5.5" rx="1" fill="#FFF"/>
+        <rect x="7.5" y="11" width="9" height="1.5" rx="0" fill="#FFF" opacity="0.5"/>
+    </svg>
+);
+
+export const GoogleDriveIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24">
+      <path fill="#FFC107" d="M8.27 4.14L13.78 13.68H2.76L8.27 4.14z" transform="translate(3.3 0)"/> 
+      <path fill="#0F9D58" d="M22.18 13.68H11.16l-2.76 4.77 5.52-9.54 8.26 4.77z"/>
+      <path fill="#4285F4" d="M14.88 20.84l-5.52-9.54-5.52 9.54h11.04z" transform="rotate(180 9.36 16.07)"/>
+      {/* Simplified generic approximation for Drive shape if complex paths are issue, using colored triangle-like shapes */}
+      <path d="M7.71 3.53L2.24 13h10.94l5.47-9.47H7.71z" fill="#FFC107"/>
+      <path d="M13.18 13L7.71 22.47 2.24 13h10.94z" fill="#4285F4" transform="rotate(60 7.71 17.73)"/>
+      <path d="M18.65 13H7.71l-2.74 4.74 8.21 14.21 5.47-9.48z" fill="#0F9D58" transform="rotate(-60 13.18 22.47)"/>
+      {/* Reverting to a simpler standard svg structure for reliability */}
+      <path fill="#FFC107" d="M8.666 3.75l-5.333 9.25H14l5.333-9.25z"/>
+      <path fill="#0F9D58" d="M19.333 13L14 22.25H3.333L8.666 13z"/>
+      <path fill="#4285F4" d="M3.333 13L8.666 3.75 14 13H3.333z" opacity="0"/> 
+      <path fill="#4285F4" d="M8.666 3.75L3.333 13 6 17.625l5.333-9.25z"/>
+    </svg>
+);
+
+export const DocumentTextIcon = ({ className }: { className?: string }) => (
+    <Icon className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+    </Icon>
+);
