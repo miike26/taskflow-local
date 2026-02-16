@@ -469,18 +469,23 @@ useEffect(() => {
 
         // 4. NOTIFICAÇÃO DE CHANGELOG (Baseada no constants/changelog.ts)
         // =========================================================================
-        // Só gera se a opção "Novidades e Dicas" estiver ATIVA e houver dados
+        // Só gera se a opção "Novidades e Dicas" estiver ATIVA, houver dados E se a versão for nova
         if (notificationSettings.marketingEmails && CHANGELOG_DATA.length > 0) {
             const latestVer = CHANGELOG_DATA[0]; // Pega a versão mais recente (topo da lista)
-            const changelogId = `changelog-v${latestVer.version}`;
+            
+            // 👇 AQUI ESTÁ A CORREÇÃO:
+            // Só adiciona na lista se a versão atual for DIFERENTE da última vista
+            if (latestVer.version !== lastSeenVersion) {
+                const changelogId = `changelog-v${latestVer.version}`;
 
-            generated.push({
-                id: changelogId,
-                taskId: 'system-changelog', // ID especial para identificar clique e ícone
-                taskTitle: `✨ Novidades da Versão ${latestVer.version}`,
-                message: latestVer.title, // Ex: "Novas opções para gerenciar tarefas"
-                notifyAt: latestVer.date ? new Date(latestVer.date).toISOString() : new Date().toISOString()
-            });
+                generated.push({
+                    id: changelogId,
+                    taskId: 'system-changelog', // ID especial para identificar clique e ícone
+                    taskTitle: `✨ Novidades da Versão ${latestVer.version}`,
+                    message: latestVer.title, // Ex: "Novas opções para gerenciar tarefas"
+                    notifyAt: latestVer.date ? new Date(latestVer.date).toISOString() : new Date().toISOString()
+                });
+            }
         }
 
         const sortedGenerated = generated.sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime()).filter(n => !clearedNotificationIds.includes(n.id));
@@ -539,7 +544,7 @@ useEffect(() => {
     generateAndCheckNotifications();
     const interval = setInterval(generateAndCheckNotifications, 5000);
     return () => clearInterval(interval);
-  }, [tasks, categories, notificationSettings, user, readNotificationIds, clearedNotificationIds, habits, getLocalISODate]);
+  }, [tasks, categories, notificationSettings, user, readNotificationIds, clearedNotificationIds, habits, getLocalISODate, lastSeenVersion]);
 
 
   const unreadNotifications = useMemo(() => notifications.filter(n => !readNotificationIds.includes(n.id)), [notifications, readNotificationIds]);
