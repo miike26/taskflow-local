@@ -812,6 +812,7 @@ const activityConfig: Record<Activity['type'], { icon: React.FC<{ className?: st
 };
 
 // --- COMPONENT: ActivityItem (Versão Final Corrigida) ---
+// --- COMPONENT: ActivityItem (Texto Restaurado + Tooltip Novo) ---
 const ActivityItem: React.FC<{ 
     act: Activity; 
     onDelete: (id: string, type: Activity['type']) => void; 
@@ -820,6 +821,7 @@ const ActivityItem: React.FC<{
     onLinkLeave: () => void;
 }> = ({ act, onDelete, timeFormat, onLinkEnter, onLinkLeave }) => {
     
+    const [isExpanded, setIsExpanded] = useState(false); // Adicionado para suportar o 'Ver detalhes' do BulkChange antigo
     const time = formatActivityTimestamp(act.timestamp, timeFormat);
     const isAi = act.isAiGenerated;
     const config = activityConfig[act.type] || activityConfig.creation;
@@ -830,15 +832,13 @@ const ActivityItem: React.FC<{
         ? 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 text-purple-600 dark:text-purple-300' 
         : config.classes;
 
-    // --- MANIPULADORES DE EVENTO OTIMIZADOS ---
-
+    // --- MANIPULADORES DE EVENTO OTIMIZADOS (MANTIDOS DA VERSÃO NOVA) ---
     const handleContainerMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         const link = target.closest('a');
 
         if (link) {
             const rect = link.getBoundingClientRect();
-            // Passamos os dados. A validação para não repetir está no pai (handleLinkEnter)
             onLinkEnter({
                 url: link.getAttribute('href') || '',
                 title: link.innerText,
@@ -851,17 +851,10 @@ const ActivityItem: React.FC<{
     const handleContainerMouseOut = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement;
         const link = target.closest('a');
-        
-        // CORREÇÃO: Só disparar "sair" se realmente saímos do link
-        // e.relatedTarget é o elemento para onde o mouse foi.
-        // Se o mouse foi para dentro de um filho do link, não consideramos saída.
         if (link && e.relatedTarget && !link.contains(e.relatedTarget as Node)) {
             onLinkLeave();
         }
     };
-
-    // CORREÇÃO: Removemos o onClick handler que dava preventDefault.
-    // Deixamos o link funcionar nativamente.
 
     return (
         <li className="group flex items-start space-x-3 py-3 border-b border-dashed border-gray-200 dark:border-gray-700 last:border-b-0">
@@ -871,18 +864,50 @@ const ActivityItem: React.FC<{
             <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-700 dark:text-gray-300 break-words">
                    <span className="font-semibold">{act.user}</span>{' '}
+                   
+                   {/* --- LÓGICA DE TEXTO RESTAURADA (DO ARQUIVO ANTIGO) --- */}
+                   
                    {act.type === 'creation' && !act.taskTitle ? 'criou esta tarefa.' : null}
                    {act.type === 'creation' && act.taskTitle && (
-                       <>
-                           {(act.note?.includes('removida') || act.note?.includes('desvinculada')) ? 'removeu' : 'adicionou'} a tarefa <strong>{act.taskTitle}</strong>.
-                       </>
+                        <>
+                            {(act.note?.includes('removida') || act.note?.includes('desvinculada')) ? 'removeu' : 'adicionou'} a tarefa <strong>{act.taskTitle}</strong>.
+                        </>
+                    )}
+
+                   {act.type === 'project' && act.taskTitle && (
+                        act.action === 'added' ? <>adicionou a tarefa <strong>{act.taskTitle}</strong> a este projeto.</> :
+                        act.action === 'removed' ? <>removeu a tarefa <strong>{act.taskTitle}</strong> deste projeto.</> :
+                        'atualizou o projeto.'
                    )}
-                   {act.type === 'project' && 'atualizou o projeto.'}
+                   {act.type === 'project' && !act.taskTitle && 'atualizou o projeto.'}
+
                    {act.type === 'note' && (isAi ? 'sumarizou anotações com IA:' : 'adicionou uma nota:')}
-                   {act.type === 'status_change' && !isBulkChange && 'alterou o status.'}
+
+                   {/* Lógica de Status Change (Com detalhes DE -> PARA) */}
+                   {isBulkChange ? (
+                        <>
+                            alterou <strong>{act.count} tarefas</strong> de <StatusSpan status={act.from!} /> para <StatusSpan status={act.to!} />
+                            <button onClick={() => setIsExpanded(!isExpanded)} className="ml-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline text-xs font-semibold focus:outline-none">
+                                {isExpanded ? '(ocultar)' : '(detalhes)'}
+                            </button>.
+                        </>
+                    ) : (
+                        act.type === 'status_change' && (
+                            <>
+                                {act.taskTitle ? <>alterou o status de <strong>{act.taskTitle}</strong></> : 'alterou o status'} de <StatusSpan status={act.from!} /> para <StatusSpan status={act.to!} />.
+                            </>
+                        )
+                    )}
+
+                   {/* Lógica de Property Change (Prioridade, Categoria, Título, etc) */}
+                   {act.type === 'property_change' && (
+                        <>alterou {act.property} de <strong>{act.from || act.oldValue}</strong> para <strong>{act.to || act.newValue}</strong>.</>
+                   )}
+                   
+                   {/* ----------------------------------------------------- */}
                 </p>
 
-                {isBulkChange && act.affectedTasks && (
+                {isBulkChange && isExpanded && act.affectedTasks && (
                      <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
                         <ul className="list-disc list-inside text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
                             {act.affectedTasks.map((title, idx) => (
@@ -892,17 +917,13 @@ const ActivityItem: React.FC<{
                     </div>
                 )}
 
-                {act.note && (
+                {/* Área da Nota (Com lógica nova de Tooltip) */}
+                {act.note && act.type === 'note' && (
                     <div 
                         className={`mt-1 p-2 border rounded-md text-sm note-content break-words relative z-10 
-                            ${act.type === 'note' 
-                                ? (isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50') 
-                                : 'bg-transparent border-transparent p-0 mt-0'
-                            }`}
+                            ${isAi ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-100 dark:border-indigo-800' : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50'}`}
                         onMouseOver={handleContainerMouseOver}
                         onMouseOut={handleContainerMouseOut}
-                        // Removemos onClick para restaurar o clique nativo
-                        // Injetamos estilo para garantir cursor pointer e cor azul
                         dangerouslySetInnerHTML={{ 
                             __html: act.note.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" style="cursor: pointer; text-decoration: underline; color: #3b82f6;" ') 
                         }}
@@ -914,6 +935,7 @@ const ActivityItem: React.FC<{
                         <p className="font-semibold">
                             {new Date(act.notifyAt).toLocaleDateString('pt-BR', { dateStyle: 'full' })}, {new Date(act.notifyAt).toLocaleTimeString('pt-BR', { hour: timeFormat === '12h' ? 'numeric' : '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}
                         </p>
+                        {act.note && <p className="mt-1 italic">"{act.note}"</p>}
                     </div>
                 )}
 
