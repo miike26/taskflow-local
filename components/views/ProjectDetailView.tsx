@@ -75,17 +75,17 @@ const NotificationCard: React.FC<{
     // --- MODO GRUPO (Resumo do Dia) ---
     if (isGroupSummary && notification.relatedTaskIds && allTasks) {
         const groupedTasks = allTasks.filter(t => notification.relatedTaskIds?.includes(t.id));
-        
-        const groupBgClass = isRead 
-            ? 'bg-white dark:bg-[#21262D] opacity-75' 
+
+        const groupBgClass = isRead
+            ? 'bg-white dark:bg-[#21262D] opacity-75'
             : 'bg-indigo-50/60 dark:bg-indigo-900/10 border-l-4 border-l-indigo-500';
-        const groupBorderClass = isRead 
-            ? 'border-gray-100 dark:border-gray-800' 
+        const groupBorderClass = isRead
+            ? 'border-gray-100 dark:border-gray-800'
             : 'border-indigo-100 dark:border-indigo-900/30';
 
         return (
             <li className="mb-2 last:mb-0">
-                 <div className={`relative w-full rounded-xl border transition-all duration-200 ${groupBgClass} ${groupBorderClass}`}>
+                <div className={`relative w-full rounded-xl border transition-all duration-200 ${groupBgClass} ${groupBorderClass}`}>
                     <div onClick={() => setIsExpanded(!isExpanded)} className="p-4 cursor-pointer flex gap-4 select-none group">
                         <div className="flex-shrink-0 pt-1">
                             <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white dark:bg-gray-800 text-indigo-500 shadow-sm">
@@ -101,7 +101,7 @@ const NotificationCard: React.FC<{
                             <p className="text-xs text-gray-500 dark:text-gray-400">{notification.message}</p>
                             <div className="mt-2 flex items-center text-xs text-indigo-600 dark:text-indigo-400 font-semibold group-hover:underline">
                                 {isExpanded ? 'Recolher lista' : 'Ver lista de tarefas'}
-                                <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}/>
+                                <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
                     </div>
@@ -120,7 +120,7 @@ const NotificationCard: React.FC<{
                             </ul>
                         </div>
                     )}
-                 </div>
+                </div>
             </li>
         );
     }
@@ -136,7 +136,7 @@ const NotificationCard: React.FC<{
     } else {
         CardIcon = getCategoryIcon(category);
     }
-    
+
     if (isHabitReminder) CategoryIcon = ClipboardDocumentCheckIcon;
     else CategoryIcon = getCategoryIcon(category);
 
@@ -181,7 +181,7 @@ const NotificationCard: React.FC<{
                                 </button>
                             ) : (
                                 <button onClick={handleSnooze} disabled={isSnoozing} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSnoozing ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}>
-                                    <ClockIcon className="w-3.5 h-3.5"/> {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
+                                    <ClockIcon className="w-3.5 h-3.5" /> {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
                                 </button>
                             )}
                         </div>
@@ -828,9 +828,10 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
 
     useEffect(() => {
         const handleResize = () => {
-            const small = window.innerWidth < 1280;
+            // Mantemos 1440 para garantir que notebooks 1366 entrem nesse modo novo
+            const small = window.innerWidth < 1440;
             setIsSmallScreen(small);
-            if (small) { // xl breakpoint
+            if (small) {
                 setIsHistoryCollapsed(true);
             } else {
                 setIsHistoryCollapsed(false);
@@ -1809,81 +1810,112 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                     )}
                 </div>
 
-                {/* Right: Activity Log */}
-                {isHistoryCollapsed ? (
-                    <div
-                        onClick={() => setIsHistoryCollapsed(false)}
-                        className="w-12 flex-shrink-0 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group"
-                        title="Expandir Histórico"
+                {/* Right: Activity Log Container & Overlay Wrapper */}
+            <div className={`relative flex-shrink-0 h-full transition-all duration-300 ease-in-out ${isSmallScreen ? 'w-12' : (isHistoryCollapsed ? 'w-12' : 'w-[480px]')}`}>
+                
+                {/* 1. OVERLAY (Fundo Escuro) */}
+            {/* Z-Index 40: Fica acima de tudo, mas abaixo do painel de histórico (que será z-50) */}
+            {isSmallScreen && !isHistoryCollapsed && (
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-[1px] z-40 transition-opacity duration-300 animate-fade-in"
+                    onClick={() => setIsHistoryCollapsed(true)}
+                ></div>
+            )}
+
+            {/* Right: Activity Log Container (Wrapper) */}
+            {/* O Wrapper serve apenas para reservar o espaço da "tirinha" (w-12) no layout quando em tela pequena */}
+            <div 
+                className={`
+                    relative flex-shrink-0 h-full transition-all duration-300 ease-in-out
+                    ${isSmallScreen ? 'w-12' : (isHistoryCollapsed ? 'w-12' : 'w-[480px]')}
+                `}
+            >
+                {/* 2. O PAINEL DE CONTEÚDO (Tirinha + Expandido) */}
+                <div 
+                    className={`
+                        bg-white dark:bg-[#161B22] shadow-xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden rounded-2xl
+                        transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] origin-right
+                        ${isSmallScreen 
+                            ? 'absolute top-0 right-0 h-full z-50' // MODO FLUTUANTE: Fica preso ao topo/direita do wrapper, mas flutua por cima (Z-50)
+                            : 'relative h-full'                      // MODO NORMAL: Preenche o wrapper
+                        }
+                        ${isHistoryCollapsed 
+                            ? 'w-12 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5' // Largura Fechada
+                            : (isSmallScreen ? 'w-[450px]' : 'w-full')                     // Largura Aberta
+                        }
+                    `}
+                    onClick={(e) => {
+                        // Permite abrir clicando em qualquer lugar da tirinha
+                        if (isHistoryCollapsed) {
+                            e.stopPropagation();
+                            setIsHistoryCollapsed(false);
+                        }
+                    }}
+                    title={isHistoryCollapsed ? "Expandir Histórico" : ""}
+                >
+                    
+                    {/* A. CONTEÚDO DO MODO FECHADO (Tirinha Vertical) */}
+                    {/* Absolute inset-0 garante que fique centralizado enquanto o painel anima a largura */}
+                    <div 
+                        className={`
+                            absolute inset-0 flex flex-col items-center pt-4 transition-opacity duration-200
+                            ${isHistoryCollapsed ? 'opacity-100 delay-100' : 'opacity-0 pointer-events-none'}
+                        `}
                     >
-                        <ChevronLeftIcon className="w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:scale-110 transition-transform" />
+                        <ChevronLeftIcon className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                        <div className="mt-8 [writing-mode:vertical-rl] text-xs font-bold text-gray-400 uppercase tracking-widest rotate-180 whitespace-nowrap">
+                            Histórico
+                        </div>
                     </div>
-                ) : (
-                    <div className="w-[480px] flex-shrink-0 bg-white dark:bg-[#161B22] p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden">
-                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+
+                    {/* B. CONTEÚDO DO MODO ABERTO (Painel Completo) */}
+                    {/* min-w-[450px] é essencial para o texto não "espremer" enquanto a largura do pai anima */}
+                    <div 
+                        className={`
+                            flex flex-col h-full w-full min-w-[450px] transition-opacity duration-300
+                            ${isHistoryCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100 delay-75'}
+                        `}
+                    >
+                        {/* Header do Painel */}
+                        <div className="flex justify-between items-center p-4 pb-0 flex-shrink-0">
                             <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">Histórico do Projeto</h3>
                             <div className="flex items-center gap-2">
-                                {isSmallScreen && (
-                                    <button
-                                        onClick={() => setIsHistoryCollapsed(true)}
-                                        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                        title="Recolher"
-                                    >
-                                        <ChevronRightIcon className="w-4 h-4" />
-                                    </button>
-                                )}
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIsHistoryCollapsed(true);
+                                    }}
+                                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                    title="Recolher"
+                                >
+                                    <ChevronRightIcon className="w-4 h-4" />
+                                </button>
+
+                                {/* --- Botões de IA e Filtro (Mantidos Originais) --- */}
                                 <div ref={summaryDropdownRef} className="relative">
                                     <button
-                                        onClick={() => setIsSummaryDropdownOpen(prev => !prev)}
+                                        onClick={(e) => { e.stopPropagation(); setIsSummaryDropdownOpen(prev => !prev); }}
                                         disabled={isSummarizing}
-                                        className="group flex items-center justify-center p-2 rounded-full bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-100 shadow-sm hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:bg-gradient-to-r hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:text-white hover:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-purple-400 hover:ring-offset-2 dark:hover:ring-offset-[#161B22]"
+                                        className="group flex items-center justify-center p-2 rounded-full bg-white dark:bg-gray-800 border border-indigo-100 dark:border-indigo-900 text-indigo-600 dark:text-indigo-100 shadow-sm hover:shadow-md hover:bg-gradient-to-r hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 hover:text-white hover:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-purple-400 hover:ring-offset-2 dark:hover:ring-offset-[#161B22]"
                                     >
                                         <SparklesIcon className={`w-4 h-4 flex-shrink-0 ${isSummarizing ? 'animate-spin' : ''}`} />
-                                        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap ml-0 group-hover:ml-2 text-xs font-medium">
-                                            Sumarizar
-                                        </span>
-                                        <ChevronDownIcon className="w-3 h-3 ml-1" />
                                     </button>
                                     {isSummaryDropdownOpen && (
                                         <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-20 overflow-hidden animate-scale-in">
-                                            <button
-                                                onClick={() => handleSummarizeProject('project')}
-                                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
-                                            >
-                                                Do projeto
-                                            </button>
-                                            <button
-                                                onClick={() => handleSummarizeProject('full')}
-                                                className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors"
-                                            >
-                                                Do projeto + Tarefas
-                                            </button>
+                                            <button onClick={() => handleSummarizeProject('project')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors">Do projeto</button>
+                                            <button onClick={() => handleSummarizeProject('full')} className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition-colors">Do projeto + Tarefas</button>
                                         </div>
                                     )}
                                 </div>
                                 <div ref={filterDropdownRef} className="relative">
-                                    <button
-                                        onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                                        className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${activityFilter !== 'all'
-                                                ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-700 dark:text-primary-300'
-                                                : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'
-                                            }`}
-                                    >
+                                    <button onClick={(e) => { e.stopPropagation(); setIsFilterDropdownOpen(!isFilterDropdownOpen); }} className={`flex items-center gap-2 px-3 py-1.5 border rounded-lg text-xs font-medium transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${activityFilter !== 'all' ? 'bg-primary-50 dark:bg-primary-900/30 border-primary-500 text-primary-700 dark:text-primary-300' : 'bg-white dark:bg-[#0D1117] border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/10'}`}>
                                         <span>{currentFilterLabel}</span>
                                         <ChevronDownIcon className={`w-3 h-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
                                     </button>
-
                                     {isFilterDropdownOpen && (
                                         <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-[#21262D] p-1 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20 space-y-0.5 animate-scale-in">
                                             {activityFilterOptions.map(option => (
-                                                <button
-                                                    key={option.value}
-                                                    onClick={() => { setActivityFilter(option.value); setIsFilterDropdownOpen(false); }}
-                                                    className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${activityFilter === option.value
-                                                            ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                        }`}
-                                                >
+                                                <button key={option.value} onClick={() => { setActivityFilter(option.value); setIsFilterDropdownOpen(false); }} className={`w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between ${activityFilter === option.value ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                                                     {option.label}
                                                     {activityFilter === option.value && <CheckCircleIcon className="w-3 h-3" />}
                                                 </button>
@@ -1894,15 +1926,17 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                             </div>
                         </div>
 
+                        {/* Resumo Loading */}
                         {isSummarizing && (
-                            <div className="px-2 pb-3 flex-shrink-0">
+                            <div className="px-4 pb-3 pt-2 flex-shrink-0">
                                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
                                     <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-1 rounded-full animate-pulse-glow w-full"></div>
                                 </div>
                             </div>
                         )}
 
-                        <div className={`flex-1 overflow-y-auto pr-2 transition-colors duration-500 ${isSummarizing ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
+                        {/* Lista de Atividades */}
+                        <div className={`flex-1 overflow-y-auto px-4 pt-2 transition-colors duration-500 custom-scrollbar ${isSummarizing ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
                             {filteredActivity.length > 0 ? (
                                 <ul className="space-y-0">
                                     {filteredActivity.slice().reverse().map(act => (
@@ -1911,6 +1945,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                                             act={act}
                                             onDelete={handleDeleteActivity}
                                             timeFormat={appSettings.timeFormat}
+                                            onLinkEnter={() => {}} 
+                                            onLinkLeave={() => {}}
                                         />
                                     ))}
                                 </ul>
@@ -1919,7 +1955,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                             )}
                         </div>
 
-                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+                        {/* Editor de Nota */}
+                        <div className="p-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 bg-white dark:bg-[#161B22]">
                             {isNoteEditorExpanded ? (
                                 <div className="transition-all duration-300 ease-in-out">
                                     <RichTextNoteEditor
@@ -1947,7 +1984,9 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
                             )}
                         </div>
                     </div>
-                )}
+                </div>
+            </div>
+            </div>
             </div>
 
             {/* Export Modal */}
