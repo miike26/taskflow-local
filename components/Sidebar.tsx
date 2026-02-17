@@ -131,6 +131,25 @@ const RecentTaskItem: React.FC<{
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTaskIds, pinnedTaskIds, tasks, categories, onSelectTask, onPinTask, selectedTask, onClearRecents, userName, hasNewUpdate }) => {
   const [isCollapsed, setIsCollapsed] = useLocalStorage('sidebar.collapsed', false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 1360);
+
+  // 👇 LÓGICA NOVA: Auto-colapso responsivo
+  React.useEffect(() => {
+    const handleResize = () => {
+      const small = window.innerWidth < 1360;
+      setIsSmallScreen(small); // Atualiza o estado da tela
+
+      if (small) {
+        setIsCollapsed(true); // Força o recolhimento
+      }
+    };
+
+    // Executa na montagem
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [setIsCollapsed]);
 
   // The sidebar is "fully visible" if it's NOT collapsed, OR if it IS collapsed but the user is hovering over it.
   const showFull = !isCollapsed || isHovered;
@@ -277,7 +296,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                 <div className={`pt-4 border-t border-gray-200 dark:border-gray-700 flex ${showFull ? 'flex-row items-center justify-between pr-2' : 'flex-col gap-2 items-center'}`}>
                     
                     {/* Collapsed Mode: Arrow is ABOVE Settings */}
-                    {!showFull && (
+                    {!isSmallScreen && !showFull && (
                         <button 
                             onClick={() => setIsCollapsed(!isCollapsed)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
@@ -301,7 +320,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
                     </ul>
 
                     {/* Expanded Mode: Arrow is to the RIGHT of Settings */}
-                    {showFull && (
+                    {!isSmallScreen && showFull && (
                         <button 
                             onClick={() => setIsCollapsed(!isCollapsed)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ml-1"
