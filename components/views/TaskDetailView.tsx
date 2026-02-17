@@ -1734,9 +1734,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 </div>
             </header>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-8 gap-6 min-h-0">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-8 gap-4 2xl:gap-6 min-h-0">
                 {/* Col 1 */}
-                <div className="lg:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar px-2 pb-2">
+                <div className="lg:col-span-1 2xl:col-span-2 flex flex-col gap-6 overflow-y-auto custom-scrollbar px-2 pb-2">
                     {/* Lógica de Visualização vs Edição da Descrição */}
                     <div className="relative group">
                         {isEditingDescription ? (
@@ -2069,7 +2069,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 </div>
 
                 {/* Col 2 (Central) */}
-                <div className="lg:col-span-3 flex flex-col gap-4 min-h-0 h-full">
+                <div className="lg:col-span-1 2xl:col-span-3 flex flex-col gap-4 min-h-0 h-full">
 
                     {/* 1. Sub-tarefas Section */}
                     {/* A altura agora é calculada: Se Docs fechado, ocupa tudo menos o cabeçalho do Docs. Se aberto, ocupa 55%. */}
@@ -2240,7 +2240,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 </div>
 
                 {/* Col 3 */}
-                <section className="lg:col-span-3 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden">
+                <section className="lg:col-span-1 2xl:col-span-3 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden">
                     <div className="flex justify-between items-center p-4 flex-shrink-0">
                         <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Atividade</h3>
                         {/* ... Activity buttons ... */}
