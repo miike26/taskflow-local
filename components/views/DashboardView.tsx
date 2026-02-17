@@ -830,7 +830,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
   );
 
   return (
-    <div className="p-4 flex flex-col w-full h-full gap-6 overflow-y-auto xl:overflow-hidden custom-scrollbar">
+    <div className="p-2 lg:p-4 flex flex-col w-full h-full gap-4 lg:gap-6 overflow-y-auto 2xl:overflow-hidden custom-scrollbar">
         {/* Top Stats Section */}
         <div className="bg-white dark:bg-[#161B22] p-3 xl:p-5 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex-shrink-0 transition-all">
     <section className="grid grid-cols-1 lg:grid-cols-7 gap-3 xl:gap-6">
@@ -856,10 +856,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 w-full flex-shrink-0 xl:flex-1 xl:min-h-0 xl:overflow-hidden">
+        <div className="grid grid-cols-1 min-[1370px]:grid-cols-3 gap-6 w-full flex-shrink-0 min-[1370px]:flex-1 min-[1370px]:min-h-0 min-[1370px]:overflow-hidden">
             
             {/* Left Panel: Unified Tasks Overview (Col Span 2) */}
-            <div className="xl:col-span-2 flex flex-col min-w-0 h-[600px] xl:h-full min-h-0 overflow-hidden">
+            <div className="min-[1370px]:col-span-2 flex flex-col min-w-0 h-[550px] min-[1370px]:h-full min-[1370px]:min-h-0 overflow-hidden">
                 <div className="bg-white dark:bg-[#161B22] p-6 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col h-full overflow-hidden">
                     
                     {/* Panel Header with Toggle */}
@@ -926,7 +926,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
             </div>
 
             {/* Right Panel: Widgets (Col Span 1) */}
-            <div className="flex flex-col gap-6 min-w-0 h-auto xl:h-full xl:min-h-0 xl:overflow-y-auto custom-scrollbar pr-2 pb-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 min-[1370px]:flex min-[1370px]:flex-col gap-6 min-w-0 h-auto min-[1370px]:h-full min-[1370px]:min-h-0 min-[1370px]:overflow-y-auto custom-scrollbar pr-2 pb-2">
                 <div className="flex-1 flex flex-col min-h-[250px]">
                     <HabitWidget habits={habits} onToggle={onToggleHabit} onReorder={onReorderHabits} />
                 </div>
