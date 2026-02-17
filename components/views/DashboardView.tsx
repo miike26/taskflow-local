@@ -421,7 +421,7 @@ const KanbanColumn: React.FC<{
     const getTag = (id: string) => tags.find(t => t.id === id);
 
     return (
-        <div className="rounded-xl flex flex-col border border-gray-200 dark:border-gray-800 px-2 min-h-0 flex-1 h-full">
+        <div className="rounded-xl flex flex-col border border-gray-200 dark:border-gray-800 px-2 min-h-0 flex-1 h-full min-w-[260px] xl:min-w-0 snap-center">
             <h3 className="flex items-center gap-3 font-semibold text-lg p-4 pb-2 text-gray-800 dark:text-gray-200 flex-shrink-0">
                 <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[title as Status]}`}></span>
                 {title} <span className="text-sm font-normal text-gray-500">({tasks.length})</span>
@@ -462,15 +462,17 @@ const CompactStatCard: React.FC<{
     colorClass: string; 
     bgClass: string; 
     trend?: number;
-    trendTooltip?: string; // <--- NOVO CAMPO
+    trendTooltip?: string;
 }> = ({ label, value, icon: Icon, colorClass, bgClass, trend, trendTooltip }) => (
-    <div className={`p-4 rounded-xl border border-transparent ${bgClass} flex items-center justify-between transition-all hover:scale-[1.02]`}>
+    // MUDANÇA: p-3 (antes p-4) e hover scale mais suave
+    <div className={`p-3 xl:p-4 rounded-xl border border-transparent ${bgClass} flex items-center justify-between transition-all hover:scale-[1.02]`}>
         <div className="flex flex-col">
             <div className="flex items-center gap-2">
-                <span className="text-2xl font-bold text-gray-800 dark:text-white">{value}</span>
+                {/* MUDANÇA: text-xl (antes text-2xl) em laptop */}
+                <span className="text-xl xl:text-2xl font-bold text-gray-800 dark:text-white">{value}</span>
                 {trend !== undefined && trend !== 0 && (
                     <span 
-                        title={trendTooltip} // <--- TOOLTIP NATIVO AQUI
+                        title={trendTooltip}
                         className={`flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full cursor-help ${trend > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
                     >
                         {trend > 0 ? <ArrowTrendingUpIcon className="w-3 h-3 mr-0.5"/> : <ArrowTrendingDownIcon className="w-3 h-3 mr-0.5"/>}
@@ -478,10 +480,12 @@ const CompactStatCard: React.FC<{
                     </span>
                 )}
             </div>
-            <span className="text-xs font-semibold uppercase tracking-wider opacity-70 text-gray-600 dark:text-gray-300">{label}</span>
+            {/* MUDANÇA: text-[10px] em laptop */}
+            <span className="text-[10px] xl:text-xs font-semibold uppercase tracking-wider opacity-70 text-gray-600 dark:text-gray-300">{label}</span>
         </div>
-        <div className={`p-3 rounded-lg ${colorClass} bg-white/50 dark:bg-black/20`}>
-            <Icon className="w-6 h-6" />
+        {/* MUDANÇA: p-2 (antes p-3) e ícone menor */}
+        <div className={`p-2 xl:p-3 rounded-lg ${colorClass} bg-white/50 dark:bg-black/20`}>
+            <Icon className="w-5 h-5 xl:w-6 xl:h-6" />
         </div>
     </div>
 );
@@ -828,8 +832,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
   return (
     <div className="p-4 flex flex-col w-full h-full gap-6 overflow-y-auto xl:overflow-hidden custom-scrollbar">
         {/* Top Stats Section */}
-        <div className="bg-white dark:bg-[#161B22] p-5 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex-shrink-0">
-            <section className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+        <div className="bg-white dark:bg-[#161B22] p-3 xl:p-5 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex-shrink-0 transition-all">
+    <section className="grid grid-cols-1 lg:grid-cols-7 gap-3 xl:gap-6">
                 <div className="lg:col-span-2 flex items-center justify-center p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                     <CompletionRing percentage={completionRate} total={totalTasks} completed={stats.completed} />
                 </div>
@@ -890,7 +894,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ tasks, categories, tags, 
                     {/* Content Area */}
                     <div className="flex-1 min-h-0 relative">
                         {overviewViewMode === 'status' ? (
-                            <div className="flex flex-col md:flex-row gap-4 h-full overflow-y-hidden overflow-x-auto pb-2">
+                            <div className="flex flex-col md:flex-row gap-3 xl:gap-4 h-full overflow-y-hidden overflow-x-auto pb-2 snap-x">
                                 <KanbanColumn title="Pendente" tasks={pendingTasks} categories={categories} userName={userName} tags={tags} projects={projects} onSelectTask={onSelectTask} onUpdateTask={onUpdateTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon} />
                                 <KanbanColumn title="Em andamento" tasks={inProgressTasks} categories={categories} userName={userName} tags={tags} projects={projects} onSelectTask={onSelectTask} onUpdateTask={onUpdateTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon}/>
                                 <KanbanColumn title="Concluída" tasks={completedTasks} categories={categories} userName={userName} tags={tags} projects={projects} onSelectTask={onSelectTask} onUpdateTask={onUpdateTask} disableOverdueColor={appSettings?.disableOverdueColor} showProject={appSettings?.showProjectOnCard} onlyProjectIcon={appSettings?.onlyProjectIcon} />
