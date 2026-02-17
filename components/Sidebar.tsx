@@ -136,7 +136,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
   // 👇 LÓGICA NOVA: Auto-colapso responsivo
   React.useEffect(() => {
     const handleResize = () => {
-      const small = window.innerWidth < 1360;
+      const small = window.innerWidth < 1370;
       setIsSmallScreen(small); // Atualiza o estado da tela
 
       if (small) {
