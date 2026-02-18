@@ -11,6 +11,26 @@ export interface ChangeLogItem {
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     {
+        version: '1.3.0',
+        date: '2026-02-18',
+        title: 'Nova Interface de Lembretes e Melhorias Visuais',
+        description: 'Um visual mais moderno para seus lembretes e uma experiência de navegação mais fluida e responsiva.',
+        changes: [
+            { 
+                type: 'improvement', 
+                text: 'Nova Tela de Lembretes: Redesign completo com layout de duas colunas e feed de urgência.' 
+            },
+            { 
+                type: 'improvement', 
+                text: 'Responsividade do aplicativo: Em telas menores (Notebooks), telas como Dashboard, Projetos e Lista de tarefas se adaptam à diferentes resoluções, tornando a usabilidade mais fluída.' 
+            },
+            { 
+                type: 'fix', 
+                text: 'Correção de bugs da Barra Lateral (Sidebar) quando está em sua versão compacta.' 
+            }
+        ]
+    },
+    {
         version: '1.2.5',
         date: '2026-02-06',
         title: 'Novas funcionalidades e melhorias',
