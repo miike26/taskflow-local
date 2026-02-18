@@ -1,15 +1,35 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import type { Task, Category, Activity, AppSettings } from '../../types';
-import { BellIcon, CalendarIcon, TrashIcon, ClockIcon, ExclamationTriangleIcon, CheckCircleIcon, CalendarDaysIcon } from '../icons';
-import Calendar from '../Calendar';
+import React, { useMemo } from 'react';
+import type { Task, Category, Activity, AppSettings, Tag } from '../../types';
+import { 
+    BellIcon, CalendarIcon, TrashIcon, ClockIcon, 
+    ExclamationTriangleIcon, CheckCircleIcon, CalendarDaysIcon, 
+    ChevronRightIcon,
+    // 👇 Novos ícones importados para as categorias
+    BriefcaseIcon, UserCircleIcon, ListIcon, FolderIcon
+} from '../icons';
 
 interface RemindersViewProps {
-  tasks: Task[];
-  categories: Category[];
-  onSelectTask: (task: Task) => void;
-  onDeleteReminderRequest: (taskId: string, reminderId: string) => void;
-  appSettings?: AppSettings;
+    tasks: Task[];
+    categories: Category[];
+    tags: Tag[];
+    onSelectTask: (task: Task) => void;
+    onDeleteReminderRequest: (taskId: string, reminderId: string) => void;
+    appSettings?: AppSettings;
 }
+
+// --- HELPER: Recupera ícones de categorias (Igual ao TaskDetail e Header) ---
+const getCategoryIcon = (category?: Category) => {
+    if (!category) return FolderIcon; // Ícone padrão se não tiver categoria (ou pode ser BellIcon se preferir)
+    if (category.icon) return category.icon;
+
+    // Mapeamento manual
+    switch (category.id) {
+        case 'cat-1': return BriefcaseIcon;      // Trabalho
+        case 'cat-2': return UserCircleIcon;     // Pessoal
+        case 'cat-3': return ListIcon;           // Estudo / Lista
+        default: return FolderIcon;              // Personalizadas
+    }
+};
 
 // Helper to calculate grouping dates
 const getGroup = (date: Date) => {
@@ -43,20 +63,108 @@ const getGroup = (date: Date) => {
     return 'future';
 };
 
-const ReminderCard: React.FC<{
-    reminder: Activity & { task: Task; category?: Category };
+const ReminderItem: React.FC<{
+    reminder: Activity & { task: Task; category?: Category; tag?: Tag };
     onSelectTask: (task: Task) => void;
     onDelete: () => void;
-    variant?: 'default' | 'highlight';
     disableOverdueColor?: boolean;
     timeFormat?: '12h' | '24h';
-}> = ({ reminder, onSelectTask, onDelete, variant = 'default', disableOverdueColor, timeFormat = '24h' }) => {
-    const { task, category } = reminder;
-    const CategoryIcon = category?.icon || BellIcon;
+}> = ({ reminder, onSelectTask, onDelete, disableOverdueColor, timeFormat = '24h' }) => {
+    const { task, category, tag } = reminder;
+    
+    // 👇 AQUI A MUDANÇA: Usa a função helper para pegar o ícone correto
+    const CategoryIcon = getCategoryIcon(category);
+    
     const reminderDate = new Date(reminder.notifyAt!);
     const isOverdue = reminderDate < new Date();
-    const applyOverdueStyle = isOverdue && !disableOverdueColor;
+    
+    const timeOptions: Intl.DateTimeFormatOptions = { 
+        hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
+        minute: '2-digit', 
+        hour12: timeFormat === '12h' 
+    };
+    const formattedTime = reminderDate.toLocaleTimeString('pt-BR', timeOptions);
+    const formattedDate = reminderDate.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
+    return (
+        <div 
+            onClick={() => onSelectTask(task)}
+            className={`group relative flex items-center gap-4 bg-white dark:bg-[#161B22] p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:shadow-md transition-all duration-200 cursor-pointer overflow-hidden
+            ${isOverdue && !disableOverdueColor ? 'border-l-4 border-l-red-500' : 'hover:border-primary-300 dark:hover:border-primary-700'}`}
+        >
+            {/* Time Column */}
+            <div className="flex flex-col items-center justify-center min-w-[60px] border-r border-gray-100 dark:border-gray-700 pr-4 py-1">
+                <span className={`text-lg font-bold ${isOverdue ? 'text-red-500' : 'text-gray-800 dark:text-white'}`}>
+                    {formattedTime}
+                </span>
+                <span className="text-[10px] uppercase font-bold text-gray-400 dark:text-gray-500">
+                    {formattedDate}
+                </span>
+            </div>
+
+            {/* Content Column */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-bold text-base text-gray-900 dark:text-white truncate leading-snug" title={task.title}>
+                        {task.title}
+                    </h4>
+                    {tag && (
+                        <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${tag.bgColor} ${tag.color}`}>
+                            {tag.name === 'Normal' ? 'Média' : tag.name}
+                        </span>
+                    )}
+                </div>
+                
+                <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-gray-400 dark:text-gray-500 flex-shrink-0" title={category?.name}>
+                        {/* Renderiza o ícone da categoria aqui */}
+                        <CategoryIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <p className="line-clamp-1 break-words">
+                        {reminder.note || "Sem anotação extra"}
+                    </p>
+                </div>
+            </div>
+
+            {/* Action Column */}
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    title="Excluir Lembrete"
+                >
+                    <TrashIcon className="w-5 h-5" />
+                </button>
+                <div className="text-gray-300 dark:text-gray-600">
+                    <ChevronRightIcon className="w-5 h-5" />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const StatRow: React.FC<{ label: string; count: number; colorClass: string; icon: React.ReactNode }> = ({ label, count, colorClass, icon }) => (
+    <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-default">
+        <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg bg-white dark:bg-black/20 shadow-sm ${colorClass}`}>
+                {icon}
+            </div>
+            <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">{label}</span>
+        </div>
+        <span className="font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 rounded-md text-xs group-hover:scale-110 transition-transform">
+            {count}
+        </span>
+    </div>
+);
+
+const NextReminderSpotlight: React.FC<{
+    reminder: Activity & { task: Task; category?: Category };
+    onSelectTask: (task: Task) => void;
+    timeFormat?: '12h' | '24h';
+}> = ({ reminder, onSelectTask, timeFormat = '24h' }) => {
+    const { task } = reminder;
+    const reminderDate = new Date(reminder.notifyAt!);
+    
     const timeOptions: Intl.DateTimeFormatOptions = { 
         hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
         minute: '2-digit', 
@@ -64,120 +172,40 @@ const ReminderCard: React.FC<{
     };
     const formattedTime = reminderDate.toLocaleTimeString('pt-BR', timeOptions);
 
-    if (variant === 'highlight') {
-        return (
-            <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                    <BellIcon className="w-24 h-24" />
-                </div>
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2 opacity-90">
-                        <ClockIcon className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-wider">Próximo Lembrete</span>
-                    </div>
-                    <div className="text-3xl font-bold mb-1">
-                        {formattedTime}
-                    </div>
-                    <div className="text-primary-100 text-sm mb-4 font-medium">
-                        {reminderDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </div>
-                    
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => onSelectTask(task)}>
-                        <h4 className="font-bold text-lg truncate">{task.title}</h4>
-                        <p className="text-primary-100 text-sm truncate opacity-90">{reminder.note || "Sem nota"}</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className={`group relative bg-white dark:bg-[#161B22] p-4 rounded-xl border transition-all duration-200 hover:shadow-md ${applyOverdueStyle ? 'border-red-200 dark:border-red-900/30' : 'border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700'}`}>
-            <div className="flex items-start gap-4">
-                {/* Date Box */}
-                <div className={`flex flex-col items-center justify-center w-14 h-14 rounded-xl flex-shrink-0 border ${applyOverdueStyle ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400' : 'bg-gray-50 dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-700 dark:text-gray-300'}`}>
-                    <span className="text-lg font-bold leading-none">{reminderDate.getDate()}</span>
-                    <span className="text-[10px] font-bold uppercase mt-0.5">{reminderDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '')}</span>
+        <div className="w-full bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden group mb-6">
+            {/* 👇 MUDANÇA AQUI: Adicionei as classes de animação no sino de fundo */}
+            <div className="absolute top-0 right-0 p-4 opacity-10 transform transition-all duration-700 ease-out group-hover:scale-110 group-hover:rotate-12 group-hover:opacity-20 origin-top-right">
+                <BellIcon className="w-24 h-24" />
+            </div>
+            
+            <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2 opacity-90">
+                    <ClockIcon className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase tracking-wider">Próximo Lembrete</span>
                 </div>
-
-                <div className="flex-grow min-w-0">
-                    <div className="flex justify-between items-start">
-                        <div className="flex flex-col">
-                            <span className={`text-xs font-bold mb-0.5 flex items-center gap-1 ${applyOverdueStyle ? 'text-red-500' : 'text-primary-600 dark:text-primary-400'}`}>
-                                <ClockIcon className="w-3 h-3" />
-                                {formattedTime}
-                                {isOverdue && <span className="ml-1 px-1.5 py-0.5 bg-red-100 dark:bg-red-900/40 rounded text-[9px] uppercase tracking-wide">Atrasado</span>}
-                            </span>
-                            <h4 
-                                className="font-semibold text-gray-800 dark:text-gray-200 truncate cursor-pointer hover:text-primary-500 transition-colors"
-                                onClick={() => onSelectTask(task)}
-                            >
-                                {task.title}
-                            </h4>
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
-                        {reminder.note || "Lembrete personalizado"}
-                    </p>
-                    
-                    <div className="flex items-center gap-3 mt-3">
-                        {category && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-                                <CategoryIcon className="w-3.5 h-3.5" />
-                                <span>{category.name}</span>
-                            </div>
-                        )}
-                        {task.status === 'Concluída' && (
-                            <span className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded">Concluída</span>
-                        )}
-                    </div>
+                <div className="text-3xl font-bold mb-1">
+                    {formattedTime}
                 </div>
-
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                    className="absolute top-4 right-4 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                    title="Excluir lembrete"
+                <div className="text-primary-100 text-sm mb-4 font-medium capitalize">
+                    {reminderDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </div>
+                
+                <div 
+                    className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 cursor-pointer hover:bg-white/20 transition-colors" 
+                    onClick={() => onSelectTask(task)}
                 >
-                    <TrashIcon className="w-4 h-4" />
-                </button>
+                    <h4 className="font-bold text-lg truncate">{task.title}</h4>
+                    <p className="text-primary-100 text-sm truncate opacity-90">{reminder.note || "Sem nota"}</p>
+                </div>
             </div>
         </div>
     );
 };
 
-const ReminderGroup: React.FC<{ title: string; count: number; icon: React.ReactNode; colorClass: string; children: React.ReactNode }> = ({ title, count, icon, colorClass, children }) => {
-    if (count === 0) return null;
-    return (
-        <div className="space-y-3 mb-8">
-            <h3 className={`flex items-center gap-2 text-sm font-bold uppercase tracking-wider ${colorClass}`}>
-                {icon}
-                {title}
-                <span className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full text-xs ml-auto">
-                    {count}
-                </span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                {children}
-            </div>
-        </div>
-    );
-};
-
-const StatCard: React.FC<{ label: string; value: number; icon: React.FC<{className?: string}>; bgClass: string; textClass: string }> = ({ label, value, icon: Icon, bgClass, textClass }) => (
-    <div className={`flex items-center gap-4 p-4 rounded-xl border border-transparent ${bgClass}`}>
-        <div className={`p-3 rounded-lg bg-white/50 dark:bg-black/20 ${textClass}`}>
-            <Icon className="w-6 h-6" />
-        </div>
-        <div>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
-            <p className="text-xs font-semibold uppercase tracking-wider opacity-70 text-gray-600 dark:text-gray-300">{label}</p>
-        </div>
-    </div>
-);
-
-const RemindersView: React.FC<RemindersViewProps> = ({ tasks, categories, onSelectTask, onDeleteReminderRequest, appSettings }) => {
+const RemindersView: React.FC<RemindersViewProps> = ({ tasks = [], categories = [], tags = [], onSelectTask, onDeleteReminderRequest, appSettings }) => {
     
-    const { activeReminders, nextReminder, stats, groupedReminders } = useMemo(() => {
+    const { activeReminders, nextReminder, groupedReminders, counts } = useMemo(() => {
         const now = new Date();
         const all = tasks.flatMap(task => 
             task.activity
@@ -185,174 +213,139 @@ const RemindersView: React.FC<RemindersViewProps> = ({ tasks, categories, onSele
                 .map(reminderActivity => ({ 
                     ...reminderActivity,
                     task, 
-                    category: categories.find(c => c.id === task.categoryId) 
+                    category: categories.find(c => c.id === task.categoryId),
+                    tag: tags.find(t => t.id === task.tagId)
                 }))
         ).sort((a, b) => new Date(a.notifyAt).getTime() - new Date(b.notifyAt).getTime());
 
-        // SHOW ALL REMINDERS regardless of task status. 
-        // Previously we filtered out completed tasks, but reminders might be relevant even if the task is done.
-        const active = all; 
-        
-        const next = active.length > 0 ? active.filter(r => new Date(r.notifyAt) >= now)[0] : null;
+        const next = all.length > 0 ? all.filter(r => new Date(r.notifyAt) >= now)[0] : null;
 
         const groups = {
-            overdue: [] as typeof active,
-            today: [] as typeof active,
-            tomorrow: [] as typeof active,
-            week: [] as typeof active,
-            future: [] as typeof active,
+            overdue: [] as typeof all,
+            today: [] as typeof all,
+            tomorrow: [] as typeof all,
+            week: [] as typeof all,
+            future: [] as typeof all,
         };
 
-        active.forEach(r => {
+        all.forEach(r => {
             const groupKey = getGroup(new Date(r.notifyAt));
             if (groups[groupKey]) {
                 groups[groupKey].push(r);
             } else {
-                // Fallback for edge cases
                 groups['future'].push(r);
             }
         });
 
-        return { 
-            activeReminders: active, 
-            nextReminder: next,
-            stats: {
-                total: active.length,
-                overdue: groups.overdue.length,
-                today: groups.today.length
-            },
-            groupedReminders: groups
+        const counts = {
+            total: all.length,
+            overdue: groups.overdue.length,
+            today: groups.today.length,
+            upcoming: groups.tomorrow.length + groups.week.length + groups.future.length
         };
 
-    }, [tasks, categories]);
+        return { 
+            activeReminders: all, 
+            nextReminder: next,
+            groupedReminders: groups,
+            counts
+        };
+
+    }, [tasks, categories, tags]);
+
+    const renderGroup = (title: string, list: typeof activeReminders, icon: React.ReactNode, textColor: string) => {
+        if (list.length === 0) return null;
+        return (
+            <div className="mb-8 last:mb-0 animate-slide-up-fade-in">
+                <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-gray-100 dark:border-gray-800 ${textColor}`}>
+                    {icon}
+                    <h3 className="text-lg font-bold">{title}</h3>
+                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full font-bold ml-auto">{list.length}</span>
+                </div>
+                <div className="space-y-3">
+                    {list.map(reminder => (
+                        <ReminderItem
+                            key={reminder.id}
+                            reminder={reminder}
+                            onSelectTask={onSelectTask}
+                            onDelete={() => onDeleteReminderRequest(reminder.task.id, reminder.id)}
+                            disableOverdueColor={appSettings?.disableOverdueColor}
+                            timeFormat={appSettings?.timeFormat}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    };
 
     return (
-        <div className="h-full flex flex-col p-4 md:p-6 overflow-hidden">
-            <header className="mb-6 flex flex-col gap-1">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    Meus Lembretes
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Gerencie seus alertas e notificações agendadas.
-                </p>
-            </header>
-
-            {activeReminders.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-white dark:bg-[#161B22] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm border-dashed">
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-full mb-4">
-                        <BellIcon className="w-12 h-12 text-yellow-500" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Tudo Silencioso</h3>
-                    <p className="text-gray-500 dark:text-gray-400 mt-2 max-w-md">
-                        Você não tem lembretes ativos no momento. Adicione um lembrete dentro dos detalhes de uma tarefa.
-                    </p>
-                </div>
-            ) : (
-                <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
-                    
-                    {/* Left Panel: Stats & Highlights */}
-                    <div className="w-full lg:w-80 flex-shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pb-4">
-                        {/* Next Reminder Highlight */}
-                        {nextReminder && (
-                            <ReminderCard 
-                                reminder={nextReminder} 
-                                onSelectTask={onSelectTask} 
-                                onDelete={() => onDeleteReminderRequest(nextReminder.task.id, nextReminder.id)}
-                                variant="highlight" 
-                                timeFormat={appSettings?.timeFormat}
-                            />
-                        )}
-
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-1 gap-3">
-                            <StatCard 
-                                label="Total Ativos" 
-                                value={stats.total} 
-                                icon={BellIcon} 
-                                bgClass="bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800"
-                                textClass="text-blue-600 dark:text-blue-400"
-                            />
-                            <StatCard 
-                                label="Para Hoje" 
-                                value={stats.today} 
-                                icon={CalendarIcon} 
-                                bgClass="bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800"
-                                textClass="text-emerald-600 dark:text-emerald-400"
-                            />
-                            {stats.overdue > 0 && (
-                                <StatCard 
-                                    label="Atrasados" 
-                                    value={stats.overdue} 
-                                    icon={ExclamationTriangleIcon} 
-                                    bgClass="bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800 animate-pulse-glow"
-                                    textClass="text-red-600 dark:text-red-400"
-                                />
-                            )}
-                        </div>
+        <div className="flex flex-col lg:flex-row h-full w-full p-4 lg:p-6 gap-6 relative">
+            
+            {/* --- LEFT PANEL: Summary & Next Reminder (Detached Card) --- */}
+            <div className="w-full lg:w-96 flex-shrink-0 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden h-auto lg:h-full">
+                <div className="overflow-y-auto custom-scrollbar h-full p-6 lg:p-8">
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Meus Lembretes</h2>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie seus alertas e prazos.</p>
                     </div>
 
-                    {/* Right Panel: The List */}
-                    <div className="flex-1 bg-white dark:bg-[#161B22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
-                        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                            
-                            <ReminderGroup 
-                                title="Atrasados" 
-                                count={groupedReminders.overdue.length} 
-                                icon={<ExclamationTriangleIcon className="w-4 h-4"/>} 
-                                colorClass="text-red-500"
-                            >
-                                {groupedReminders.overdue.map(r => (
-                                    <ReminderCard key={r.id} reminder={r} onSelectTask={onSelectTask} onDelete={() => onDeleteReminderRequest(r.task.id, r.id)} disableOverdueColor={appSettings?.disableOverdueColor} timeFormat={appSettings?.timeFormat} />
-                                ))}
-                            </ReminderGroup>
-
-                            <ReminderGroup 
-                                title="Hoje" 
-                                count={groupedReminders.today.length} 
-                                icon={<CheckCircleIcon className="w-4 h-4"/>} 
-                                colorClass="text-emerald-500"
-                            >
-                                {groupedReminders.today.map(r => (
-                                    <ReminderCard key={r.id} reminder={r} onSelectTask={onSelectTask} onDelete={() => onDeleteReminderRequest(r.task.id, r.id)} disableOverdueColor={appSettings?.disableOverdueColor} timeFormat={appSettings?.timeFormat} />
-                                ))}
-                            </ReminderGroup>
-
-                            <ReminderGroup 
-                                title="Amanhã" 
-                                count={groupedReminders.tomorrow.length} 
-                                icon={<CalendarIcon className="w-4 h-4"/>} 
-                                colorClass="text-blue-500"
-                            >
-                                {groupedReminders.tomorrow.map(r => (
-                                    <ReminderCard key={r.id} reminder={r} onSelectTask={onSelectTask} onDelete={() => onDeleteReminderRequest(r.task.id, r.id)} disableOverdueColor={appSettings?.disableOverdueColor} timeFormat={appSettings?.timeFormat} />
-                                ))}
-                            </ReminderGroup>
-
-                            <ReminderGroup 
-                                title="Próximos 7 Dias" 
-                                count={groupedReminders.week.length} 
-                                icon={<CalendarIcon className="w-4 h-4"/>} 
-                                colorClass="text-purple-500"
-                            >
-                                {groupedReminders.week.map(r => (
-                                    <ReminderCard key={r.id} reminder={r} onSelectTask={onSelectTask} onDelete={() => onDeleteReminderRequest(r.task.id, r.id)} disableOverdueColor={appSettings?.disableOverdueColor} timeFormat={appSettings?.timeFormat} />
-                                ))}
-                            </ReminderGroup>
-
-                            <ReminderGroup 
-                                title="Futuro" 
-                                count={groupedReminders.future.length} 
-                                icon={<ClockIcon className="w-4 h-4"/>} 
-                                colorClass="text-gray-500"
-                            >
-                                {groupedReminders.future.map(r => (
-                                    <ReminderCard key={r.id} reminder={r} onSelectTask={onSelectTask} onDelete={() => onDeleteReminderRequest(r.task.id, r.id)} disableOverdueColor={appSettings?.disableOverdueColor} timeFormat={appSettings?.timeFormat} />
-                                ))}
-                            </ReminderGroup>
+                    {nextReminder ? (
+                        <NextReminderSpotlight 
+                            reminder={nextReminder} 
+                            onSelectTask={onSelectTask}
+                            timeFormat={appSettings?.timeFormat}
+                        />
+                    ) : (
+                        <div className="mb-8 p-6 bg-gray-50 dark:bg-white/5 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 text-center">
+                            <BellIcon className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nenhum lembrete pendente.</p>
                         </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">Visão Geral</h3>
+                        <StatRow 
+                            label="Atrasados" 
+                            count={counts.overdue} 
+                            colorClass="text-red-500" 
+                            icon={<ExclamationTriangleIcon className="w-5 h-5"/>} 
+                        />
+                        <StatRow 
+                            label="Hoje" 
+                            count={counts.today} 
+                            colorClass="text-emerald-500" 
+                            icon={<CheckCircleIcon className="w-5 h-5"/>} 
+                        />
+                        <StatRow 
+                            label="Futuros" 
+                            count={counts.upcoming} 
+                            colorClass="text-blue-500" 
+                            icon={<CalendarDaysIcon className="w-5 h-5"/>} 
+                        />
                     </div>
                 </div>
-            )}
+            </div>
+
+            {/* --- RIGHT PANEL: Scrollable Feed --- */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0 rounded-2xl">
+                <div className="max-w-4xl mx-auto pb-6">
+                    {activeReminders.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center opacity-50">
+                            <BellIcon className="w-20 h-20 text-gray-300 dark:text-gray-700 mb-4" />
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Tudo Silencioso</h3>
+                            <p className="text-gray-500">Você não tem lembretes configurados no momento.</p>
+                        </div>
+                    ) : (
+                        <>
+                            {renderGroup('Atrasados', groupedReminders.overdue, <ExclamationTriangleIcon className="w-5 h-5"/>, 'text-red-500')}
+                            {renderGroup('Hoje', groupedReminders.today, <CheckCircleIcon className="w-5 h-5"/>, 'text-emerald-500')}
+                            {renderGroup('Amanhã', groupedReminders.tomorrow, <CalendarIcon className="w-5 h-5"/>, 'text-blue-500')}
+                            {renderGroup('Próximos 7 Dias', groupedReminders.week, <CalendarDaysIcon className="w-5 h-5"/>, 'text-purple-500')}
+                            {renderGroup('Futuro', groupedReminders.future, <ClockIcon className="w-5 h-5"/>, 'text-gray-500')}
+                        </>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
