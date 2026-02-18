@@ -42,16 +42,15 @@ const NavItem: React.FC<{
           onClick(viewName);
         }}
         title={!showLabel ? label : undefined}
-        className={`group flex items-center p-3 text-base font-normal rounded-lg transition-all duration-200
-          ${isActive 
-            ? 'bg-primary-600 text-white shadow-md' 
+        className={`group flex items-center px-2.5 py-3 text-base font-normal rounded-lg transition-colors duration-200
+  ${isActive
+            ? 'bg-primary-600 text-white shadow-md'
             : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10'
           }
-          ${!showLabel ? 'justify-center' : ''}
-        `}
+`}
       >
-        <div className="relative">
-          <span className={`transition-colors duration-200 flex-shrink-0 ${isActive ? 'text-white' : `text-gray-500 group-hover:${hoverColorClass}`}`}>
+        <div className="relative w-6 h-6 flex items-center justify-center flex-shrink-0">
+          <span className={`transition-colors duration-200 ${isActive ? 'text-white' : `text-gray-500 group-hover:${hoverColorClass}`}`}>
             {icon}
           </span>
           {hasBadge && (
@@ -61,8 +60,14 @@ const NavItem: React.FC<{
             </span>
           )}
         </div>
-        <span className={`ml-3 font-medium whitespace-nowrap transition-all duration-300 overflow-hidden ${showLabel ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 ml-0'}`}>
-            {label}
+        <span
+          className={`
+    ml-3 font-medium whitespace-nowrap overflow-hidden
+    transition-[opacity,max-width] duration-300
+    ${showLabel ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}
+  `}
+        >
+          {label}
         </span>
       </a>
     </li>
@@ -112,14 +117,13 @@ const RecentTaskItem: React.FC<{
         <span className="ml-2 font-medium text-sm truncate flex-1 animate-fade-in">{task.title}</span>
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onPin(); }}
-          className={`ml-2 p-1 rounded-full transition-all duration-200 ${
-            (isPinned || isHovered) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-          } ${ isSelected
-                ? 'text-white hover:bg-white/20'
-                : isPinned
+          className={`ml-2 p-1 rounded-full transition-all duration-200 ${(isPinned || isHovered) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+            } ${isSelected
+              ? 'text-white hover:bg-white/20'
+              : isPinned
                 ? 'text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/50'
                 : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
+            }`}
         >
           <PinIcon className="w-4 h-4" isPinned={isPinned} />
         </button>
@@ -156,11 +160,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
 
   const recentItems = useMemo(() => {
     const allTasksById = new Map(tasks.map(t => [t.id, t]));
-    
+
     const pinned = pinnedTaskIds
       .map(id => allTasksById.get(id))
       .filter((t): t is Task => !!t);
-      
+
     const recents = recentTaskIds
       .filter(id => !pinnedTaskIds.includes(id))
       .map(id => allTasksById.get(id))
@@ -172,166 +176,171 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView, recentTa
 
   return (
     // Outer Wrapper: reserves space in the flex layout (w-64 or w-20)
-    <div 
-        className={`relative h-full transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] flex-shrink-0 ${isCollapsed ? 'w-20' : 'w-64'} z-50`}
-        onMouseEnter={() => isCollapsed && setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+    <div
+      className={`relative h-full transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] flex-shrink-0 ${isCollapsed ? 'w-[75px]' : 'w-64'} z-50`}
+      onMouseEnter={() => isCollapsed && setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-        {/* Actual Sidebar: Can expand absolutely over content */}
-        <aside 
-            className={`
+      {/* Actual Sidebar: Can expand absolutely over content */}
+      <aside
+        className={`
                 bg-white dark:bg-[#161B22] rounded-2xl flex flex-col h-full overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1.0)] border border-transparent dark:border-gray-800 pb-4
                 ${isCollapsed && isHovered ? 'absolute top-0 left-0 w-64 shadow-2xl border-gray-200 dark:border-gray-700' : 'w-full'}
-                ${isCollapsed && !isHovered ? 'items-center px-2' : 'px-4'}
+                px-3
+${isCollapsed && !isHovered ? 'items-center' : ''}
             `}
-            aria-label="Sidebar"
-        >
-            {/* Header: Logo Only (Button moved to bottom) */}
-            <div className={`flex items-center justify-center pt-6 pb-6 flex-shrink-0 min-h-[80px]`}>
-                {!isCollapsed ? (
-                    <img src={SIDEBAR_LOGO_URL} alt="FlowTask Logo" className="w-32 animate-fade-in object-contain" />
-                ) : (
-                    // Show mini logo or nothing when fully collapsed to save space for icons
-                    <img 
-            src={APP_ICON_URL} 
-            alt="FT" 
-            className="h-8 w-8 object-contain" // Ajuste o tamanho (h-8 w-8) conforme necessário
-        />
-                )}
+        aria-label="Sidebar"
+      >
+        {/* Header: Logo Only (Button moved to bottom) */}
+        <div className={`flex items-center justify-center pt-6 pb-6 flex-shrink-0 min-h-[80px]`}>
+          {!isCollapsed ? (
+            <img src={SIDEBAR_LOGO_URL} alt="FlowTask Logo" className="w-32 animate-fade-in object-contain" />
+          ) : (
+            // Show mini logo or nothing when fully collapsed to save space for icons
+            <img
+              src={APP_ICON_URL}
+              alt="FT"
+              className="h-8 w-8 object-contain" // Ajuste o tamanho (h-8 w-8) conforme necessário
+            />
+          )}
+        </div>
+
+        {/* Scrollable Content Area */}
+        <div className="flex-1 flex-col overflow-y-auto min-h-0 pr-1 -mr-1 w-full custom-scrollbar">
+          <ul className={`space-y-2 w-full ${showFull ? 'pl-0.5' : ''}`}>
+            <NavItem
+              viewName="dashboard"
+              label="Dashboard"
+              icon={<DashboardIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+            <NavItem
+              viewName="projects"
+              label="Projetos"
+              icon={<FolderIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+            <NavItem
+              viewName="list"
+              label="Lista de Tarefas"
+              icon={<ListIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+            <NavItem
+              viewName="calendar"
+              label="Calendário"
+              icon={<CalendarIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+            <NavItem
+              viewName="reminders"
+              label="Meus Lembretes"
+              icon={<ClockIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+            <NavItem
+              viewName="reports"
+              label="Relatórios"
+              icon={<BarChartIcon className="w-6 h-6" />}
+              currentView={currentView}
+              onClick={setCurrentView}
+              hoverColorClass="text-cyan-500"
+              showLabel={showFull}
+            />
+          </ul>
+
+          {recentItems.length > 0 && (
+            <div className={`
+        mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 
+        transition-all duration-200 overflow-hidden 
+        ${showFull ? 'opacity-100 delay-100' : 'opacity-0 hidden'}
+    `}>
+              <div className="flex justify-between items-center pr-1">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">Tarefas recentes</h3>
+                <button onClick={onClearRecents} title="Limpar recentes" className="p-1 -mr-1 mb-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
+                  <BroomIcon className="w-4 h-4" />
+                </button>
+              </div>
+              <ul className="space-y-1">
+                {recentItems.map(task => {
+                  const category = categories.find(c => c.id === task.categoryId);
+                  const isPinned = pinnedTaskIds.includes(task.id);
+                  const isSelected = selectedTask?.id === task.id;
+
+                  return (
+                    <RecentTaskItem
+                      key={task.id}
+                      task={task}
+                      category={category}
+                      isPinned={isPinned}
+                      isSelected={isSelected}
+                      onSelect={() => onSelectTask(task)}
+                      onPin={() => onPinTask(task.id)}
+                      showLabel={showFull}
+                    />
+                  );
+                })}
+              </ul>
             </div>
-            
-            {/* Scrollable Content Area */}
-            <div className="flex-1 flex flex-col overflow-y-auto min-h-0 pr-1 -mr-1 w-full custom-scrollbar">
-            <ul className="space-y-2 w-full">
-                <NavItem 
-                viewName="dashboard" 
-                label="Dashboard" 
-                icon={<DashboardIcon className="w-6 h-6" />}
+          )}
+        </div>
+
+        {/* Settings & Toggle at Bottom */}
+        <div className="mt-4 flex-shrink-0 w-full">
+          <div className={`pt-4 border-t border-gray-200 dark:border-gray-700 flex ${showFull ? 'flex-row items-center justify-between pr-2' : 'flex-col gap-2 items-center'}`}>
+
+            {/* Collapsed Mode: Arrow is ABOVE Settings */}
+            {!isSmallScreen && !showFull && (
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                title="Expandir barra lateral"
+              >
+                <ChevronRightIcon className="w-5 h-5" />
+              </button>
+            )}
+
+            <ul className={`space-y-2 ${showFull ? 'flex-1' : 'w-full'}`}>
+              <NavItem
+                viewName="settings"
+                label="Configurações"
+                icon={<Cog6ToothIcon className="w-6 h-6" />}
                 currentView={currentView}
                 onClick={setCurrentView}
                 hoverColorClass="text-cyan-500"
                 showLabel={showFull}
-                />
-                <NavItem
-                viewName="projects"
-                label="Projetos"
-                icon={<FolderIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
-                />
-                <NavItem
-                viewName="list"
-                label="Lista de Tarefas"
-                icon={<ListIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
-                />
-                <NavItem
-                viewName="calendar"
-                label="Calendário"
-                icon={<CalendarIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
-                />
-                <NavItem
-                viewName="reminders"
-                label="Meus Lembretes"
-                icon={<ClockIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
-                />
-                <NavItem
-                viewName="reports"
-                label="Relatórios"
-                icon={<BarChartIcon className="w-6 h-6" />}
-                currentView={currentView}
-                onClick={setCurrentView}
-                hoverColorClass="text-cyan-500"
-                showLabel={showFull}
-                />
+                hasBadge={hasNewUpdate}
+              />
             </ul>
 
-            {recentItems.length > 0 && (
-                <div className={`mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 transition-opacity duration-200 ${showFull ? 'opacity-100' : 'opacity-0 hidden'}`}>
-                <div className="flex justify-between items-center pr-1">
-                    <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-gray-400">Tarefas recentes</h3>
-                    <button onClick={onClearRecents} title="Limpar recentes" className="p-1 -mr-1 mb-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">
-                    <BroomIcon className="w-4 h-4" />
-                    </button>
-                </div>
-                <ul className="space-y-1">
-                    {recentItems.map(task => {
-                    const category = categories.find(c => c.id === task.categoryId);
-                    const isPinned = pinnedTaskIds.includes(task.id);
-                    const isSelected = selectedTask?.id === task.id;
-                    
-                    return (
-                        <RecentTaskItem
-                        key={task.id}
-                        task={task}
-                        category={category}
-                        isPinned={isPinned}
-                        isSelected={isSelected}
-                        onSelect={() => onSelectTask(task)}
-                        onPin={() => onPinTask(task.id)}
-                        showLabel={showFull}
-                        />
-                    );
-                    })}
-                </ul>
-                </div>
+            {/* Expanded Mode: Arrow is to the RIGHT of Settings */}
+            {!isSmallScreen && showFull && (
+              <button
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ml-1"
+                title={isCollapsed ? "Fixar barra lateral" : "Recolher barra lateral"}
+              >
+                {isCollapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
+              </button>
             )}
-            </div>
-
-            {/* Settings & Toggle at Bottom */}
-            <div className="mt-4 flex-shrink-0 w-full">
-                <div className={`pt-4 border-t border-gray-200 dark:border-gray-700 flex ${showFull ? 'flex-row items-center justify-between pr-2' : 'flex-col gap-2 items-center'}`}>
-                    
-                    {/* Collapsed Mode: Arrow is ABOVE Settings */}
-                    {!isSmallScreen && !showFull && (
-                        <button 
-                            onClick={() => setIsCollapsed(!isCollapsed)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                            title="Expandir barra lateral"
-                        >
-                            <ChevronRightIcon className="w-5 h-5" />
-                        </button>
-                    )}
-
-                    <ul className={`space-y-2 ${showFull ? 'flex-1' : 'w-full'}`}>
-                        <NavItem
-                            viewName="settings"
-                            label="Configurações"
-                            icon={<Cog6ToothIcon className="w-6 h-6" />}
-                            currentView={currentView}
-                            onClick={setCurrentView}
-                            hoverColorClass="text-cyan-500"
-                            showLabel={showFull}
-                            hasBadge={hasNewUpdate}
-                        />
-                    </ul>
-
-                    {/* Expanded Mode: Arrow is to the RIGHT of Settings */}
-                    {!isSmallScreen && showFull && (
-                        <button 
-                            onClick={() => setIsCollapsed(!isCollapsed)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ml-1"
-                            title={isCollapsed ? "Fixar barra lateral" : "Recolher barra lateral"}
-                        >
-                            {isCollapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </aside>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 };
