@@ -8,6 +8,41 @@ import {
     BriefcaseIcon, UserCircleIcon, ListIcon, FolderIcon
 } from '../icons';
 
+// --- ICON: Google Calendar (Oficial Colorido) ---
+const GoogleCalendarIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <img 
+        src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" 
+        alt="Google Agenda" 
+        className={className} 
+    />
+);
+
+// --- HELPER: Gera Link Mágico do Google Calendar (Lógica Específica para Lembretes) ---
+const generateReminderCalendarLink = (reminder: Activity, task: Task): string => {
+    const baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    
+    // Formata o título: [Lembrete] Nome da Tarefa
+    const text = encodeURIComponent(`[Lembrete] ${task.title}`);
+    
+    // Adiciona a nota do lembrete, se houver, na descrição
+    const descriptionText = reminder.note ? `Nota do lembrete: ${reminder.note}\n\n` : '';
+    const details = encodeURIComponent(`${descriptionText}${task.description || ""}`);
+
+    if (!reminder.notifyAt) return baseUrl;
+
+    const startDate = new Date(reminder.notifyAt);
+    // Adiciona 1 hora exata a partir do horário do lembrete
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); 
+
+    const formatDateTime = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+    };
+
+    const dates = `${formatDateTime(startDate)}/${formatDateTime(endDate)}`;
+
+    return `${baseUrl}&text=${text}&details=${details}&dates=${dates}`;
+};
+
 interface RemindersViewProps {
     tasks: Task[];
     categories: Category[];
@@ -128,6 +163,20 @@ const ReminderItem: React.FC<{
 
             {/* Action Column */}
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity pl-2">
+                
+                {/* 👇 NOVO: Botão do Google Agenda */}
+                <a
+                    href={generateReminderCalendarLink(reminder, task)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} // Impede que abra os detalhes da tarefa ao clicar
+                    className="p-2 transition-colors dark:bg-gray-800 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                    title="Adicionar Lembrete ao Google Agenda"
+                >
+                    <GoogleCalendarIcon className="w-5 h-5 object-contain" />
+                </a>
+
+                {/* Botão de Lixeira Existente */}
                 <button 
                     onClick={(e) => { e.stopPropagation(); onDelete(); }}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -191,13 +240,25 @@ const NextReminderSpotlight: React.FC<{
                     {reminderDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </div>
                 
+                {/* Card de Detalhes da Tarefa */}
                 <div 
-                    className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 cursor-pointer hover:bg-white/20 transition-colors" 
+                    className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 cursor-pointer hover:bg-white/20 transition-colors w-full" 
                     onClick={() => onSelectTask(task)}
                 >
                     <h4 className="font-bold text-lg truncate">{task.title}</h4>
                     <p className="text-primary-100 text-sm truncate opacity-90">{reminder.note || "Sem nota"}</p>
                 </div>
+
+                {/* 👇 NOVO: Botão do Google Agenda ocupando a largura total (Abaixo) */}
+                <a
+                    href={generateReminderCalendarLink(reminder, task)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center justify-center gap-3 w-full bg-white/5 backdrop-blur-sm rounded-xl py-2 px-3 border border-white/10 cursor-pointer hover:bg-white/20 transition-colors text-sm font-semibold text-white/90 hover:text-white"
+                >
+                    <GoogleCalendarIcon className="w-5 h-5 object-contain" />
+                    Adicionar ao Google Agenda
+                </a>
             </div>
         </div>
     );
@@ -284,10 +345,7 @@ const RemindersView: React.FC<RemindersViewProps> = ({ tasks = [], categories = 
             {/* --- LEFT PANEL: Summary & Next Reminder (Detached Card) --- */}
             <div className="w-full lg:w-96 flex-shrink-0 bg-white dark:bg-[#161B22] rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden h-auto lg:h-full">
                 <div className="overflow-y-auto custom-scrollbar h-full p-6 lg:p-8">
-                    <div className="mb-8">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Meus Lembretes</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie seus alertas e prazos.</p>
-                    </div>
+        
 
                     {nextReminder ? (
                         <NextReminderSpotlight 
@@ -302,7 +360,7 @@ const RemindersView: React.FC<RemindersViewProps> = ({ tasks = [], categories = 
                         </div>
                     )}
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-10">
                         <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3 px-1">Visão Geral</h3>
                         <StatRow 
                             label="Atrasados" 

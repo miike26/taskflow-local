@@ -17,6 +17,52 @@ import DateRangeCalendar from '../DateRangeCalendar';
 import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
 
+// --- HELPER: Gera Link Mágico do Google Calendar ---
+const generateGoogleCalendarLink = (task: Task): string => {
+    const baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+    const text = encodeURIComponent(task.title);
+    const details = encodeURIComponent(task.description || "");
+
+    if (!task.dueDate) return baseUrl;
+
+    // 1. Pega a data base que o usuário escolheu
+    const baseDate = new Date(task.dueDate);
+
+    // 2. Cria a data de INÍCIO forçando as 09:00 da manhã (horário local)
+    const startDate = new Date(
+        baseDate.getFullYear(), 
+        baseDate.getMonth(), 
+        baseDate.getDate(), 
+        9, 0, 0
+    );
+    
+    // 3. Cria a data de FIM forçando as 10:00 da manhã (horário local)
+    const endDate = new Date(
+        baseDate.getFullYear(), 
+        baseDate.getMonth(), 
+        baseDate.getDate(), 
+        10, 0, 0
+    );
+
+    // 4. Formata para o padrão UTC sem pontuação que a Google exige
+    const formatDateTime = (date: Date) => {
+        return date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+    };
+
+    const dates = `${formatDateTime(startDate)}/${formatDateTime(endDate)}`;
+
+    return `${baseUrl}&text=${text}&details=${details}&dates=${dates}`;
+};
+
+// --- ICON: Google Calendar (Oficial Colorido) ---
+const GoogleCalendarIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <img 
+        src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" 
+        alt="Google Agenda" 
+        className={className} 
+    />
+);
+
 // --- HELPER: Recupera ícones de categorias (Sincronizado com Header.tsx) ---
 const getCategoryIcon = (category?: Category) => {
     if (!category) return BellIcon;
@@ -1846,17 +1892,41 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                     <div className="flex flex-col gap-6 px-4 pt-6 mt-2 border-t border-gray-200 dark:border-gray-700">
                         <div ref={dueDateRef} className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                             <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 xl:mb-0">Prazo Final</label>
-                            <button type="button" onClick={() => setIsDueDateCalendarOpen(prev => !prev)}
-                                className={`flex items-center justify-between w-full xl:w-[205px] px-3 py-2 bg-white dark:bg-[#0D1117] border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 ${isDueDateCalendarOpen ? 'ring-2 ring-primary-500/20 dark:ring-primary-500/50 border-primary-500' : ''}`}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <CalendarDaysIcon className="w-4 h-4 text-gray-400" />
-                                    <span className={`text-sm ${taskData.dueDate ? 'text-gray-900 dark:text-gray-200' : 'text-gray-500'}`}>{taskData.dueDate ? new Date(taskData.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nenhuma'}</span>
-                                </div>
-                            </button>
-                            {isDueDateCalendarOpen && (
-                                <div className="absolute top-full right-0 mt-2 z-10"><Calendar selectedDate={taskData.dueDate ? new Date(taskData.dueDate) : null} onSelectDate={handleDateSelect} displayDate={editCalendarDisplayDate} onDisplayDateChange={setEditCalendarDisplayDate} /></div>
-                            )}
+                            
+                            <div className="group flex items-center justify-end w-full xl:w-[205px] relative">
+                                
+                                <button type="button" onClick={() => setIsDueDateCalendarOpen(prev => !prev)}
+                                    className={`relative flex items-center justify-between px-3 py-2 bg-white dark:bg-[#0D1117] border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer transition-all duration-200 hover:border-primary-400 dark:hover:border-primary-400 flex-1 min-w-0 ${isDueDateCalendarOpen ? 'ring-2 ring-primary-500/20 dark:ring-primary-500/50 border-primary-500' : ''}`}
+                                >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <CalendarDaysIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                        <span className={`text-sm truncate ${taskData.dueDate ? 'text-gray-900 dark:text-gray-200' : 'text-gray-500'}`}>{taskData.dueDate ? new Date(taskData.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : 'Nenhuma'}</span>
+                                    </div>
+                                </button>
+
+                                {/* Botão Google Agenda */}
+                                {taskData.dueDate && (
+                                    <div className="flex items-center gap-1 overflow-hidden w-0 group-hover:w-auto opacity-0 group-hover:opacity-100 transition-all duration-300 ease-in-out pl-1">
+                                        <a
+                                            href={generateGoogleCalendarLink(taskData)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            // Removi as cores de texto, deixei apenas o hover do fundo
+                                            className="p-2 text-gray-400 hover:text-primary-500 transition-colors bg-gray-100 dark:bg-gray-800 rounded-md hover:bg-primary-50 dark:hover:bg-primary-900/20"
+                                            title="Adicionar ao Google Agenda"
+                                        >
+                                            <GoogleCalendarIcon className="w-5 h-5 object-contain" />
+                                        </a>
+                                    </div>
+                                )}
+
+                                {isDueDateCalendarOpen && (
+                                    <div className="absolute top-full right-0 mt-2 z-10">
+                                        <Calendar selectedDate={taskData.dueDate ? new Date(taskData.dueDate) : null} onSelectDate={handleDateSelect} displayDate={editCalendarDisplayDate} onDisplayDateChange={setEditCalendarDisplayDate} />
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div ref={categoryDropdownRef} className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">

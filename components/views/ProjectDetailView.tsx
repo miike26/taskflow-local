@@ -694,6 +694,23 @@ const defaultTableSort = (a: Task, b: Task) => {
     return aDueDate - bDueDate;
 };
 
+// 👇 ADICIONE ESTA FUNÇÃO:
+const kanbanSortFunction = (a: Task, b: Task) => {
+    const now = new Date();
+    const aIsOverdue = a.dueDate && new Date(a.dueDate) < now && a.status !== 'Concluída';
+    const bIsOverdue = b.dueDate && new Date(b.dueDate) < now && b.status !== 'Concluída';
+
+    // Prioriza atrasados
+    if (aIsOverdue && !bIsOverdue) return -1;
+    if (!aIsOverdue && bIsOverdue) return 1;
+
+    // Depois ordena por prazo (menor primeiro)
+    const aDueDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+    const bDueDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+
+    return aDueDate - bDueDate;
+};
+
 const KanbanColumn: React.FC<{
     title: string;
     tasks: Task[];
@@ -902,6 +919,8 @@ const ProjectDetailView: React.FC<ProjectDetailViewProps> = ({
             } else {
                 results.sort(defaultTableSort);
             }
+            } else {
+            results.sort(kanbanSortFunction);
         }
 
         return results;
