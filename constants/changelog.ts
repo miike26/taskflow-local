@@ -10,22 +10,22 @@ export interface ChangeLogItem {
 }
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
-    // {
-    //     version: '1.3.1',
-    //     date: '2026-02-19',
-    //     title: 'Integração com Google Agenda',
-    //     description: 'Agora você pode adicionar suas tarefas e lembretes diretamente no Google Agenda.',
-    //     changes: [
-    //         { 
-    //             type: 'feature', 
-    //             text: 'Atalho para integração com Google Agenda: Adicione tarefas e lembretes ao seu calendário oficial com apenas um clique através de links inteligentes. Ao passar o mouse sobre o prazo de uma tarefa, um novo botão "Adicionar ao Google Agenda" aparece.' 
-    //         },
-    //         { 
-    //             type: 'feature', 
-    //             text: 'Na tela de lembretes, agora é possível exportar o horário exato da notificação para o Google Agenda, incluindo notas extras e detalhes da tarefa.' 
-    //         }
-    //     ]
-    // },
+    {
+        version: '1.3.1',
+        date: '2026-02-19',
+        title: 'Integração com Google Agenda',
+        description: 'Agora você pode adicionar suas tarefas e lembretes diretamente no Google Agenda.',
+        changes: [
+            { 
+                type: 'feature', 
+                text: 'Atalho para integração com Google Agenda: Adicione tarefas e lembretes ao seu calendário oficial com apenas um clique através de links inteligentes. Ao passar o mouse sobre o prazo de uma tarefa, um novo botão "Adicionar ao Google Agenda" aparece.' 
+            },
+            { 
+                type: 'feature', 
+                text: 'Na tela de lembretes, agora é possível exportar o horário exato da notificação para o Google Agenda, incluindo notas extras e detalhes da tarefa.' 
+            }
+        ]
+    },
     {
         version: '1.3.0',
         date: '2026-02-18',

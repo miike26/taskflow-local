@@ -727,7 +727,7 @@ const SubTaskItem: React.FC<{
     }
 
     const handleSaveNote = () => {
-        onUpdate(subTask.id, { note: noteText.trim() || undefined });
+        onUpdate(subTask.id, { note: noteText.trim() });
         setIsPopoverOpen(false);
     };
 
@@ -865,7 +865,7 @@ const ActivityItem: React.FC<{
     timeFormat: '12h' | '24h';
     onLinkEnter: (data: { url: string; title: string; x: number; y: number }) => void;
     onLinkLeave: () => void;
-}> = ({ act, onDelete, timeFormat, onLinkEnter, onLinkLeave }) => {
+}> = ({ act, onDelete, timeFormat, onLinkEnter, onLinkLeave, taskTitle }) => {
 
     const [isExpanded, setIsExpanded] = useState(false); // Adicionado para suportar o 'Ver detalhes' do BulkChange antigo
     const time = formatActivityTimestamp(act.timestamp, timeFormat);
@@ -928,6 +928,7 @@ const ActivityItem: React.FC<{
                     {act.type === 'project' && !act.taskTitle && 'atualizou o projeto.'}
 
                     {act.type === 'note' && (isAi ? 'sumarizou anotações com IA:' : 'adicionou uma nota:')}
+                    {act.type === 'reminder' && 'criou um lembrete para:'}
 
                     {/* Lógica de Status Change (Com detalhes DE -> PARA) */}
                     {isBulkChange ? (
@@ -977,11 +978,38 @@ const ActivityItem: React.FC<{
                 )}
 
                 {act.type === 'reminder' && act.notifyAt && (
-                    <div className="mt-1 p-2 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900/50 text-sm">
-                        <p className="font-semibold">
+                    <div className="mt-1 p-3 border border-gray-200 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900/50 text-sm">
+                        <p className="font-semibold text-gray-800 dark:text-gray-200">
                             {new Date(act.notifyAt).toLocaleDateString('pt-BR', { dateStyle: 'full' })}, {new Date(act.notifyAt).toLocaleTimeString('pt-BR', { hour: timeFormat === '12h' ? 'numeric' : '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}
                         </p>
-                        {act.note && <p className="mt-1 italic">"{act.note}"</p>}
+                        {act.note && <p className="mt-1.5 italic text-gray-600 dark:text-gray-400">"{act.note}"</p>}
+                        
+                        {/* 👇 NOVO: Botão do Google Agenda Integrado */}
+                        <div className="mt-3 flex justify-start">
+                            <a
+                                href={(() => {
+                                    // Mini construtor do Link Mágico específico para este lembrete
+                                    const baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+                                    const title = taskTitle || act.taskTitle || "Tarefa";
+                                    const text = encodeURIComponent(`[Lembrete] ${title}`);
+                                    const desc = encodeURIComponent(act.note ? `Nota do lembrete: ${act.note}` : '');
+                                    
+                                    const startDate = new Date(act.notifyAt!);
+                                    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+                                    
+                                    const formatDateTime = (date: Date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
+                                    const dates = `${formatDateTime(startDate)}/${formatDateTime(endDate)}`;
+                                    
+                                    return `${baseUrl}&text=${text}&details=${desc}&dates=${dates}`;
+                                })()}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                            >
+                                <GoogleCalendarIcon className="w-3.5 h-3.5 object-contain" />
+                                Adicionar ao Google Agenda
+                            </a>
+                        </div>
                     </div>
                 )}
 
@@ -1602,6 +1630,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             timeFormat={appSettings.timeFormat}
             onLinkEnter={handleLinkEnter}
             onLinkLeave={handleLinkLeave}
+            taskTitle={taskData.title}
         />
     );
 
