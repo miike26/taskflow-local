@@ -66,14 +66,13 @@ const RichTextNoteEditor: React.FC<{
     onCancel: () => void;
     isLoading?: boolean;
     isAiHighlighted?: boolean;
-    enableAi?: boolean; // [MODIFICADO] Nova prop para controle
+    enableAi?: boolean; 
 }> = ({ value, onChange, placeholder, onAdd, onCancel, isLoading, isAiHighlighted, enableAi = true }) => {
     const editorRef = useRef<HTMLDivElement>(null);
     const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
     const [isFormatting, setIsFormatting] = useState(false);
     const savedSelectionRef = useRef<Range | null>(null);
 
-    // Sync external value to innerHTML
     useEffect(() => {
         if (editorRef.current && !isLoading && !isFormatting) {
             if (editorRef.current.innerHTML !== value) {
@@ -97,6 +96,64 @@ const RichTextNoteEditor: React.FC<{
         if (editorRef.current) {
             onChange(editorRef.current.innerHTML);
             editorRef.current.focus();
+        }
+    };
+
+    // 👇 [NOVO] Lógica de detecção de Auto-link ao digitar Espaço ou Enter
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+            const selection = window.getSelection();
+            if (!selection || !selection.isCollapsed) return;
+
+            const node = selection.focusNode;
+            const offset = selection.focusOffset;
+
+            // Verifica se estamos num nó de texto válido
+            if (node && node.nodeType === Node.TEXT_NODE) {
+                // Se já estivermos dentro de um link (<a>), ignoramos para não quebrar o HTML
+                if (node.parentElement && node.parentElement.tagName.toLowerCase() === 'a') {
+                    return;
+                }
+
+                // Pega o texto antes do cursor
+                const textBeforeCursor = node.textContent?.slice(0, offset) || '';
+                
+                // Regex para encontrar uma URL (http ou https) que está "colada" no cursor
+                const urlMatch = textBeforeCursor.match(/(https?:\/\/[^\s]+)$/i);
+
+                if (urlMatch) {
+                    const url = urlMatch[1];
+                    
+                    e.preventDefault(); // Impede o espaço ou enter nativo temporariamente
+
+                    // Cria um Range para selecionar só a URL digitada
+                    const range = document.createRange();
+                    range.setStart(node, offset - url.length);
+                    range.setEnd(node, offset);
+                    
+                    // Aplica a seleção
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+
+                    // Transforma em link
+                    document.execCommand('createLink', false, url);
+
+                    // Joga o cursor para o final do link que acabou de ser criado
+                    selection.collapseToEnd();
+
+                    // Agora insere o Espaço ou Enter que havíamos cancelado no e.preventDefault()
+                    if (e.key === ' ') {
+                        document.execCommand('insertText', false, ' ');
+                    } else if (e.key === 'Enter') {
+                        document.execCommand('insertParagraph', false);
+                    }
+
+                    // Força a atualização do estado
+                    if (editorRef.current) {
+                        onChange(editorRef.current.innerHTML);
+                    }
+                }
+            }
         }
     };
 
@@ -153,7 +210,7 @@ const RichTextNoteEditor: React.FC<{
             ${rawContent}
 
             Saída:
-            Apenas o HTML limpo e formatado (tags permitidas: <p>, <ul>, <li>, <strong>, <em>, <br>). Sem markdown.
+            Apenas o HTML limpo e formatado (tags permitidas: <p>, <ul>, <li>, <strong>, <em>, <br>, <a>). Sem markdown.
             `;
 
             const response = await ai.models.generateContent({
@@ -165,7 +222,6 @@ const RichTextNoteEditor: React.FC<{
             
             if (formattedText) {
                 onChange(formattedText);
-                // We don't set innerHTML here because React state update will trigger useEffect to update it when formatting state is cleared
             }
         } catch (error) {
             console.error("Smart format failed:", error);
@@ -201,7 +257,6 @@ const RichTextNoteEditor: React.FC<{
                     <button onMouseDown={(e) => handleMouseDown(e, handleLinkModalOpen)} className={toolbarButtonClass} title="Link" disabled={isBusy}><LinkIcon className="w-5 h-5" /></button>
                     <button onMouseDown={(e) => handleMouseDown(e, () => execFormat('insertUnorderedList'))} className={toolbarButtonClass} title="Lista" disabled={isBusy}><ListBulletIcon className="w-5 h-5" /></button>
                     
-                    {/* [MODIFICADO] Renderização Condicional do Botão de IA */}
                     {enableAi && (
                         <button 
                             onMouseDown={(e) => handleMouseDown(e, handleSmartFormat)} 
@@ -220,7 +275,6 @@ const RichTextNoteEditor: React.FC<{
                 </div>
                 
                 <div className="relative min-h-[120px] max-h-[300px] overflow-hidden">
-                    {/* Loading Overlay */}
                     {isBusy && (
                         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-4 bg-white dark:bg-[#0D1117] text-indigo-500 dark:text-indigo-400 cursor-wait">
                             <SparklesIcon className="w-6 h-6 animate-spin mb-3" />
@@ -230,11 +284,12 @@ const RichTextNoteEditor: React.FC<{
                         </div>
                     )}
                     
-                    {/* Editor */}
+                    {/* 👇 [NOVO] Adicionado o onKeyDown aqui */}
                     <div
                         ref={editorRef}
                         contentEditable
                         onInput={handleInput}
+                        onKeyDown={handleKeyDown} 
                         data-placeholder={placeholder}
                         className={`prose prose-sm dark:prose-invert max-w-none block w-full p-2.5 h-full min-h-[120px] max-h-[300px] overflow-y-auto focus:outline-none empty:before:text-gray-400 empty:before:content-[attr(data-placeholder)] ${isBusy ? 'invisible' : ''}`}
                     />
