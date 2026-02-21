@@ -450,7 +450,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               {title}
             </h3>
             {description && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 transition-opacity duration-200">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 transition-opacity duration-200 break-words [overflow-wrap:anywhere] w-full">
                 {description}
               </p>
             )}
