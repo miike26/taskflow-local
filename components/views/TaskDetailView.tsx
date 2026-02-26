@@ -30,17 +30,17 @@ const generateGoogleCalendarLink = (task: Task): string => {
 
     // 2. Cria a data de INÍCIO forçando as 09:00 da manhã (horário local)
     const startDate = new Date(
-        baseDate.getFullYear(), 
-        baseDate.getMonth(), 
-        baseDate.getDate(), 
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate(),
         9, 0, 0
     );
-    
+
     // 3. Cria a data de FIM forçando as 10:00 da manhã (horário local)
     const endDate = new Date(
-        baseDate.getFullYear(), 
-        baseDate.getMonth(), 
-        baseDate.getDate(), 
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate(),
         10, 0, 0
     );
 
@@ -56,10 +56,10 @@ const generateGoogleCalendarLink = (task: Task): string => {
 
 // --- ICON: Google Calendar (Oficial Colorido) ---
 const GoogleCalendarIcon: React.FC<{ className?: string }> = ({ className }) => (
-    <img 
-        src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" 
-        alt="Google Agenda" 
-        className={className} 
+    <img
+        src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg"
+        alt="Google Agenda"
+        className={className}
     />
 );
 
@@ -680,15 +680,28 @@ const SubTaskItem: React.FC<{
     onToggle: (id: string) => void;
     onDelete: (id: string) => void;
     onUpdate: (id: string, updates: Partial<SubTask>) => void;
-    dragHandlers: any;
-}> = ({ subTask, onToggle, onDelete, onUpdate, dragHandlers }) => {
+    dragHandlers?: any;
+    isDraft?: boolean;
+}> = ({ subTask, onToggle, onDelete, onUpdate, dragHandlers, isDraft }) => {
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [noteText, setNoteText] = useState(subTask.note || '');
     const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0, align: 'bottom' });
     const [showTooltip, setShowTooltip] = useState(false);
     const [tooltipCoords, setTooltipCoords] = useState({ top: 0, left: 0, placement: 'bottom' });
+    
+    // 👇 ESTADO NOVO PARA ANIMAÇÃO DE ENTRADA
+    const [isAnimatingIn, setIsAnimatingIn] = useState(!!isDraft);
 
     const iconRef = useRef<HTMLButtonElement>(null);
+
+    // Efeito para disparar a animação quando o rascunho é renderizado
+    useEffect(() => {
+        if (isDraft) {
+            // Remove a classe de animação após 500ms para estabilizar o elemento
+            const timer = setTimeout(() => setIsAnimatingIn(false), 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isDraft]);
 
     const handleOpenPopover = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -740,17 +753,44 @@ const SubTaskItem: React.FC<{
         <>
             <div
                 {...dragHandlers}
-                className="flex items-center bg-gray-100 dark:bg-[#0D1117] p-2 rounded-md group hover:shadow-sm transition-all duration-200 relative"
+                className={`flex items-center p-2 rounded-md group transition-all duration-500 ease-out relative overflow-hidden
+                    ${isDraft 
+                        ? 'bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 ring-1 ring-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]' 
+                        : 'bg-gray-100 dark:bg-[#0D1117] hover:shadow-sm border border-transparent'
+                    }
+                    ${isAnimatingIn ? 'opacity-0 translate-y-4 scale-95' : 'opacity-100 translate-y-0 scale-100'}
+                `}
             >
-                <DragHandleIcon className="w-5 h-5 text-gray-400 cursor-grab mr-2" />
+                {/* Efeito de "Brilho" que corre quando a tarefa oficializa */}
+                {!isDraft && !isAnimatingIn && (
+                    <div className="absolute inset-0 bg-white/20 dark:bg-white/5 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                )}
+
+                <div className="w-7 flex justify-center flex-shrink-0 transition-all duration-300">
+                    {isDraft ? (
+                        <SparklesIcon className="w-4 h-4 text-indigo-500 animate-pulse" />
+                    ) : (
+                        <DragHandleIcon className="w-5 h-5 text-gray-400 cursor-grab opacity-50 group-hover:opacity-100 transition-opacity" />
+                    )}
+                </div>
+                
                 <input
                     type="checkbox"
                     id={`subtask-${subTask.id}`}
                     checked={subTask.completed}
                     onChange={() => onToggle(subTask.id)}
-                    className="appearance-none h-5 w-5 rounded-md border-2 border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent focus:outline-none"
+                    className={`appearance-none h-4 w-4 rounded border-2 focus:outline-none transition-colors duration-200 flex-shrink-0 cursor-pointer
+                        ${isDraft 
+                            ? 'border-indigo-300 dark:border-indigo-600 checked:bg-indigo-500 checked:border-transparent' 
+                            : 'border-gray-300 dark:border-gray-600 checked:bg-primary-500 checked:border-transparent'
+                        }
+                    `}
                 />
-                <label htmlFor={`subtask-${subTask.id}`} className={`ml-3 flex-1 text-sm cursor-pointer ${subTask.completed ? 'line-through text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                
+                <label htmlFor={`subtask-${subTask.id}`} className={`ml-3 flex-1 text-sm cursor-pointer transition-colors duration-200
+                    ${subTask.completed ? 'line-through text-gray-400 dark:text-gray-500' : 
+                        isDraft ? 'text-indigo-900 dark:text-indigo-200 font-medium' : 'text-gray-800 dark:text-gray-200'
+                    }`}>
                     {subTask.text}
                 </label>
 
@@ -759,19 +799,24 @@ const SubTaskItem: React.FC<{
                         <button
                             ref={iconRef}
                             onClick={handleOpenPopover}
-                            className={`p-1 transition-all duration-200 ${subTask.note ? 'opacity-100 text-primary-500' : 'opacity-0 group-hover:opacity-100 text-gray-400 hover:text-primary-500'}`}
+                            className={`p-1 transition-all duration-200 
+                                ${subTask.note 
+                                    ? (isDraft ? 'opacity-100 text-indigo-500' : 'opacity-100 text-primary-500') 
+                                    : `opacity-0 group-hover:opacity-100 ${isDraft ? 'text-indigo-300 hover:text-indigo-600' : 'text-gray-400 hover:text-primary-500'}`
+                                }`}
                             title={subTask.note ? undefined : "Adicionar nota"}
                         >
                             <ChatBubbleOvalLeftIcon className="w-4 h-4" />
                         </button>
                     </div>
 
-                    <button onClick={() => onDelete(subTask.id)} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => onDelete(subTask.id)} className={`opacity-0 group-hover:opacity-100 transition-all duration-200 p-1 rounded hover:bg-white/50 dark:hover:bg-white/10 ${isDraft ? 'text-indigo-400 hover:text-indigo-600' : 'text-gray-400 hover:text-red-500'}`}>
                         <TrashIcon className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
+            {/* ... Todo o resto do Tooltip e Popover continua exatamente igual ... */}
             {showTooltip && (
                 <div
                     className="fixed z-[70] p-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl pointer-events-none w-72 max-w-sm break-words whitespace-pre-wrap"
@@ -983,7 +1028,7 @@ const ActivityItem: React.FC<{
                             {new Date(act.notifyAt).toLocaleDateString('pt-BR', { dateStyle: 'full' })}, {new Date(act.notifyAt).toLocaleTimeString('pt-BR', { hour: timeFormat === '12h' ? 'numeric' : '2-digit', minute: '2-digit', hour12: timeFormat === '12h' })}
                         </p>
                         {act.note && <p className="mt-1.5 italic text-gray-600 dark:text-gray-400">"{act.note}"</p>}
-                        
+
                         {/* 👇 NOVO: Botão do Google Agenda Integrado */}
                         <div className="mt-3 flex justify-start">
                             <a
@@ -993,13 +1038,13 @@ const ActivityItem: React.FC<{
                                     const title = taskTitle || act.taskTitle || "Tarefa";
                                     const text = encodeURIComponent(`[Lembrete] ${title}`);
                                     const desc = encodeURIComponent(act.note ? `Nota do lembrete: ${act.note}` : '');
-                                    
+
                                     const startDate = new Date(act.notifyAt!);
                                     const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-                                    
+
                                     const formatDateTime = (date: Date) => date.toISOString().replace(/-|:|\.\d\d\d/g, "");
                                     const dates = `${formatDateTime(startDate)}/${formatDateTime(endDate)}`;
-                                    
+
                                     return `${baseUrl}&text=${text}&details=${desc}&dates=${dates}`;
                                 })()}
                                 target="_blank"
@@ -1069,6 +1114,11 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
 
 
     const [taskData, setTaskData] = useState<Task>(task);
+
+    // --- ESTADOS DA IA PARA SUB-TAREFAS ---
+    const [aiSubTaskSuggestions, setAiSubTaskSuggestions] = useState<SubTask[]>([]);
+    const [isGeneratingSubTasks, setIsGeneratingSubTasks] = useState(false);
+
     useEffect(() => setTaskData(task), [task]);
 
     const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -1657,7 +1707,122 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
         }
     };
 
+    // --- FUNÇÃO PARA GERAR SUB-TAREFAS COM IA ---
+    // --- FUNÇÃO PARA GERAR SUB-TAREFAS COM IA ---
+    const handleGenerateSubTasks = async () => {
+        if (!appSettings.enableAi) {
+            setConfirmationState({
+                isOpen: true,
+                title: "Ativar Recursos de IA",
+                message: "Para gerar sub-tarefas, é necessário ativar os Recursos de IA. Deseja ativar agora?",
+                onConfirm: () => setAppSettings(prev => ({ ...prev, enableAi: true }))
+            });
+            return;
+        }
 
+        // 1. Validação local super rápida (poupa requisição à toa)
+        const contextLength = (taskData.title || '').length + (taskData.description || '').length;
+        if (contextLength < 4) {
+            addToast({ title: 'O título é muito curto para a IA entender.', type: 'error' });
+            return;
+        }
+
+        setIsGeneratingSubTasks(true);
+        setAiSubTaskSuggestions([]); 
+
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            
+            // 👇 PROMPT ATUALIZADO: Com regra de Validação de Contexto
+            const prompt = `
+            Você é um assistente de produtividade.
+            Crie uma lista de sub-tarefas curtas e diretas baseadas no título e descrição da tarefa abaixo.
+            As sub-tarefas devem começar com um VERBO DE AÇÃO (ex: Criar, Revisar, Enviar).
+            
+            Título: ${taskData.title}
+            Descrição: ${taskData.description || 'Sem descrição detalhada.'}
+            
+            REGRAS OBRIGATÓRIAS:
+            1. SE o título e a descrição forem genéricos demais, vagos ou apenas testes (ex: "Teste", "asdf", "Nova Tarefa", "Ligar") e não houver contexto suficiente para quebrar em passos menores, NÃO INVENTE TAREFAS. Retorne EXATAMENTE e APENAS a palavra: INSUFICIENTE.
+            2. Caso haja contexto válido, retorne APENAS uma lista de texto simples, com um item por linha.
+            3. Comece CADA linha com um traço e um espaço (exatamente assim: "- ").
+            4. Não adicione introduções ou formatação markdown.
+            5. Gere no máximo 7 sub-tarefas.
+
+            Exemplo de saída esperada:
+
+            - Configurar repositório no GitHub
+            - Definir paleta de cores
+            - Criar componente Header
+            `;
+
+            const response = await ai.models.generateContent({ 
+                model: 'gemini-2.5-flash', 
+                contents: prompt 
+            });
+            
+            const rawText = response.text || "";
+            
+            // 👇 2. O APP LÊ O CÓDIGO DA IA E AVISA O USUÁRIO
+            if (rawText.trim().includes('INSUFICIENTE')) {
+                addToast({ title: 'Adicione mais contexto à tarefa para a IA gerar sugestões!', type: 'error' });
+                return; // Para a função aqui e não tenta renderizar nada
+            }
+            
+            const suggestionsList = rawText
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line.startsWith('-'))
+                .map(line => line.replace(/^- /, '').trim());
+
+            if (suggestionsList.length > 0) {
+                const draftSubTasks: SubTask[] = suggestionsList.map((text, index) => ({
+                    id: `draft-${Date.now()}-${index}`,
+                    text: text,
+                    completed: false,
+                    isDraft: true 
+                }));
+                
+                setAiSubTaskSuggestions(draftSubTasks);
+            } else {
+                throw new Error("A IA não retornou itens no formato esperado.");
+            }
+        } catch (e) {
+            console.error("Erro ao gerar sub-tarefas com IA:", e);
+            addToast({ title: 'Erro ao gerar sugestões. Tente novamente.', type: 'error' });
+        } finally {
+            setIsGeneratingSubTasks(false);
+        }
+    };
+
+    // Funcões para Aceitar/Recusar o Draft
+    const handleAcceptAiSuggestions = () => {
+        // Pega as sugestões e remove a propriedade 'isDraft' completamente
+        const finalTasks = aiSubTaskSuggestions.map(st => {
+            const { isDraft, ...cleanSubTask } = st; // Desestrutura tirando o isDraft
+            return cleanSubTask; // Retorna só os dados limpos que o Firebase gosta
+        });
+
+        onUpdate(taskData.id, { subTasks: [...(taskData.subTasks || []), ...finalTasks] });
+        setAiSubTaskSuggestions([]); // Limpa o rascunho
+    };
+
+    // --- HANDLERS DOS RASCUNHOS DA IA ---
+    const handleToggleDraftSubTask = (subTaskId: string) => {
+        setAiSubTaskSuggestions(prev => prev.map(st => st.id === subTaskId ? { ...st, completed: !st.completed } : st));
+    };
+
+    const handleDeleteDraftSubTask = (subTaskId: string) => {
+        setAiSubTaskSuggestions(prev => prev.filter(st => st.id !== subTaskId));
+    };
+
+    const handleUpdateDraftSubTaskData = (subTaskId: string, updates: Partial<SubTask>) => {
+        setAiSubTaskSuggestions(prev => prev.map(st => st.id === subTaskId ? { ...st, ...updates } : st));
+    };
+
+    const handleDiscardAiSuggestions = () => {
+        setAiSubTaskSuggestions([]);
+    };
 
     return (
         <div className="p-4 flex flex-col h-full">
@@ -1921,9 +2086,9 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                     <div className="flex flex-col gap-6 px-4 pt-6 mt-2 border-t border-gray-200 dark:border-gray-700">
                         <div ref={dueDateRef} className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-1.5">
                             <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 xl:mb-0">Prazo Final</label>
-                            
+
                             <div className="group flex items-center justify-end w-full xl:w-[205px] relative">
-                                
+
                                 <button type="button" onClick={() => setIsDueDateCalendarOpen(prev => !prev)}
                                     className={`relative flex items-center justify-between px-3 py-2 bg-white dark:bg-[#0D1117] border border-gray-300 dark:border-gray-700 rounded-lg shadow-sm cursor-pointer transition-all duration-200 hover:border-primary-400 dark:hover:border-primary-400 flex-1 min-w-0 ${isDueDateCalendarOpen ? 'ring-2 ring-primary-500/20 dark:ring-primary-500/50 border-primary-500' : ''}`}
                                 >
@@ -2171,9 +2336,22 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                 <div className="lg:col-span-1 2xl:col-span-3 flex flex-col gap-4 min-h-0 h-full">
 
                     {/* 1. Sub-tarefas Section */}
-                    {/* A altura agora é calculada: Se Docs fechado, ocupa tudo menos o cabeçalho do Docs. Se aberto, ocupa 55%. */}
                     <div className={`bg-white dark:bg-[#161B22] p-4 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${isDocsCollapsed ? 'h-[calc(100%-4.5rem)]' : 'h-[55%]'}`}>
-                        <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex-shrink-0">Sub-tarefas</h3>
+                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-200">Sub-tarefas</h3>
+
+                            {/* 👇 MUDANÇA 1: Botão Pequeno no Topo (Só aparece se já tem sub-tarefas E não tem rascunho aberto) */}
+                            {totalSubTasks > 0 && aiSubTaskSuggestions.length === 0 && (
+                                <button
+                                    onClick={handleGenerateSubTasks}
+                                    disabled={isGeneratingSubTasks}
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg text-xs font-bold transition-colors disabled:opacity-50"
+                                >
+                                    <SparklesIcon className={`w-3.5 h-3.5 ${isGeneratingSubTasks ? 'animate-spin' : ''}`} />
+                                    Gerar com IA
+                                </button>
+                            )}
+                        </div>
 
                         {totalSubTasks > 0 && (
                             <div className="mb-4 flex-shrink-0">
@@ -2202,13 +2380,61 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                                         }}
                                     />
                                 ))
-                            ) : (
+                            ) : aiSubTaskSuggestions.length === 0 ? (
+                                /* 👇 MUDANÇA 2: Empty State com Botão Grande de IA */
                                 <div className="text-center py-4 flex flex-col items-center justify-center h-full">
-                                    <ListBulletIcon className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-700" />
-                                    <h4 className="mt-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Nenhuma sub-tarefa</h4>
+                                    <ListBulletIcon className="w-10 h-10 mx-auto text-gray-300 dark:text-gray-700 mb-2" />
+                                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Nenhuma sub-tarefa</h4>
+                                    <button
+                                        onClick={handleGenerateSubTasks}
+                                        disabled={isGeneratingSubTasks}
+                                        className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl text-sm font-bold transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+                                    >
+                                        <SparklesIcon className={`w-4 h-4 ${isGeneratingSubTasks ? 'animate-spin' : 'group-hover:animate-pulse'}`} />
+                                        {isGeneratingSubTasks ? 'Pensando...' : 'Criar checklist com IA'}
+                                    </button>
                                 </div>
-                            )}
+                            ) : null}
+
+                            {/* 👇 MUDANÇA AQUI: 2. Mapeamento dos Rascunhos da IA */}
+                            {aiSubTaskSuggestions.map((draftSt) => (
+                                <SubTaskItem
+                                    key={draftSt.id}
+                                    subTask={draftSt}
+                                    isDraft={true}
+                                    onToggle={handleToggleDraftSubTask}
+                                    onDelete={handleDeleteDraftSubTask}
+                                    onUpdate={handleUpdateDraftSubTaskData}
+                                // Não passamos dragHandlers para o rascunho, ele fica fixo até ser salvo!
+                                />
+                            ))}
+
+
                         </div>
+
+                        {/* 👇 MUDANÇA AQUI: Barra de Confirmação da IA */}
+                        {aiSubTaskSuggestions.length > 0 && (
+                            <div className="mt-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-xl flex items-center justify-between flex-shrink-0 animate-fade-in shadow-inner">
+                                <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
+                                    <SparklesIcon className="w-4 h-4" />
+                                    <span className="text-sm font-semibold">{aiSubTaskSuggestions.length} sugestões</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleDiscardAiSuggestions}
+                                        className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    >
+                                        Descartar
+                                    </button>
+                                    <button
+                                        onClick={handleAcceptAiSuggestions}
+                                        className="px-3 py-1.5 text-xs font-bold bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-sm"
+                                    >
+                                        Manter Sugestões
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex gap-2 mt-4 flex-shrink-0">
                             <input type="text" value={newSubTask} onChange={e => setNewSubTask(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddSubTask()} placeholder="Adicionar sub-tarefa..." className="flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm p-2.5 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500" />
