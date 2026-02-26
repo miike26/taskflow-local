@@ -1,13 +1,18 @@
 import { Task, Category, Tag, Project } from '../types';
 
 // Função auxiliar para escapar caracteres especiais do CSV (aspas, vírgulas, quebras de linha)
+// Função auxiliar para escapar caracteres especiais do CSV (aspas, vírgulas, quebras de linha)
 const escapeCsvCell = (text: string | undefined | null): string => {
     if (!text) return '';
-    const stringText = String(text);
-    // Se tiver aspas, vírgula ou quebra de linha, envolve em aspas e duplica as aspas internas
-    if (stringText.includes('"') || stringText.includes(',') || stringText.includes('\n')) {
+    
+    // 1. Limpa quebras de linha (Enter) substituindo por um espaço para não quebrar a planilha
+    const stringText = String(text).replace(/[\r\n]+/g, ' ').trim();
+
+    // 2. Se tiver aspas ou vírgula, envolve em aspas e duplica as aspas internas
+    if (stringText.includes('"') || stringText.includes(',')) {
         return `"${stringText.replace(/"/g, '""')}"`;
     }
+    
     return stringText;
 };
 
