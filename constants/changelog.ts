@@ -14,7 +14,27 @@ export interface ChangeLogItem {
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     {
-        version: '1.3.2',
+        version: '1.3.5',
+        date: '2026-02-28',
+        title: 'Criação de sub-tarefas com IA e correção de bugs',
+        description: 'O FlowTask ficou mais inteligente! Agora você pode gerar sub-tarefas automáticas com IA.',
+        changes: [
+            { 
+                type: 'feature', 
+                text: 'Gere sub-tarefas automaticamente com IA. O FlowTask analisa o contexto do título, descrição e anotações, para sugerir etapas que façam sentido para concluir sua tarefa.' 
+            },
+            { 
+                type: 'improvement', 
+                text: 'Nova tela de "Sobre o Sistema" dentro de Configurações. Todas as novidades e tours guiados do FlowTask em um único lugar.' 
+            },
+            { 
+                type: 'fix', 
+                text: 'Corrigido problema de exportação onde a quebra de linha do campo "Descrição" de uma tarefa, quebrava o arquivo CSV.' 
+            }
+        ]
+    },
+    {
+        version: '1.3.1',
         date: '2026-02-19',
         title: 'Integração com Google Agenda',
         description: 'Agora você pode adicionar suas tarefas e lembretes diretamente no Google Agenda.',

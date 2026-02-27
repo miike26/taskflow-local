@@ -11,7 +11,7 @@ interface FeatureTourModalProps {
 const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, campaign }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const steps = campaign?.steps || [];
-    const currentStep = steps[currentIndex];
+    const currentStep = steps[currentIndex] || steps[0];
     
     // Armazena as URLs "locais" (Blobs) dos vídeos baixados
     const [cachedVideoUrls, setCachedVideoUrls] = useState<Record<string, string>>({});
@@ -86,7 +86,7 @@ const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, ca
         });
     }, [currentIndex, isOpen, cachedVideoUrls]); // Adicionado cachedVideoUrls para dar play assim que baixar
 
-    if (!isOpen) return null;
+    if (!isOpen || !currentStep) return null;
 
     const handleNext = () => {
         if (currentIndex < steps.length - 1) {
