@@ -27,7 +27,7 @@ import { writeBatch, doc } from 'firebase/firestore';
 import { db } from './lib/firebase';
 import FeatureTourModal from './components/FeatureTourModal';
 import LandingPage from './components/LandingPage';
-import { FEATURE_TOUR_STEPS } from './constants/tours';
+import { APP_TOURS, TourCampaign } from './constants/tours';
 import ChangelogModal from './components/ChangelogModal'; // Importe
 import type { View, Task, Category, Tag, Status, NotificationSettings, Notification, Activity, ConfirmationToastData, Habit, HabitTemplate, Project, AppSettings } from './types.ts';
 import { DEFAULT_TASKS, DEFAULT_CATEGORIES, DEFAULT_TAGS, DEFAULT_HABITS, HABIT_TEMPLATES, DEFAULT_PROJECTS } from './constants.ts';
@@ -209,7 +209,37 @@ const AppContent = () => {
   const [isHabitSettingsOpen, setIsHabitSettingsOpen] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  const [isTourOpen, setIsTourOpen] = useState(false);
+  // --- GERENCIADOR DE ONBOARDING CONTÍNUO ---
+  const [activeTour, setActiveTour] = useState<TourCampaign | null>(null);
+
+  // Função para marcar no Firebase que o usuário já viu este tour
+  const markTourAsSeen = useCallback((tourId: string) => {
+      const currentSeen = userData?.seenTours || [];
+      if (!currentSeen.includes(tourId)) {
+          updateUserDoc({ seenTours: [...currentSeen, tourId] });
+      }
+      setActiveTour(null); // Fecha o modal
+  }, [userData, updateUserDoc]);
+
+  // O "Radar" de navegação: Fica olhando a tela atual para soltar os popups
+  useEffect(() => {
+      if (!userData) return;
+
+      const seenTours = userData.seenTours || [];
+      
+      // Procura o 1º tour que está Ativo, não foi visto, e pertence à tela atual
+      const tourToRun = APP_TOURS.find(tour => 
+          tour.isActive && 
+          tour.id !== 'initial_onboarding_v1' && // 👇 A MÁGICA: O radar ignora o tour inicial
+          !seenTours.includes(tour.id) &&
+          (tour.triggerScreen === 'global' || tour.triggerScreen === currentView)
+      );
+
+      // Regra de Ouro: Só mostra tours se a pessoa já terminou o setup inicial (OnboardingWizard)
+      if (tourToRun && (userData.hasCompletedOnboarding || tourToRun.id !== 'initial_onboarding_v1')) {
+          setActiveTour(tourToRun);
+      }
+  }, [currentView, userData]);
   
   const hasLoadedInitialNotifications = useRef(false);
   // const isFirstLoad = useRef(true); < apagar
@@ -338,16 +368,22 @@ const AppContent = () => {
           }
 
           updateUserDoc({ hasCompletedOnboarding: true });
+          const initialTour = APP_TOURS.find(t => t.id === 'initial_onboarding_v1');
+        if (initialTour) {
+            setActiveTour(initialTour);
+        }
           addToast({ title: 'Tudo pronto!', subtitle: 'Suas preferências foram salvas.', type: 'success' });
-          setIsTourOpen(true);
 
       } catch (error) {
           console.error("Erro ao configurar ambiente:", error);
           updateUserDoc({ hasCompletedOnboarding: true });
-          addToast({ title: 'Aviso', subtitle: 'Houve um problema ao criar os dados padrão, mas seu acesso foi liberado.', type: 'error' });
-          setIsTourOpen(true);
+          const initialTour = APP_TOURS.find(t => t.id === 'initial_onboarding_v1');
+        if (initialTour) {
+            setActiveTour(initialTour);
+        }
+          addToast({ title: 'Aviso', subtitle: 'Houve um problema ao criar os dados padrão, mas seu acesso foi liberado.', type: 'error' });          
       }
-  }, [user, categories, tags, updateUserDoc, addToast]);
+  }, [user, categories, tags, updateUserDoc, addToast, setActiveTour]);
 
 
 // [CORREÇÃO DO LOOP INFINITO E DA EXPLOSÃO DE TOASTS]
@@ -1006,7 +1042,13 @@ useEffect(() => {
 
       <ChangelogModal isOpen={isChangelogOpen} onClose={() => setIsChangelogOpen(false)} />
       <OnboardingWizard isOpen={userData !== undefined && !hasCompletedOnboarding} userName={userName} setUserName={handleUpdateUserName} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} theme={theme} setTheme={setTheme} onComplete={handleSyncOnboardingData} />
-      <FeatureTourModal isOpen={isTourOpen} onClose={() => setIsTourOpen(false)} steps={FEATURE_TOUR_STEPS} />
+      <FeatureTourModal 
+    isOpen={!!activeTour} 
+    onClose={() => {
+        if (activeTour) markTourAsSeen(activeTour.id);
+    }} 
+    campaign={activeTour} 
+/>
         
       {showCelebration && <><Confetti /><SuccessOverlay /></>}
       <div className="fixed top-24 right-6 z-50 space-y-3">
@@ -1033,7 +1075,7 @@ useEffect(() => {
                 <Route path="/reminders" element={<RemindersView tasks={tasks} categories={categories} onSelectTask={handleSelectTask} onDeleteReminderRequest={handleDeleteReminderRequest} tags={tags} appSettings={appSettings}/>} />
                 <Route path="/reports" element={<ReportsView tasks={tasks} tags={tags} categories={categories} onSelectTask={handleSelectTask} projects={projects} appSettings={appSettings}/>} />
                 <Route path="/projects" element={<ProjectsView projects={projects} tasks={tasks} userName={userName} onAddProject={handleAddProject} onSelectProject={handleSelectProject} onPinProject={handlePinProject} onUpdateTask={handleUpdateTask} />} />
-                <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onOpenChangelog={handleOpenChangelog} hasNewUpdate={hasNewUpdate} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={() => setIsTourOpen(true)}/>} />
+                <Route path="/settings" element={<SettingsView categories={categories} onAddCategory={(newCat) => { const { icon, ...catData } = newCat; addCategoryFire(catData as Category); addToast({ title: 'Categoria Adicionada', type: 'success' }); }} onDeleteCategory={(id) => { removeCategoryFire(id); addToast({ title: 'Categoria Removida', type: 'success' }); }} tags={tags} onOpenChangelog={handleOpenChangelog} hasNewUpdate={hasNewUpdate} onAddTag={(newTag) => { addTagFire(newTag); addToast({ title: 'Prioridade Adicionada', type: 'success' }); }} onDeleteTag={(id) => { removeTagFire(id); addToast({ title: 'Prioridade Removida', type: 'success' }); }} notificationSettings={notificationSettings} setNotificationSettings={handleUpdateNotificationSettings} appSettings={appSettings} setAppSettings={handleUpdateAppSettings} onLogout={handleCompleteLogout} userName={userName} setUserName={handleUpdateUserName} onOpenTour={(tourId) => setActiveTour(APP_TOURS.find(t => t.id === tourId) || null)}/>} />
         
                 <Route path="/projects/:projectId" element={
                     <ProjectDetailWrapper 

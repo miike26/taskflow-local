@@ -1,34 +1,36 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Category, Tag, NotificationSettings, AppSettings } from '../../types';
 import { useAuth } from '../../hooks/useAuth';
-import { 
-    PencilIcon, TrashIcon, PlusIcon, BriefcaseIcon, Cog6ToothIcon, BellIcon, 
+import {
+    PencilIcon, TrashIcon, PlusIcon, BriefcaseIcon, Cog6ToothIcon, BellIcon,
     UserCircleIcon, CpuChipIcon, SparklesIcon, ExclamationTriangleIcon,
-    FolderIcon, ArrowRightOnRectangleIcon, CheckIcon, ChevronDownIcon, InformationCircleIcon
+    FolderIcon, ArrowRightOnRectangleIcon, CheckIcon, ChevronDownIcon, InformationCircleIcon, PlayIcon, ChevronRightIcon
 } from '../icons';
+import { APP_ICON_URL } from '../../constants';
+import { CHANGELOG_DATA } from '../../constants/changelog';
 
 interface SettingsViewProps {
-  categories: Category[];
-  onAddCategory: (category: Category) => void;
-  onDeleteCategory: (id: string) => void;
-  onOpenChangelog: () => void;
-  
-  tags: Tag[];
-  onAddTag: (tag: Tag) => void;
-  onDeleteTag: (id: string) => void;
+    categories: Category[];
+    onAddCategory: (category: Category) => void;
+    onDeleteCategory: (id: string) => void;
+    onOpenChangelog: () => void;
 
-  notificationSettings: NotificationSettings;
-  setNotificationSettings: React.Dispatch<React.SetStateAction<NotificationSettings>>;
-  appSettings: AppSettings;
-  setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
-  onLogout: () => void;
-  userName: string;
-  setUserName: (name: string) => void;
-  onOpenTour: () => void;
-  hasNewUpdate?: boolean;
+    tags: Tag[];
+    onAddTag: (tag: Tag) => void;
+    onDeleteTag: (id: string) => void;
+
+    notificationSettings: NotificationSettings;
+    setNotificationSettings: React.Dispatch<React.SetStateAction<NotificationSettings>>;
+    appSettings: AppSettings;
+    setAppSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+    onLogout: () => void;
+    userName: string;
+    setUserName: (name: string) => void;
+    onOpenTour: (tourId: string) => void;
+    hasNewUpdate?: boolean;
 }
 
-type SettingsTab = 'general' | 'notifications' | 'organization' | 'account';
+type SettingsTab = 'general' | 'notifications' | 'organization' | 'account' | 'about';
 
 // IDs that cannot be deleted
 const PROTECTED_IDS = ['cat-1', 'cat-2', 'cat-3', 'tag-1', 'tag-2', 'tag-3'];
@@ -40,37 +42,47 @@ const SidebarItem = ({
     label, 
     icon: Icon, 
     isActive, 
-    onClick 
+    onClick,
+    showBadge // 👇 NOVA PROPRIEDADE
 }: { 
     id: SettingsTab, 
     label: string, 
     icon: React.FC<{className?: string}>, 
     isActive: boolean, 
-    onClick: (id: SettingsTab) => void 
+    onClick: (id: SettingsTab) => void,
+    showBadge?: boolean // 👇 TIPO DA NOVA PROPRIEDADE
 }) => (
     <button
         onClick={() => onClick(id)}
-        className={`w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-all duration-200 ${
+        className={`w-full flex items-center justify-between px-4 py-3 text-left rounded-lg transition-all duration-200 ${
             isActive
             ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold' 
             : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
         }`}
     >
-        <Icon className="w-5 h-5" />
-        <span>{label}</span>
+        {/* Agrupamos o ícone e o texto na esquerda */}
+        <div className="flex items-center gap-3">
+            <Icon className="w-5 h-5" />
+            <span>{label}</span>
+        </div>
+        
+        {/* 👇 A bolinha vermelha pulsante na direita */}
+        {showBadge && (
+            <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse flex-shrink-0"></span>
+        )}
     </button>
 );
 
-const SettingToggle = ({ 
-    label, 
-    description, 
-    checked, 
+const SettingToggle = ({
+    label,
+    description,
+    checked,
     onChange,
     colorClass = 'bg-primary-500'
-}: { 
-    label: string, 
-    description?: string, 
-    checked: boolean, 
+}: {
+    label: string,
+    description?: string,
+    checked: boolean,
     onChange: (checked: boolean) => void,
     colorClass?: string
 }) => (
@@ -79,7 +91,7 @@ const SettingToggle = ({
             <p className="font-medium text-gray-900 dark:text-white text-sm">{label}</p>
             {description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{description}</p>}
         </div>
-        <button 
+        <button
             onClick={() => onChange(!checked)}
             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${checked ? colorClass : 'bg-gray-300 dark:bg-gray-700'}`}
         >
@@ -92,14 +104,14 @@ const SettingToggle = ({
     </div>
 );
 
-const CustomSelect = ({ 
-    value, 
-    onChange, 
-    options, 
-    label 
-}: { 
-    value: string; 
-    onChange: (val: string) => void; 
+const CustomSelect = ({
+    value,
+    onChange,
+    options,
+    label
+}: {
+    value: string;
+    onChange: (val: string) => void;
     options: { value: string; label: string; color?: string }[];
     label?: string;
 }) => {
@@ -140,8 +152,8 @@ const CustomSelect = ({
                             key={opt.value}
                             onClick={() => { onChange(opt.value); setIsOpen(false); }}
                             className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2
-                                ${value === opt.value 
-                                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' 
+                                ${value === opt.value
+                                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
                                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
                                 }`}
                         >
@@ -156,7 +168,7 @@ const CustomSelect = ({
     );
 };
 
-const SettingsView: React.FC<SettingsViewProps> = ({ 
+const SettingsView: React.FC<SettingsViewProps> = ({
     categories, onAddCategory, onDeleteCategory,
     tags, onAddTag, onDeleteTag,
     notificationSettings, setNotificationSettings,
@@ -165,7 +177,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
-    
+
     // Organization State
     const [newCategory, setNewCategory] = useState('');
     const [newTagName, setNewTagName] = useState('');
@@ -180,16 +192,16 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     // -- Handlers --
 
     const handleAddCategoryClick = () => {
-        if(newCategory.trim()){
-            onAddCategory({id: `cat-${Date.now()}`, name: newCategory.trim(), icon: BriefcaseIcon });
+        if (newCategory.trim()) {
+            onAddCategory({ id: `cat-${Date.now()}`, name: newCategory.trim(), icon: BriefcaseIcon });
             setNewCategory('');
         }
     };
-    
+
     const handleAddTagClick = () => {
-        if(newTagName.trim()){
+        if (newTagName.trim()) {
             onAddTag({
-                id: `tag-${Date.now()}`, 
+                id: `tag-${Date.now()}`,
                 name: newTagName.trim(),
                 color: `text-${newTagColor}-700`,
                 bgColor: `bg-${newTagColor}-100 dark:bg-${newTagColor}-900/50 dark:text-${newTagColor}-300`,
@@ -205,7 +217,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             setUserName(editingName.trim());
         }
     };
-  
+
 
     const handleAiToggleClick = () => {
         if (appSettings.enableAi) {
@@ -213,7 +225,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             setIsAiConfirmationOpen(true);
         } else {
             // Trying to enable
-            setAppSettings(s => ({...s, enableAi: true}));
+            setAppSettings(s => ({ ...s, enableAi: true }));
         }
     };
 
@@ -246,7 +258,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const confirmDisableAi = () => {
-        setAppSettings(s => ({...s, enableAi: false}));
+        setAppSettings(s => ({ ...s, enableAi: false }));
         setIsAiConfirmationOpen(false);
     };
 
@@ -262,11 +274,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Desativar Recursos de IA?</h3>
                         </div>
-                        
+
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                             Ao desativar os recursos de Inteligência Artificial, você perderá acesso imediato às seguintes funcionalidades:
                         </p>
-                        
+
                         <ul className="space-y-3 mb-6">
                             <li className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></div>
@@ -283,13 +295,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                         </ul>
 
                         <div className="flex justify-end gap-3 pt-2">
-                            <button 
+                            <button
                                 onClick={() => setIsAiConfirmationOpen(false)}
                                 className="px-4 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg border border-gray-300 dark:border-gray-500 font-medium transition-colors"
                             >
                                 Cancelar
                             </button>
-                            <button 
+                            <button
                                 onClick={confirmDisableAi}
                                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold transition-colors shadow-sm hover:ring-2 hover:ring-offset-2 hover:ring-red-500 dark:hover:ring-offset-[#21262D]"
                             >
@@ -309,12 +321,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     <SidebarItem id="organization" label="Organização" icon={FolderIcon} isActive={activeTab === 'organization'} onClick={setActiveTab} />
                     <div className="my-2 border-t border-gray-100 dark:border-gray-800"></div>
                     <SidebarItem id="account" label="Conta" icon={UserCircleIcon} isActive={activeTab === 'account'} onClick={setActiveTab} />
+                    <SidebarItem id="about" label="Sobre o Sistema" icon={InformationCircleIcon} isActive={activeTab === 'about'} onClick={setActiveTab} showBadge={hasNewUpdate} />
                 </div>
             </div>
 
             {/* Content Area */}
             <div className="flex-1 bg-white dark:bg-[#161B22] rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 lg:p-8 overflow-y-auto">
-                
+
                 {/* GENERAL TAB */}
                 {activeTab === 'general' && (
                     <div className="space-y-8 animate-fade-in">
@@ -325,7 +338,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
                         <div className="space-y-2">
                             <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Aparência & Comportamento</h4>
-                            
+
                             {/* Time Format */}
                             <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                 <div>
@@ -333,14 +346,14 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Escolha como as horas são exibidas.</p>
                                 </div>
                                 <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                                    <button 
-                                        onClick={() => setAppSettings(s => ({...s, timeFormat: '12h'}))}
+                                    <button
+                                        onClick={() => setAppSettings(s => ({ ...s, timeFormat: '12h' }))}
                                         className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${appSettings.timeFormat === '12h' ? 'bg-white dark:bg-[#21262D] shadow text-primary-600' : 'text-gray-500'}`}
                                     >
                                         12h (AM/PM)
                                     </button>
-                                    <button 
-                                        onClick={() => setAppSettings(s => ({...s, timeFormat: '24h'}))}
+                                    <button
+                                        onClick={() => setAppSettings(s => ({ ...s, timeFormat: '24h' }))}
                                         className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${appSettings.timeFormat === '24h' ? 'bg-white dark:bg-[#21262D] shadow text-primary-600' : 'text-gray-500'}`}
                                     >
                                         24h
@@ -348,37 +361,37 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 </div>
                             </div>
 
-                            <SettingToggle 
-                                label="Confetti ao concluir" 
-                                description="Exibir animação de celebração ao finalizar tarefas." 
-                                checked={appSettings.enableAnimations} 
-                                onChange={(v) => setAppSettings(s => ({...s, enableAnimations: v}))} 
+                            <SettingToggle
+                                label="Confetti ao concluir"
+                                description="Exibir animação de celebração ao finalizar tarefas."
+                                checked={appSettings.enableAnimations}
+                                onChange={(v) => setAppSettings(s => ({ ...s, enableAnimations: v }))}
                             />
 
-                            <SettingToggle 
-                                label="Exibir projeto nos cards" 
-                                description="Mostra a identificação do projeto vinculado." 
+                            <SettingToggle
+                                label="Exibir projeto nos cards"
+                                description="Mostra a identificação do projeto vinculado."
                                 checked={appSettings.showProjectOnCard !== false}
-                                onChange={(v) => setAppSettings(s => ({...s, showProjectOnCard: v}))} 
+                                onChange={(v) => setAppSettings(s => ({ ...s, showProjectOnCard: v }))}
                             />
 
                             {appSettings.showProjectOnCard !== false && (
                                 <div className="ml-6 pl-4 border-l-2 border-gray-100 dark:border-gray-800 mt-2">
-                                    <SettingToggle 
-                                        label="Exibir apenas ícone" 
-                                        description="Economiza espaço mostrando apenas o símbolo do projeto." 
-                                        checked={!!appSettings.onlyProjectIcon} 
-                                        onChange={(v) => setAppSettings(s => ({...s, onlyProjectIcon: v}))} 
+                                    <SettingToggle
+                                        label="Exibir apenas ícone"
+                                        description="Economiza espaço mostrando apenas o símbolo do projeto."
+                                        checked={!!appSettings.onlyProjectIcon}
+                                        onChange={(v) => setAppSettings(s => ({ ...s, onlyProjectIcon: v }))}
                                     />
                                 </div>
                             )}
-                            
-                            
-                            <SettingToggle 
-                                label="Destacar atrasos" 
-                                description="Tarefas atrasadas ficam com fundo vermelho." 
-                                checked={!appSettings.disableOverdueColor} 
-                                onChange={(v) => setAppSettings(s => ({...s, disableOverdueColor: !v}))} 
+
+
+                            <SettingToggle
+                                label="Destacar atrasos"
+                                description="Tarefas atrasadas ficam com fundo vermelho."
+                                checked={!appSettings.disableOverdueColor}
+                                onChange={(v) => setAppSettings(s => ({ ...s, disableOverdueColor: !v }))}
                                 colorClass="bg-red-500"
                             />
                         </div>
@@ -392,9 +405,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                            Recursos de IA <SparklesIcon className="w-4 h-4 text-yellow-500"/>
+                                            Recursos de IA <SparklesIcon className="w-4 h-4 text-yellow-500" />
                                         </h4>
-                                        <button 
+                                        <button
                                             onClick={handleAiToggleClick}
                                             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${appSettings.enableAi ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-700'}`}
                                         >
@@ -410,49 +423,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     </p>
                                     <div className="text-xs text-indigo-600 dark:text-indigo-400 bg-white/50 dark:bg-black/20 p-2 rounded border border-indigo-100 dark:border-indigo-800/50">
                                         <strong>Nota de Privacidade:</strong> Ao ativar, os dados das tarefas são processados pela API do Google Gemini. Recomendamos evitar incluir informações sensíveis ou confidenciais (como senhas ou dados financeiros) nos títulos e descrições.                                    </div>
-                                 </div>
-                            </div>
-                        </div>
-                        <div className="space-y-2 pt-6 border-t border-gray-100 dark:border-gray-800">
-                            <h4 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">Sobre o Sistema</h4>
-                            
-                            {/* Bloco 1: Changelog (Já existia) */}
-                            <div className="bg-white dark:bg-[#0D1117] p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Novidades e Atualizações</h4>                                     
-                                        {hasNewUpdate && (
-                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse">
-                                                NOVO
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Veja o histórico de versões e o que mudou recentemente.</p>
                                 </div>
-                                <button
-                                    onClick={onOpenChangelog}
-                                    className={`px-4 py-2 rounded-lg transition-colors text-xs font-bold border ${hasNewUpdate
-                                            ? 'bg-primary-500 text-white hover:bg-primary-600 border-transparent shadow-md shadow-primary-500/20'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
-                                    }`}
-                                >
-                                    Ver Changelog
-                                </button>
-                            </div>
-
-                            {/* Bloco 2: Tour (NOVO) - Estilo consistente com o card de cima */}
-                            <div className="bg-white dark:bg-[#0D1117] p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                                <div>
-                                    <h4 className="font-bold text-gray-900 dark:text-white text-sm">Introdução ao Sistema</h4>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Reveja o tour guiado e conheça as funcionalidades.</p>
-                                </div>
-                                <button
-                                    onClick={onOpenTour}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
-                                >
-                                    <InformationCircleIcon className="w-4 h-4" />
-                                    Ver Tour
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -468,17 +439,17 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
                         <div className="space-y-2">
                             {/* 1. Nível Superior: Sistema Geral */}
-                            <SettingToggle 
-                                label="Habilitar Notificações" 
-                                description="Ativa o sistema de alertas dentro do aplicativo." 
-                                checked={notificationSettings.enabled} 
-                                onChange={(v) => setNotificationSettings(s => ({...s, enabled: v}))} 
+                            <SettingToggle
+                                label="Habilitar Notificações"
+                                description="Ativa o sistema de alertas dentro do aplicativo."
+                                checked={notificationSettings.enabled}
+                                onChange={(v) => setNotificationSettings(s => ({ ...s, enabled: v }))}
                             />
 
                             {/* 2. Sub-opções (Identadas) */}
                             <div className={`transition-all duration-300 ${notificationSettings.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none grayscale'}`}>
                                 <div className="pl-4 ml-2 border-l-2 border-gray-100 dark:border-gray-800 space-y-2 mt-4">
-                                    
+
                                     {/* 2.1 [MOVIDO] Lembrete Antecipado (Agora é o primeiro) */}
                                     <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
                                         <div>
@@ -491,7 +462,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                                 min="0"
                                                 max="7"
                                                 value={notificationSettings.remindDaysBefore}
-                                                onChange={e => setNotificationSettings(s => ({...s, remindDaysBefore: parseInt(e.target.value) || 0}))}
+                                                onChange={e => setNotificationSettings(s => ({ ...s, remindDaysBefore: parseInt(e.target.value) || 0 }))}
                                                 className="w-16 p-1.5 text-center bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-gray-700 rounded-md text-sm font-bold focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                                             />
                                             <span className="text-sm text-gray-500">dias</span>
@@ -515,13 +486,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     </div>
 
                                     {/* 2.2 Notificações de Desktop (Push) */}
-                                    <SettingToggle 
-                                        label="Notificações de Desktop (Push)" 
-                                        description="Receber alertas no Windows/Mac mesmo com a aba minimizada." 
-                                        checked={!!notificationSettings.desktopNotifications} 
+                                    <SettingToggle
+                                        label="Notificações de Desktop (Push)"
+                                        description="Receber alertas no Windows/Mac mesmo com a aba minimizada."
+                                        checked={!!notificationSettings.desktopNotifications}
                                         onChange={(v) => handleDesktopPushToggle(v)}
                                     />
-                                    
+
                                     {/* Aviso de Bloqueio (Só aparece se necessário) */}
                                     {notificationSettings.desktopNotifications && Notification.permission === 'denied' && (
                                         <div className="flex items-center gap-2 p-3 mb-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
@@ -533,34 +504,34 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                     )}
 
                                     {/* 2.3 [NOVO] Som de Notificação (Logo abaixo do Push) */}
-                                    <SettingToggle 
-                                        label="Som de Notificação" 
-                                        description="Tocar um aviso sonoro ao receber alertas." 
-                                        checked={!!notificationSettings.playNotificationSound} 
-                                        onChange={(v) => setNotificationSettings(s => ({...s, playNotificationSound: v}))}
+                                    <SettingToggle
+                                        label="Som de Notificação"
+                                        description="Tocar um aviso sonoro ao receber alertas."
+                                        checked={!!notificationSettings.playNotificationSound}
+                                        onChange={(v) => setNotificationSettings(s => ({ ...s, playNotificationSound: v }))}
                                     />
 
-                                    <SettingToggle 
-                                        label="Tarefas e Prazos" 
-                                        description="Alertas sobre tarefas vencidas ou próximas do vencimento." 
-                                        checked={notificationSettings.taskReminders} 
-                                        onChange={(v) => setNotificationSettings(s => ({...s, taskReminders: v}))} 
-                                    />
-                                    
-                                    <SettingToggle 
-                                        label="Hábitos Diários" 
-                                        description="Lembretes para completar sua rotina." 
-                                        checked={notificationSettings.habitReminders} 
-                                        onChange={(v) => setNotificationSettings(s => ({...s, habitReminders: v}))} 
+                                    <SettingToggle
+                                        label="Tarefas e Prazos"
+                                        description="Alertas sobre tarefas vencidas ou próximas do vencimento."
+                                        checked={notificationSettings.taskReminders}
+                                        onChange={(v) => setNotificationSettings(s => ({ ...s, taskReminders: v }))}
                                     />
 
-                                        <SettingToggle 
-                                            label="Novidades e Dicas" 
-                                            description="Receber atualizações sobre novas funcionalidades." 
-                                            checked={notificationSettings.marketingEmails} 
-                                            onChange={(v) => setNotificationSettings(s => ({...s, marketingEmails: v}))} 
-                                            colorClass="bg-green-500"
-                                        />
+                                    <SettingToggle
+                                        label="Hábitos Diários"
+                                        description="Lembretes para completar sua rotina."
+                                        checked={notificationSettings.habitReminders}
+                                        onChange={(v) => setNotificationSettings(s => ({ ...s, habitReminders: v }))}
+                                    />
+
+                                    <SettingToggle
+                                        label="Novidades e Dicas"
+                                        description="Receber atualizações sobre novas funcionalidades."
+                                        checked={notificationSettings.marketingEmails}
+                                        onChange={(v) => setNotificationSettings(s => ({ ...s, marketingEmails: v }))}
+                                        colorClass="bg-green-500"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -586,7 +557,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         <span className="text-gray-800 dark:text-gray-200 font-medium text-sm">{cat.name}</span>
                                         {!PROTECTED_IDS.includes(cat.id) ? (
                                             <button onClick={() => onDeleteCategory(cat.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                                <TrashIcon className="w-4 h-4"/>
+                                                <TrashIcon className="w-4 h-4" />
                                             </button>
                                         ) : (
                                             <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">Padrão</span>
@@ -595,9 +566,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 ))}
                             </ul>
                             <div className="flex gap-2">
-                                <input 
-                                    type="text" 
-                                    value={newCategory} 
+                                <input
+                                    type="text"
+                                    value={newCategory}
                                     onChange={(e) => setNewCategory(e.target.value)}
                                     placeholder="Nova categoria"
                                     className="flex-grow block w-full rounded-lg p-2.5 border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#161B22] text-gray-900 dark:text-gray-200 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
@@ -621,7 +592,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                         </span>
                                         {!PROTECTED_IDS.includes(tag.id) ? (
                                             <button onClick={() => onDeleteTag(tag.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                                <TrashIcon className="w-4 h-4"/>
+                                                <TrashIcon className="w-4 h-4" />
                                             </button>
                                         ) : (
                                             <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">Padrão</span>
@@ -630,15 +601,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 ))}
                             </ul>
                             <div className="flex gap-2 items-center">
-                                <input 
-                                    type="text" 
-                                    value={newTagName} 
+                                <input
+                                    type="text"
+                                    value={newTagName}
                                     onChange={(e) => setNewTagName(e.target.value)}
                                     placeholder="Nova prioridade"
                                     className="flex-grow min-w-[120px] rounded-lg p-2.5 border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#161B22] text-gray-900 dark:text-gray-200 text-sm focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
                                 />
                                 <div className="w-40 flex-shrink-0">
-                                    <CustomSelect 
+                                    <CustomSelect
                                         value={newTagColor}
                                         onChange={setNewTagColor}
                                         options={[
@@ -668,52 +639,52 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                             <p className="text-sm text-gray-500 dark:text-gray-400">Gerencie seus dados e acesso.</p>
                         </div>
 
-                       {/* Profile Header */}
-<div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
-    <div className="relative z-10 flex-shrink-0">
-        {/* Container do Avatar com Borda Degradê */}
-        <div className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-[#21262D] shadow-md">
-            
-            {/* Círculo interno (Branco/Escuro) */}
-            <div className="w-full h-full rounded-full bg-white dark:bg-[#161B22] flex items-center justify-center overflow-hidden">
-                {user?.photoURL ? (
-                    // SE TEM FOTO: Mostra a imagem do Google
-                    <img 
-                        src={user.photoURL} 
-                        alt={userName} 
-                        className="w-full h-full object-cover" 
-                    />
-                ) : (
-                    // SE NÃO TEM FOTO: Mostra o ícone padrão cinza
-                    <UserCircleIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />
-                )}
-            </div>
+                        {/* Profile Header */}
+                        <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
+                            <div className="relative z-10 flex-shrink-0">
+                                {/* Container do Avatar com Borda Degradê */}
+                                <div className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-[#21262D] shadow-md">
 
-            {/* Badge do Google pequeno no canto (Opcional, mas fica chique) */}
-            {user?.photoURL && (
-                <div className="absolute bottom-0 right-0 bg-white dark:bg-[#0D1117] rounded-full p-1 border border-gray-100 dark:border-gray-700 shadow-sm">
-                    <svg className="w-3 h-3" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.17c-.22-.66-.35-1.36-.35-2.17s.13-1.51.35-2.17V7.01H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.99l3.66-2.82z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.01l3.66 2.82c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                </div>
-            )}
-        </div>
-    </div>
+                                    {/* Círculo interno (Branco/Escuro) */}
+                                    <div className="w-full h-full rounded-full bg-white dark:bg-[#161B22] flex items-center justify-center overflow-hidden">
+                                        {user?.photoURL ? (
+                                            // SE TEM FOTO: Mostra a imagem do Google
+                                            <img
+                                                src={user.photoURL}
+                                                alt={userName}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            // SE NÃO TEM FOTO: Mostra o ícone padrão cinza
+                                            <UserCircleIcon className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                                        )}
+                                    </div>
 
-    <div className="text-center md:text-left flex-grow relative z-10">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{userName}</h2>
-        {/* Mudei o texto para refletir que é login social */}
-        <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Conta Google Conectada</p>
-    </div>
+                                    {/* Badge do Google pequeno no canto (Opcional, mas fica chique) */}
+                                    {user?.photoURL && (
+                                        <div className="absolute bottom-0 right-0 bg-white dark:bg-[#0D1117] rounded-full p-1 border border-gray-100 dark:border-gray-700 shadow-sm">
+                                            <svg className="w-3 h-3" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.17c-.22-.66-.35-1.36-.35-2.17s.13-1.51.35-2.17V7.01H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.99l3.66-2.82z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.01l3.66 2.82c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
-    <div className="relative z-10">
-        <button 
-            onClick={onLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-sm"
-        >
-            <ArrowRightOnRectangleIcon className="w-4 h-4"/>
-            Sair da Conta
-        </button>
-    </div>
-</div>
+                            <div className="text-center md:text-left flex-grow relative z-10">
+                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{userName}</h2>
+                                {/* Mudei o texto para refletir que é login social */}
+                                <p className="text-gray-500 dark:text-gray-400 font-medium text-sm">Conta Google Conectada</p>
+                            </div>
+
+                            <div className="relative z-10">
+                                <button
+                                    onClick={onLogout}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-semibold rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-sm"
+                                >
+                                    <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                                    Sair da Conta
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="bg-white dark:bg-[#161B22] rounded-xl border border-gray-200 dark:border-gray-800 p-6">
                             <div className="space-y-5">
@@ -738,37 +709,37 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                                 </div>
 
                                 {/* Email Field - Read Only from Google */}
-<div className="group">
-    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
-        E-mail
-    </label>
-    <div className="relative">
-        <input
-            type="email"
-            value={user?.email || ''} 
-            disabled
-            readOnly
-            className="w-full pl-10 pr-20 py-2.5 bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed select-none focus:outline-none opacity-80"
-        />
-        
-        {/* Ícone de Cadeado (Esquerda) */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-        </div>
+                                <div className="group">
+                                    <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                                        E-mail
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="email"
+                                            value={user?.email || ''}
+                                            disabled
+                                            readOnly
+                                            className="w-full pl-10 pr-20 py-2.5 bg-gray-50 dark:bg-[#0D1117] border border-gray-200 dark:border-gray-700 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed select-none focus:outline-none opacity-80"
+                                        />
 
-        {/* Badge "GOOGLE" (Direita) */}
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-             <span className="text-[10px] font-bold bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-700">
-                GOOGLE
-             </span>
-        </div>
-    </div>
-    <p className="text-xs text-gray-400 mt-1.5 ml-1">
-        Gerenciado pela sua conta conectada.
-    </p>
-</div>
+                                        {/* Ícone de Cadeado (Esquerda) */}
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                            </svg>
+                                        </div>
+
+                                        {/* Badge "GOOGLE" (Direita) */}
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <span className="text-[10px] font-bold bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded border border-gray-300 dark:border-gray-700">
+                                                GOOGLE
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1.5 ml-1">
+                                        Gerenciado pela sua conta conectada.
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -787,6 +758,97 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                 )}
 
+                {/* --- NOVA ABA: SOBRE O SISTEMA --- */}
+            {activeTab === 'about' && (
+                <div className="space-y-6 animate-fade-in">
+                    <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Sobre o Sistema</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Informações, novidades e guias de uso do FlowTask.</p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#161B22] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 shadow-sm">
+                        {/* Cabeçalho da Versão */}
+                            <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-100 dark:border-gray-800">
+                                <div className="w-14 h-14 bg-primary-50 dark:bg-primary-900/20 rounded-2xl flex items-center justify-center p-2.5 border border-primary-100 dark:border-primary-800/50 shadow-sm">
+                                    <img src={APP_ICON_URL} alt="FlowTask Logo" className="w-full h-full object-contain" />
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">FlowTask</h4>
+                                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-0.5">Versão {CHANGELOG_DATA[0]?.version || '1.0.0'} (Beta)</p>
+                                </div>
+                            </div>
+
+                        <div className="space-y-6">
+                            {/* Botão de Changelog */}
+                            <button 
+                                onClick={onOpenChangelog} 
+                                className="w-full flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all duration-200 group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                                        <SparklesIcon className="w-5 h-5" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="flex items-center gap-2">
+                                            <h5 className="font-bold text-gray-900 dark:text-gray-200">Novidades (Changelog)</h5>
+                                            {hasNewUpdate && (
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 animate-pulse">
+                                                    NOVO
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Veja o histórico das últimas atualizações e melhorias.</p>
+                                    </div>
+                                </div>
+                                <ChevronRightIcon className="w-5 h-5 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                            </button>
+
+                            {/* Seção de Tutoriais */}
+                            <div>
+                                <h5 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 ml-1">Central de Guias</h5>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {/* Gatilho Tour 1 */}
+                                    <button 
+                                        onClick={() => onOpenTour('initial_onboarding_v1')} 
+                                        className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 border-gray-200 dark:border-gray-700 hover:border-primary-400 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-all text-left"
+                                    >
+                                        <PlayIcon className="w-6 h-6 text-primary-500 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <h6 className="text-sm font-bold text-gray-800 dark:text-gray-200">Tour Inicial</h6>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">Reveja o guia básico com as funcionalidades principais do sistema.</p>
+                                        </div>
+                                    </button>
+
+                                    {/* Gatilho Tour 2 */}
+                                    <button 
+                                        onClick={() => onOpenTour('smart_subtasks_release_v1')} 
+                                        className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all text-left group"
+                                    >
+                                        <SparklesIcon className="w-6 h-6 text-indigo-500 mt-0.5 flex-shrink-0 group-hover:animate-pulse" />
+                                        <div>
+                                            <h6 className="text-sm font-bold text-gray-800 dark:text-gray-200">Sub-tarefas com IA</h6>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">Aprenda a utilizar o gerador automático de checklists inteligentes.</p>
+                                        </div>
+                                    </button>
+
+                                    {/* Gatilho Tour 3 - em branco */}
+                                    {/* <button 
+                                        onClick={() => onOpenTour('smart_subtasks_release_v1')} 
+                                        className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/10 transition-all text-left group"
+                                    >
+                                        <SparklesIcon className="w-6 h-6 text-indigo-500 mt-0.5 flex-shrink-0 group-hover:animate-pulse" />
+                                        <div>
+                                            <h6 className="text-sm font-bold text-gray-800 dark:text-gray-200">Sub-tarefas com IA</h6>
+                                            <p className="text-xs text-gray-500 mt-1 leading-relaxed">Aprenda a utilizar o gerador automático de checklists inteligentes.</p>
+                                        </div>
+                                    </button> */}
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             </div>
         </div>
     );

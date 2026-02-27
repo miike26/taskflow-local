@@ -9,9 +9,12 @@ export interface ChangeLogItem {
     }[];
 }
 
+
+/* Ao adicionar novas novidades e tutoriais, atualizar a seção de tutoriais no "settingsview" */
+
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     {
-        version: '1.3.1',
+        version: '1.3.2',
         date: '2026-02-19',
         title: 'Integração com Google Agenda',
         description: 'Agora você pode adicionar suas tarefas e lembretes diretamente no Google Agenda.',

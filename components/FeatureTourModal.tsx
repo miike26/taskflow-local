@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { TourStep } from '../constants/tours';
+import type { TourCampaign } from '../constants/tours';
 import { XIcon, ChevronRightIcon, ChevronLeftIcon } from './icons';
 
 interface FeatureTourModalProps {
     isOpen: boolean;
     onClose: () => void;
-    steps: TourStep[];
-    onComplete?: () => void;
+    campaign: TourCampaign | null; // 👇 Agora ele recebe o Tour completo
 }
 
-const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, steps, onComplete }) => {
+const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, campaign }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
+    const steps = campaign?.steps || [];
     const currentStep = steps[currentIndex];
     
     // Armazena as URLs "locais" (Blobs) dos vídeos baixados
@@ -92,7 +92,6 @@ const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, st
         if (currentIndex < steps.length - 1) {
             setCurrentIndex(prev => prev + 1);
         } else {
-            if (onComplete) onComplete();
             onClose();
         }
     };

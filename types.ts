@@ -62,21 +62,15 @@ export interface Activity {
   count?: number;
 }
 
-export interface Notification {
-  id: string; // e.g., 'task-1-overdue', 'reminder-123'
-  taskId: string;
-  taskTitle: string;
-  message: string;
-  notifyAt: string; // The original due date or reminder time
-}
-
 export interface NotificationSettings {
   enabled: boolean;
   desktopNotifications: boolean;
+  playNotificationSound: boolean;
+  dailySummaryTime: string;
   remindDaysBefore: number;
-  taskReminders: boolean; // New
-  habitReminders: boolean; // New
-  marketingEmails: boolean; // New
+  taskReminders: boolean;
+  habitReminders: boolean;
+  marketingEmails: boolean;
 }
 
 export interface AppSettings {
@@ -167,24 +161,35 @@ export interface Notification {
   taskTitle: string;
   message: string;
   notifyAt: string;
-  // 👇 NOVO: Lista de IDs para notificações agrupadas
   relatedTaskIds?: string[]; 
 }
 
-export interface NotificationSettings {
-  enabled: boolean;
-  desktopNotifications: boolean;
-  playNotificationSound: boolean;
-  dailySummaryTime: string;
-  remindDaysBefore: number;
-  taskReminders: boolean;
-  habitReminders: boolean;
-  marketingEmails: boolean;
-}
+
 
 export interface TaskDocument {
   id: string;
   title?: string;
   url: string;
   type: 'google-doc' | 'google-sheet' | 'google-slide' | 'google-drive' | 'link';
+}
+
+export interface TourStep {
+  id: number;
+  title: string;
+  description: string;
+  mediaType: 'image' | 'gif' | 'video' | 'youtube';
+  mediaUrl: string;
+}
+
+export interface TourCampaign {
+  id: string;              
+  triggerScreen: 'global' | View; // 'global' (app todo) ou uma tela específica do seu app
+  isActive: boolean;       
+  steps: TourStep[];       
+}
+
+export interface UserProfile {
+  hasCompletedOnboarding?: boolean; // A flag que você já deve usar hoje
+  seenTours?: string[]; // O nosso novo "Banco de Memória" da IA
+  // (Pode adicionar outras coisas que você salva no user doc depois, como nome, email, etc)
 }
