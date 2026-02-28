@@ -5,87 +5,55 @@ import { XIcon, ChevronRightIcon, ChevronLeftIcon } from './icons';
 interface FeatureTourModalProps {
     isOpen: boolean;
     onClose: () => void;
-    campaign: TourCampaign | null; // 👇 Agora ele recebe o Tour completo
+    campaign: TourCampaign | null;
 }
 
 const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, campaign }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const steps = campaign?.steps || [];
-    const currentStep = steps[currentIndex] || steps[0];
     
-    // Armazena as URLs "locais" (Blobs) dos vídeos baixados
-    const [cachedVideoUrls, setCachedVideoUrls] = useState<Record<string, string>>({});
+    // 👇 O Paraquedas: Se o índice estiver bagunçado, garante que não vai quebrar
+    const currentStep = steps[currentIndex] || steps[0]; 
     
     // Refs para controlar play/pause
     const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
-    // Reset index quando abre
+    // Reset index quando o modal abre ou a campanha muda
     useEffect(() => {
         if (isOpen) {
             setCurrentIndex(0);
         }
-    }, [isOpen]);
+    }, [isOpen, campaign?.id]);
 
-    // [NOVA LÓGICA] Pré-carregamento agressivo (Blob Fetching)
+    // 👇 O Controle de Autoplay Blindado
     useEffect(() => {
         if (!isOpen) return;
 
-        const activeUrls: string[] = [];
+        // Dá um tempinho (150ms) pro navegador carregar a tag antes de forçar o play
+        const timer = setTimeout(() => {
+            videoRefs.current.forEach((video, index) => {
+                if (!video) return;
 
-        // Função para baixar um vídeo
-        const preloadVideo = async (url: string) => {
-            // Se já baixamos, ignora
-            if (cachedVideoUrls[url]) return;
-
-            try {
-                const response = await fetch(url);
-                const blob = await response.blob();
-                const objectUrl = URL.createObjectURL(blob);
-                
-                activeUrls.push(objectUrl);
-                
-                setCachedVideoUrls(prev => ({
-                    ...prev,
-                    [url]: objectUrl // Mapeia a URL original -> URL do Blob local
-                }));
-            } catch (err) {
-                console.error("Falha ao pré-carregar vídeo:", url, err);
-                // Se falhar, o player vai usar a URL original como fallback naturalmente
-            }
-        };
-
-        // Dispara o download de TODOS os vídeos da tour em paralelo
-        steps.forEach(step => {
-            if (step.mediaType === 'video' && step.mediaUrl) {
-                preloadVideo(step.mediaUrl);
-            }
-        });
-
-        // Cleanup: Limpar memória quando fechar o modal
-        return () => {
-            activeUrls.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, [isOpen, steps]); // Dependências corrigidas para evitar loop
-
-    // Controle inteligente de Play/Pause (Mantido da versão anterior)
-    useEffect(() => {
-        if (!isOpen) return;
-
-        videoRefs.current.forEach((video, index) => {
-            if (!video) return;
-
-            if (index === currentIndex) {
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => {});
+                if (index === currentIndex) {
+                    // Convence o navegador de que é seguro dar play automático (Mudo garantido)
+                    video.muted = true;
+                    video.defaultMuted = true;
+                    
+                    const playPromise = video.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(err => console.log("Navegador pausou o autoplay:", err));
+                    }
+                } else {
+                    video.pause();
+                    video.currentTime = 0;
                 }
-            } else {
-                video.pause();
-                video.currentTime = 0;
-            }
-        });
-    }, [currentIndex, isOpen, cachedVideoUrls]); // Adicionado cachedVideoUrls para dar play assim que baixar
+            });
+        }, 150);
 
+        return () => clearTimeout(timer);
+    }, [currentIndex, isOpen]);
+
+    // 👇 Trava de segurança final para não renderizar o vazio
     if (!isOpen || !currentStep) return null;
 
     const handleNext = () => {
@@ -126,9 +94,6 @@ const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, ca
                                 ? 'opacity-100 z-10 pointer-events-auto' 
                                 : 'opacity-0 z-0 pointer-events-none';
 
-                            // [TRUQUE] Se o blob já existe, usa ele. Se não, usa a URL original (enquanto baixa)
-                            const videoSource = cachedVideoUrls[step.mediaUrl] || step.mediaUrl;
-
                             return (
                                 <div 
                                     key={index} 
@@ -136,8 +101,15 @@ const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, ca
                                 >
                                     {step.mediaType === 'video' ? (
                                         <video
-                                            ref={el => videoRefs.current[index] = el}
-                                            src={videoSource} 
+                                            ref={el => {
+                                                videoRefs.current[index] = el;
+                                                // Garantia extra de mudo na criação do elemento
+                                                if (el) {
+                                                    el.muted = true;
+                                                    el.defaultMuted = true;
+                                                }
+                                            }}
+                                            src={step.mediaUrl} 
                                             className="w-full h-full object-cover"
                                             loop
                                             muted
@@ -224,6 +196,15 @@ const FeatureTourModal: React.FC<FeatureTourModalProps> = ({ isOpen, onClose, ca
                 >
                     <XIcon className="w-5 h-5" />
                 </button>
+            </div>
+
+            {/* 👇 O "Truque" do Preload Nativo super leve e rápido */}
+            <div className="hidden">
+                {steps.map((step, idx) => (
+                    step.mediaType === 'video' && (
+                        <video key={`preload-${idx}`} src={step.mediaUrl} preload="auto" />
+                    )
+                ))}
             </div>
         </div>
     );

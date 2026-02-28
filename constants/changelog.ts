@@ -15,7 +15,7 @@ export interface ChangeLogItem {
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     {
         version: '1.3.5',
-        date: '2026-02-28',
+        date: '2026-02-27',
         title: 'Criação de sub-tarefas com IA e correção de bugs',
         description: 'O FlowTask ficou mais inteligente! Agora você pode gerar sub-tarefas automáticas com IA.',
         changes: [
