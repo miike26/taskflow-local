@@ -1824,7 +1824,102 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
         setAiSubTaskSuggestions([]);
     };
 
+    // --- FUNÇÃO PARA COPIAR TAREFA COMO RICH TEXT E MARKDOWN ---
+    const handleCopyTask = async () => {
+        // 1. Encontra os nomes reais de Categoria e Prioridade
+        const categoryName = categories.find(c => c.id === taskData.categoryId)?.name || 'Sem categoria';
+        const priorityName = tags.find(t => t.id === taskData.tagId)?.name || 'Sem prioridade';
+        const projectName = currentProject?.name || 'Nenhum';
+
+        // 2. Formata datas
+        const createdDate = new Date(taskData.dateTime).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+        const dueDateFormatted = taskData.dueDate ? new Date(taskData.dueDate).toLocaleDateString('pt-BR') : 'Sem prazo';
+
+        const statusIcon = taskData.status === 'Concluída' ? '✅' : taskData.status === 'Em andamento' ? '⏳' : '⏸️';
+
+        // ==========================================
+        // 3. VERSÃO 1: MARKDOWN (Para Slack, Notion, etc)
+        // ==========================================
+        let markdownText = `**${taskData.title}**\n`;
+        if (taskData.description) markdownText += `\n*${taskData.description.replace(/<[^>]*>?/gm, '')}*\n`;
+        markdownText += `\n**Status:** ${taskData.status} ${statusIcon}`;
+        markdownText += `\n**Criado em:** ${createdDate}`;
+        markdownText += `\n**Prazo:** ${dueDateFormatted}`;
+        markdownText += `\n**Categoria:** ${categoryName}`;
+        if (projectName !== 'Nenhum') markdownText += `\n**Projeto:** ${projectName}`;
+        if (taskData.tagId) markdownText += `\n**Prioridade:** ${priorityName}`;
+
+        if (taskData.subTasks && taskData.subTasks.length > 0) {
+            markdownText += `\n\n**Sub-tarefas:**\n`;
+            taskData.subTasks.forEach(st => {
+                markdownText += `- [${st.completed ? 'x' : ' '}] ${st.text}\n`;
+                if (st.note) markdownText += `  *Nota: ${st.note}*\n`;
+            });
+        }
+
+        if (taskData.documents && taskData.documents.length > 0) {
+            markdownText += `\n**Documentos:**\n`;
+            taskData.documents.forEach(doc => {
+                markdownText += `- [${doc.title || doc.url}](${doc.url})\n`;
+            });
+        }
+        markdownText += `\n---\n🔗 [Ver no FlowTask](https://app.flowtask.tech/task/${taskData.id})`;
+
+        // ==========================================
+        // 4. VERSÃO 2: HTML/RICH TEXT (Para Word, Email, WhatsApp)
+        // ==========================================
+        let htmlText = `<b style="font-size: 1.2em;">${taskData.title}</b><br><br>`;
+        if (taskData.description) htmlText += `<i>${taskData.description.replace(/\n/g, '<br>')}</i><br><br>`;
+        htmlText += `<b>Status:</b> ${taskData.status} ${statusIcon}<br>`;
+        htmlText += `<b>Criado em:</b> ${createdDate}<br>`;
+        htmlText += `<b>Prazo:</b> ${dueDateFormatted}<br>`;
+        htmlText += `<b>Categoria:</b> ${categoryName}<br>`;
+        if (projectName !== 'Nenhum') htmlText += `<b>Projeto:</b> ${projectName}<br>`;
+        if (taskData.tagId) htmlText += `<b>Prioridade:</b> ${priorityName}<br>`;
+
+        if (taskData.subTasks && taskData.subTasks.length > 0) {
+            htmlText += `<br><b>Sub-tarefas:</b><br><ul style="margin-top: 4px; padding-left: 20px;">`;
+            taskData.subTasks.forEach(st => {
+                htmlText += `<li>${st.completed ? '✅' : '◻️'} ${st.text}`;
+                if (st.note) htmlText += `<br><i style="color: gray;">Nota: ${st.note.replace(/\n/g, '<br>')}</i>`;
+                htmlText += `</li>`;
+            });
+            htmlText += `</ul>`;
+        }
+
+        if (taskData.documents && taskData.documents.length > 0) {
+            htmlText += `<br><b>Documentos:</b><br><ul style="margin-top: 4px; padding-left: 20px;">`;
+            taskData.documents.forEach(doc => {
+                htmlText += `<li><a href="${doc.url}">${doc.title || doc.url}</a></li>`;
+            });
+            htmlText += `</ul>`;
+        }
+        htmlText += `<br><hr><br>🔗 <a href="https://app.flowtask.tech/task/${taskData.id}">Ver no FlowTask</a>`;
+
+        // ==========================================
+        // 5. INJEÇÃO NA ÁREA DE TRANSFERÊNCIA (O Pulo do Gato)
+        // ==========================================
+        try {
+            // Cria um objeto de clipboard com ambas as versões!
+            const clipboardItem = new ClipboardItem({
+                'text/plain': new Blob([markdownText], { type: 'text/plain' }),
+                'text/html': new Blob([htmlText], { type: 'text/html' })
+            });
+            await navigator.clipboard.write([clipboardItem]);
+            addToast({ title: 'Tarefa copiada!', subtitle: 'Formatada perfeitamente na área de transferência.', type: 'success' });
+        } catch (err) {
+            console.error('Navegador não suporta HTML Clipboard, usando texto simples:', err);
+            try {
+                await navigator.clipboard.writeText(markdownText);
+                addToast({ title: 'Tarefa copiada!', subtitle: 'Salva como texto simples.', type: 'success' });
+            } catch (fallbackErr) {
+                addToast({ title: 'Erro ao copiar', type: 'error' });
+            }
+        }
+    };
+
     return (
+
         <div className="p-4 flex flex-col h-full">
 
             {/* 👇 5. RENDERIZE O TOOLTIP NO TOPO DO JSX */}
@@ -1957,6 +2052,17 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                         {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
                     </button>
                     <div className="w-px h-8 bg-gray-200 dark:bg-gray-700 mx-4"></div>
+
+                    {/* 👇 NOVO BOTÃO AQUI */}
+                    <button
+                        onClick={handleCopyTask}
+                        title="Copiar (Markdown)"
+                        className="flex items-center gap-2 px-2.5 py-2.5 rounded-lg bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-gray-400 dark:hover:ring-offset-[#0D1117]"
+                    >
+                        {/* Como não temos um ícone específico importado para Markdown, o DocumentTextIcon funciona perfeitamente */}
+                        <DocumentTextIcon className="w-5 h-5" />
+                    </button>
+
                     <button
                         onClick={() => onDuplicate(taskData)}
                         title="Duplicar Tarefa"
