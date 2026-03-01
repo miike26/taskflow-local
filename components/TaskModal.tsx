@@ -9,6 +9,7 @@ import {
 } from './icons';
 import TaskCard from './TaskCard';
 import { STATUS_COLORS } from '../constants';
+import { sanitizeTag } from '../utils/tags';
 
 
 interface TaskSheetProps {
@@ -59,6 +60,9 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
   const [taskData, setTaskData] = useState<Task | null>(null);
   const [newSubTask, setNewSubTask] = useState('');
   const [newTag, setNewTag] = useState('');
+  const [isTagInputFocused, setIsTagInputFocused] = useState(false);
+  const tagAutocompleteRef = useRef<HTMLDivElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
   
   const [calendarDisplayDate, setCalendarDisplayDate] = useState(new Date());
   const [isCalendarGlowing, setIsCalendarGlowing] = useState(false);
@@ -85,10 +89,25 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
         if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target as Node)) {
             setIsProjectDropdownOpen(false);
         }
+        if (tagAutocompleteRef.current && !tagAutocompleteRef.current.contains(event.target as Node)) {
+            setIsTagInputFocused(false);
+        }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const tagSuggestions = useMemo(() => {
+      if (!appSettings?.customTags || !newTag.trim()) return [];
+
+      const sanitizedInput = sanitizeTag(newTag);
+      
+      return appSettings.customTags
+          .filter(t => t.includes(sanitizedInput))
+          .filter(t => !(taskData?.tags || []).includes(t))
+          .slice(0, 10); 
+          
+  }, [newTag, appSettings?.customTags, taskData?.tags]);
 
   useEffect(() => {
     if (isOpen) {
@@ -177,11 +196,22 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
     handleUpdate({ subTasks: taskData.subTasks.filter(st => st.id !== subTaskId) });
   };
 
-  const handleAddTagToList = () => {
-    if (!newTag.trim() || (taskData && taskData.tags?.includes(newTag.trim()))) return;
-    const updatedTags = [...(taskData?.tags || []), newTag.trim()];
+  const handleAddTagToList = (tagToSave?: string) => {
+    const rawTag = tagToSave || newTag;
+    if (!rawTag.trim() || !taskData) return;
+
+    const cleanTag = sanitizeTag(rawTag);
+    
+    if (taskData.tags?.includes(cleanTag)) {
+        setNewTag('');
+        tagInputRef.current?.focus(); 
+        return;
+    }
+    
+    const updatedTags = [...(taskData.tags || []), cleanTag];
     handleUpdate({ tags: updatedTags });
     setNewTag('');
+    tagInputRef.current?.focus(); 
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
@@ -576,20 +606,70 @@ const TaskSheet: React.FC<TaskSheetProps> = ({ isOpen, onClose, onSaveNew, onUpd
                         </div>
                     </div>
                     
-                    {/* Tags */}
-                    <div className="mt-4">
-                        <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Tags</label>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                            {taskData.tags?.map(t => (
-                                <span key={t} className="flex items-center gap-1.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                    {t} <button onClick={() => handleRemoveTag(t)} className="text-primary-500 hover:text-red-500 ml-0.5 transition-colors"><XIcon className="w-3 h-3"/></button>
-                                </span>
-                            ))}
+                    {/* Seção de Tags (Refatorada com Autocomplete) */}
+                    <div className="flex flex-col gap-3 mt-4">
+                        
+                        {/* Linha 1: Label na esquerda, Input na direita (Alinhado) */}
+                        <div className="relative flex items-center justify-between" ref={tagAutocompleteRef}>
+                            <label className="text-sm font-semibold text-gray-500 dark:text-gray-400">Tags</label>
+                            
+                            <div className="relative w-[240px]">
+                                <input 
+                                    ref={tagInputRef}
+                                    type="text" 
+                                    value={newTag} 
+                                    onChange={e => setNewTag(e.target.value)} 
+                                    onFocus={() => setIsTagInputFocused(true)}
+                                    onKeyDown={e => e.key === 'Enter' && handleAddTagToList()} 
+                                    placeholder="Adicionar tag..." 
+                                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm p-2 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500" 
+                                />
+                                
+                                {/* Menu Flutuante de Sugestões */}
+                                {isTagInputFocused && newTag.trim() && (
+                                    <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60 animate-fade-in">
+                                        <div className="overflow-y-auto p-1 custom-scrollbar">
+
+                                            {tagSuggestions.map(tagStr => (
+                                                <button
+                                                    key={tagStr}
+                                                    onClick={() => handleAddTagToList(tagStr)}
+                                                    className="w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                                >
+                                                    <span className="text-gray-400 font-bold text-sm leading-none">#</span>
+                                                    {tagStr}
+                                                </button>
+                                            ))}
+
+                                            {!tagSuggestions.includes(sanitizeTag(newTag)) && sanitizeTag(newTag).length > 0 && (
+                                                <button
+                                                    onClick={() => handleAddTagToList()}
+                                                    className="w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 hover:bg-primary-50 dark:hover:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-t border-gray-100 dark:border-gray-800 mt-1 pt-2"
+                                                >
+                                                    <PlusIcon className="w-4 h-4" />
+                                                    Criar: <strong className="break-all">"{sanitizeTag(newTag)}"</strong>
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                         <div className="flex gap-2">
-                            <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTagToList()} placeholder="Adicionar tag..." className="flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-400 text-sm p-2.5 transition-all duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 font-medium"/>
-                            <button onClick={handleAddTagToList} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50 shadow-sm" disabled={!newTag.trim()}><PlusIcon className="w-5 h-5"/></button>
-                        </div>
+
+                        {/* Linha 2: As tags que já foram adicionadas */}
+                        {taskData.tags && taskData.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                                {taskData.tags.map(t => (
+                                    <span key={t} className="flex items-center gap-1.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 px-2.5 py-1 rounded-full text-xs font-semibold border border-primary-200 dark:border-primary-800/30 shadow-sm">
+                                        <span className="opacity-50 font-normal">#</span>
+                                        {t} 
+                                        <button onClick={() => handleRemoveTag(t)} className="text-primary-500 hover:text-red-500 transition-colors ml-0.5">
+                                            <XIcon className="w-3 h-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Sub-tarefas */}
