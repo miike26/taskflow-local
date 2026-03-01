@@ -771,61 +771,69 @@ const AppContent = () => {
     };
 
     const handleSaveNewTask = (task: Task) => {
-    // 👇 HIGIENIZAÇÃO DE TAGS
-    const sanitizedTaskTags = (task.tags || [])
-        .map(t => sanitizeTag(t))
-        .filter(t => t.length > 0);
-    
-    // Substitui as tags sujas pelas limpas na tarefa
-    const taskToSave = {
-        ...task,
-        tags: sanitizedTaskTags
-    };
+        // 👇 HIGIENIZAÇÃO DE TAGS
+        const sanitizedTaskTags = Array.from(
+        new Set(
+            (task.tags || [])
+                .map(t => sanitizeTag(t))
+                .filter(t => t.length > 0)
+        )
+    );
 
-    if (!taskToSave.activity.some(a => a.type === 'creation')) {
-        taskToSave.activity.unshift({
-            id: `act-${Date.now()}`,
-            type: 'creation',
-            timestamp: new Date().toISOString(),
-            user: userName,
-            note: 'Tarefa criada.'
-        });
-    }
-    
-    addTaskFire(taskToSave);
-    
-    // 👇 AVISA O DICIONÁRIO GLOBAL
-    syncCustomTags(sanitizedTaskTags);
-    
-    if (taskToSave.projectId) {
-        const projectToUpdate = projects.find(p => p.id === taskToSave.projectId);
-        if (projectToUpdate) {
-            const activity: Activity = {
-                id: `proj-act-${Date.now()}`,
-                type: 'project',
-                action: 'added',
+        // Substitui as tags sujas pelas limpas na tarefa
+        const taskToSave = {
+            ...task,
+            tags: sanitizedTaskTags
+        };
+
+        if (!taskToSave.activity.some(a => a.type === 'creation')) {
+            taskToSave.activity.unshift({
+                id: `act-${Date.now()}`,
+                type: 'creation',
                 timestamp: new Date().toISOString(),
                 user: userName,
-                taskTitle: taskToSave.title
-            };
-            const updatedActivity = [...(projectToUpdate.activity || []), activity];
-            updateProjectFire(projectToUpdate.id, { activity: updatedActivity });
+                note: 'Tarefa criada.'
+            });
         }
-    }
 
-    setIsSheetOpen(false);
-    addToast({ title: 'Tarefa Criada', subtitle: 'Sua tarefa foi adicionada com sucesso.', type: 'success' });
-    handleSelectTask(taskToSave); 
-  };
+        addTaskFire(taskToSave);
+
+        // 👇 AVISA O DICIONÁRIO GLOBAL
+        syncCustomTags(sanitizedTaskTags);
+
+        if (taskToSave.projectId) {
+            const projectToUpdate = projects.find(p => p.id === taskToSave.projectId);
+            if (projectToUpdate) {
+                const activity: Activity = {
+                    id: `proj-act-${Date.now()}`,
+                    type: 'project',
+                    action: 'added',
+                    timestamp: new Date().toISOString(),
+                    user: userName,
+                    taskTitle: taskToSave.title
+                };
+                const updatedActivity = [...(projectToUpdate.activity || []), activity];
+                updateProjectFire(projectToUpdate.id, { activity: updatedActivity });
+            }
+        }
+
+        setIsSheetOpen(false);
+        addToast({ title: 'Tarefa Criada', subtitle: 'Sua tarefa foi adicionada com sucesso.', type: 'success' });
+        handleSelectTask(taskToSave);
+    };
 
     const handleUpdateTask = (taskId: string, updates: Partial<Task>) => {
         const currentTask = tasks.find(t => t.id === taskId);
 
         // 👇 HIGIENIZAÇÃO DE TAGS (Na Edição)
     if (updates.tags) {
-        updates.tags = updates.tags
-            .map(t => sanitizeTag(t))
-            .filter(t => t.length > 0);
+        updates.tags = Array.from(
+            new Set( // <-- O Set remove qualquer tag duplicada magicamente
+                updates.tags
+                    .map(t => sanitizeTag(t))
+                    .filter(t => t.length > 0)
+            )
+        );
         
         syncCustomTags(updates.tags);
     }

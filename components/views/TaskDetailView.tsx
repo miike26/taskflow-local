@@ -1501,7 +1501,11 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
 
         const cleanTag = sanitizeTag(rawTag);
         
-        if (taskData.tags?.includes(cleanTag)) {
+        // 👇 A MUDANÇA É AQUI: Limpamos virtualmente as tags que já estão na tarefa só para fazer a checagem
+        const currentTagsSanitized = (taskData.tags || []).map(t => sanitizeTag(t));
+        
+        // 👇 Agora ele checa na lista higienizada
+        if (currentTagsSanitized.includes(cleanTag)) {
             setNewTag('');
             // Devolve o foco para o input instantaneamente
             tagInputRef.current?.focus(); 
