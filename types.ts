@@ -81,6 +81,7 @@ export interface AppSettings {
   enableAnimations: boolean; // New
   showProjectOnCard?: boolean;
   onlyProjectIcon?: boolean;
+  customTags?: string[];
 }
 
 export interface Task {

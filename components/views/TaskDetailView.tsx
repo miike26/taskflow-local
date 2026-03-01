@@ -2056,7 +2056,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                     {/* 👇 NOVO BOTÃO AQUI */}
                     <button
                         onClick={handleCopyTask}
-                        title="Copiar (Markdown)"
+                        title="Copiar detalhes da tarefa para Área de Transferência"
                         className="flex items-center gap-2 px-2.5 py-2.5 rounded-lg bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 font-bold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-gray-400 dark:hover:ring-offset-[#0D1117]"
                     >
                         {/* Como não temos um ícone específico importado para Markdown, o DocumentTextIcon funciona perfeitamente */}

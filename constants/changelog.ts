@@ -13,6 +13,26 @@ export interface ChangeLogItem {
 /* Ao adicionar novas novidades e tutoriais, atualizar a seção de tutoriais no "settingsview" */
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
+    // {
+    //     version: '1.3.7',
+    //     date: '2026-02-xx',
+    //     title: 'Novas facilidades adicionadas',
+    //     description: 'Facilidades e melhorias de desempenho realizadas.',
+    //     changes: [
+    //         { 
+    //             type: 'feature', 
+    //             text: 'Copie todos os detalhes da sua tarefa para a área de transferência rapidamente. Basta clicar no botão de "Copiar" no topo superior direito de uma tarefa.' 
+    //         },
+    //         { 
+    //             type: 'improvement', 
+    //             text: 'Nova tela de "Sobre o Sistema" dentro de Configurações. Todas as novidades e tours guiados do FlowTask em um único lugar.' 
+    //         },
+    //         { 
+    //             type: 'fix', 
+    //             text: 'Corrigido problema de exportação onde a quebra de linha do campo "Descrição" de uma tarefa, quebrava o arquivo CSV.' 
+    //         }
+    //     ]
+    // },
     {
         version: '1.3.5',
         date: '2026-02-27',
