@@ -14,22 +14,26 @@ export interface ChangeLogItem {
 
 export const CHANGELOG_DATA: ChangeLogItem[] = [
     // {
-    //     version: '1.3.7',
-    //     date: '2026-02-xx',
-    //     title: 'Novas facilidades adicionadas',
-    //     description: 'Facilidades e melhorias de desempenho realizadas.',
+    //     version: '1.4.0',
+    //     date: '2026-03-02',
+    //     title: 'Busca Omnichannel, Gestão de Tags e Cópia Inteligente',
+    //     description: 'Uma atualização focada em produtividade! Nova busca global, sistema de tags estruturado e compartilhamento rápido.',
     //     changes: [
     //         { 
     //             type: 'feature', 
-    //             text: 'Copie todos os detalhes da sua tarefa para a área de transferência rapidamente. Basta clicar no botão de "Copiar" no topo superior direito de uma tarefa.' 
+    //             text: 'Nova Barra de Busca. Acesse instantaneamente com "Ctrl + K" e encontre tarefas por nome, descrição ou #tags em uma interface ultrarrápida e compacta.' 
+    //         },
+    //         { 
+    //             type: 'feature', 
+    //             text: 'Copie todos os detalhes de uma tarefa (título, descrição, sub-tarefas e links) já formatados para Slack, Notion ou WhatsApp com um único clique, no novo botão localizado no canto superior direito de uma tarefa.' 
     //         },
     //         { 
     //             type: 'improvement', 
-    //             text: 'Nova tela de "Sobre o Sistema" dentro de Configurações. Todas as novidades e tours guiados do FlowTask em um único lugar.' 
+    //             text: 'Novo sistema de Tags. Agora suas tags são memorizadas pelo app! Utilize o novo auto-completar ao digitar e gerencie todo o seu dicionário em Configurações > Organização.' 
     //         },
     //         { 
-    //             type: 'fix', 
-    //             text: 'Corrigido problema de exportação onde a quebra de linha do campo "Descrição" de uma tarefa, quebrava o arquivo CSV.' 
+    //             type: 'improvement', 
+    //             text: 'Normalização automática de tags. O FlowTask agora garante que suas tags sejam sempre salvas sem duplicatas acidentais (ex: "BUGS" vs "bugs"), mantendo a consistência visual.' 
     //         }
     //     ]
     // },

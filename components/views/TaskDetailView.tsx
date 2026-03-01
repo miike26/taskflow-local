@@ -18,6 +18,24 @@ import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
 import { sanitizeTag } from '../../utils/tags';
 
+// --- HELPER: Destacar texto buscado ---
+const HighlightText = ({ text, highlight }: { text: string; highlight: string }) => {
+    if (!text) return null;
+    const cleanHighlight = highlight.startsWith('#') ? highlight.slice(1).trim() : highlight.trim();
+    if (!cleanHighlight) return <>{text}</>;
+
+    const parts = text.split(new RegExp(`(${cleanHighlight})`, 'gi'));
+    return (
+        <span className="truncate">
+            {parts.map((part, i) => 
+                part.toLowerCase() === cleanHighlight.toLowerCase() ? 
+                <strong key={i} className="text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-sm px-0.5">{part}</strong> : 
+                part
+            )}
+        </span>
+    );
+};
+
 // --- HELPER: Gera Link Mágico do Google Calendar ---
 const generateGoogleCalendarLink = (task: Task): string => {
     const baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
@@ -1177,8 +1195,21 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
     // Search state and logic
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchMode, setSearchMode] = useState<'name' | 'tags'>('name'); // Added searchMode state
     const searchContainerRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null); // <--- NOVO
+
+    // Atalho de Teclado Ctrl+K / Cmd+K
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+                setIsSearchOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // AI Summarization State
     const [isSummarizing, setIsSummarizing] = useState(false);
@@ -1236,56 +1267,29 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
         }
     };
 
-    const searchResults = useMemo(() => {
-        const grouped: Record<string, Task[]> = {};
+    // --- NOVA LÓGICA DE BUSCA UNIFICADA ---
+    const searchResultsList = useMemo(() => {
+        if (!searchQuery.trim()) return [];
 
-        if (!searchQuery) {
-            if (searchMode === 'name') {
-                return { 'Pendente': [], 'Em andamento': [], 'Concluída': [] };
+        const query = searchQuery.toLowerCase();
+        const isTagSearch = query.startsWith('#');
+        const cleanQuery = isTagSearch ? query.slice(1).trim() : query.trim();
+
+        if (!cleanQuery) return []; // Digitou só "#"
+
+        return tasks.filter(t => {
+            if (isTagSearch) {
+                return t.tags?.some(tag => tag.toLowerCase().includes(cleanQuery));
+            } else {
+                const matchTitle = t.title.toLowerCase().includes(cleanQuery);
+                const matchDesc = t.description?.toLowerCase().includes(cleanQuery);
+                const matchTag = t.tags?.some(tag => tag.toLowerCase().includes(cleanQuery));
+                return matchTitle || matchDesc || matchTag;
             }
-            return {};
-        }
+        }).slice(0, 10); // Limita a 10 resultados
+    }, [searchQuery, tasks]);
 
-        if (searchMode === 'tags') {
-            const lowerCaseQuery = searchQuery.toLowerCase();
-            const tasksByTag: Record<string, Task[]> = {};
-
-            tasks.forEach(task => {
-                task.tags?.forEach(tag => {
-                    if (tag.toLowerCase().includes(lowerCaseQuery)) {
-                        const groupKey = `#${tag}`;
-                        if (!tasksByTag[groupKey]) {
-                            tasksByTag[groupKey] = [];
-                        }
-                        if (!tasksByTag[groupKey].find(t => t.id === task.id)) {
-                            tasksByTag[groupKey].push(task);
-                        }
-                    }
-                });
-            });
-            return tasksByTag;
-
-        } else { // searchMode === 'name'
-            grouped['Pendente'] = [];
-            grouped['Em andamento'] = [];
-            grouped['Concluída'] = [];
-
-            const filteredTasks = tasks.filter(
-                (task) =>
-                    task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-
-            filteredTasks.forEach((task) => {
-                if (grouped[task.status]) {
-                    grouped[task.status].push(task);
-                }
-            });
-            return grouped;
-        }
-    }, [searchQuery, tasks, searchMode]);
-
-    const hasResults = useMemo(() => Object.values(searchResults).some(group => Array.isArray(group) && group.length > 0), [searchResults]);
+    const hasResults = searchResultsList.length > 0;
 
     const handleResultClick = (task: Task) => {
         onSelectTask(task);
@@ -1980,76 +1984,123 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                     <input type="text" value={taskData.title} onChange={e => handleLocalUpdate({ title: e.target.value })} onBlur={e => handleTitleBlur(e.target.value)} placeholder="Título da Tarefa" className="text-3xl font-bold bg-transparent focus:outline-none w-full text-gray-900 dark:text-white p-2 -m-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 focus:bg-white dark:focus:bg-[#0D1117] focus:ring-2 focus:ring-primary-400 truncate" />
                 </div>
                 <div className="flex items-center gap-2">
-                    <div ref={searchContainerRef} className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    {/* BARRA DE BUSCA PRO */}
+                    <div ref={searchContainerRef} className="relative hidden md:block">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                             <SearchIcon className="w-5 h-5 text-gray-400" />
                         </div>
+                        
                         <input
+                            ref={searchInputRef}
                             type="text"
-                            placeholder="Buscar tarefas..."
+                            placeholder="Buscar ou #tag..."
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
-                                setIsSearchOpen(e.target.value.length > 0);
+                                setIsSearchOpen(true);
                             }}
-                            onFocus={() => searchQuery && setIsSearchOpen(true)}
-                            className="bg-white dark:bg-[#21262D] text-gray-900 dark:text-gray-200 rounded-lg pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-700 w-72 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
+                            onFocus={() => setIsSearchOpen(true)}
+                            className="bg-white dark:bg-[#21262D] text-gray-900 dark:text-gray-200 text-sm rounded-lg pl-10 pr-14 py-2.5 border border-gray-300 dark:border-gray-700 w-64 lg:w-72 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
                         />
-                        {isSearchOpen && hasResults && (
-                            <div className="absolute top-full mt-2 w-[500px] bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-20 max-h-96 overflow-y-auto p-6">
-                                <div className="flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
-                                    <button
-                                        onClick={() => setSearchMode('name')}
-                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${searchMode === 'name' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                                    >
-                                        Nome
-                                    </button>
-                                    <button
-                                        onClick={() => setSearchMode('tags')}
-                                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${searchMode === 'tags' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                                    >
-                                        Tags
-                                    </button>
-                                </div>
-                                <div className="space-y-6">
-                                    {(Object.keys(searchResults) as string[]).map((groupKey) => {
-                                        const tasksInGroup = searchResults[groupKey];
-                                        if (tasksInGroup.length === 0) return null;
+                        
+                        {/* Ícone de Atalho Visual */}
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">Ctrl + K</span>
+                        </div>
 
-                                        const statusColor = STATUS_COLORS[groupKey as Status];
+                        {/* MODAL DE RESULTADOS */}
+                        {isSearchOpen && (
+                            <div className="absolute top-full mt-2 w-[560px] bg-white dark:bg-[#21262D] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden flex flex-col max-h-[70vh] animate-scale-in origin-top">
+                                
+                                {/* ESTADO VAZIO: Sugestões de Tags */}
+                                {!searchQuery.trim() && appSettings.customTags && appSettings.customTags.length > 0 && (
+                                    <div className="p-4 bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-gray-800">
+                                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Pesquisas Rápidas</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {appSettings.customTags.slice(0, 8).map(tag => (
+                                                <button 
+                                                    key={tag}
+                                                    onClick={() => setSearchQuery(`#${tag}`)}
+                                                    className="px-2.5 py-1 text-xs font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-600 dark:text-gray-300 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-all shadow-sm"
+                                                >
+                                                    <span className="opacity-40 mr-0.5">#</span>{tag}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                                        return (
-                                            <div key={groupKey}>
-                                                <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 px-2 pb-2 mb-3">
-                                                    {statusColor && <span className={`w-2.5 h-2.5 rounded-full ${statusColor}`}></span>}
-                                                    {groupKey}
-                                                </h4>
-                                                <div className="space-y-2">
-                                                    {tasksInGroup.map(task => {
-                                                        const category = categories.find(c => c.id === task.categoryId);
-                                                        const tag = tags.find(t => t.id === task.tagId);
-                                                        return (
-                                                            <div key={task.id} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10" onClick={() => handleResultClick(task)}>
-                                                                <TaskCard
-                                                                    task={task}
-                                                                    category={category}
-                                                                    tag={tag}
-                                                                    onSelect={() => { }}
-                                                                    variant="compact"
-                                                                />
+                                {/* RESULTADOS DA BUSCA (List Items) */}
+                                {searchQuery.trim() && hasResults && (
+                                    <div className="overflow-y-auto p-2 custom-scrollbar">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Tarefas Encontradas</p>
+                                        {searchResultsList.map(t => {
+                                            const statusIcon = 
+                                                t.status === 'Concluída' ? <CheckCircleIcon className="w-4 h-4 text-green-500" /> :
+                                                t.status === 'Em andamento' ? <PlayCircleIcon className="w-4 h-4 text-yellow-500" /> :
+                                                <StopCircleIcon className="w-4 h-4 text-blue-500" />;
+
+                                            const category = categories.find(c => c.id === t.categoryId);
+                                            const CategoryIcon = getCategoryIcon(category);
+
+                                            // Lógica de ordenação de tags para trazer a pesquisada pra frente
+                                            const queryStr = searchQuery.startsWith('#') ? searchQuery.slice(1).trim().toLowerCase() : searchQuery.trim().toLowerCase();
+                                            const tagsToDisplay = t.tags ? [...t.tags].sort((a, b) => {
+                                                if (!queryStr) return 0;
+                                                const aMatch = a.toLowerCase().includes(queryStr);
+                                                const bMatch = b.toLowerCase().includes(queryStr);
+                                                return aMatch === bMatch ? 0 : aMatch ? -1 : 1;
+                                            }).slice(0, 2) : [];
+
+                                            return (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => handleResultClick(t)}
+                                                    className="w-full text-left flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors group"
+                                                >
+                                                    <div className="flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" title={`Status: ${t.status}`}>
+                                                        {statusIcon}
+                                                    </div>
+                                                    
+                                                    <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                                                        <div className="flex items-center gap-2.5 truncate pr-2">
+                                                            <div title={category?.name || 'Sem categoria'} className="text-gray-400 dark:text-gray-500 flex-shrink-0 bg-gray-100 dark:bg-gray-800 p-1 rounded">
+                                                                <CategoryIcon className="w-3.5 h-3.5" />
                                                             </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                        {isSearchOpen && !hasResults && searchQuery && (
-                            <div className="absolute top-full mt-2 w-[500px] bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-20 p-6 text-center text-sm text-gray-500">
-                                Nenhum resultado encontrado.
+                                                            <div className="truncate text-sm text-gray-800 dark:text-gray-200 font-medium">
+                                                                <HighlightText text={t.title} highlight={searchQuery} />
+                                                            </div>
+                                                        </div>
+
+                                                        {tagsToDisplay.length > 0 && (
+                                                            <div className="flex-shrink-0 flex items-center gap-1">
+                                                                {tagsToDisplay.map(tag => (
+                                                                    <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">
+                                                                        <HighlightText text={`#${tag}`} highlight={searchQuery} />
+                                                                    </span>
+                                                                ))}
+                                                                {(t.tags?.length || 0) > 2 && (
+                                                                    <span className="text-[10px] text-gray-400 font-medium ml-0.5">
+                                                                        +{t.tags!.length - 2}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* ESTADO VAZIO: Sem resultados */}
+                                {searchQuery.trim() && !hasResults && (
+                                    <div className="p-8 text-center flex flex-col items-center">
+                                        <SearchIcon className="w-8 h-8 text-gray-300 dark:text-gray-700 mb-2" />
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Nenhum resultado para "{searchQuery}"</p>
+                                        <p className="text-xs text-gray-500 mt-1">Tente buscar por outro termo ou #tag.</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

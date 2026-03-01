@@ -1,10 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-    SunIcon, MoonIcon, SearchIcon, PlusIcon, BellIcon, ClockIcon, 
-    ChevronDownIcon, UserCircleIcon, BroomIcon, ClipboardDocumentCheckIcon, 
-    CheckCircleIcon, DashboardIcon, CalendarIcon, ListIcon, BarChartIcon, 
-    FolderIcon, CheckIcon, Cog6ToothIcon, BriefcaseIcon, 
-    ArrowRightOnRectangleIcon, CalendarDaysIcon, SparklesIcon // <--- Adicionados
+import {
+    SunIcon, MoonIcon, SearchIcon, PlusIcon, BellIcon, ClockIcon,
+    ChevronDownIcon, UserCircleIcon, BroomIcon, ClipboardDocumentCheckIcon,
+    CheckCircleIcon, DashboardIcon, CalendarIcon, ListIcon, BarChartIcon,
+    FolderIcon, CheckIcon, Cog6ToothIcon, BriefcaseIcon,
+    ArrowRightOnRectangleIcon, CalendarDaysIcon, SparklesIcon, StopCircleIcon, PlayCircleIcon // <--- Adicionados
 } from './icons';
 import type { View, Category, Task, Tag, Status, Notification, Habit, AppSettings } from '../types';
 import TaskCard from './TaskCard';
@@ -16,14 +16,14 @@ const formatNotificationTime = (dateString: string, timeFormat: '12h' | '24h') =
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     const isTomorrow = new Date(now.setDate(now.getDate() + 1)).toDateString() === date.toDateString();
-    
-    const timeOptions: Intl.DateTimeFormatOptions = { 
-        hour: timeFormat === '12h' ? 'numeric' : '2-digit', 
-        minute: '2-digit', 
-        hour12: timeFormat === '12h' 
+
+    const timeOptions: Intl.DateTimeFormatOptions = {
+        hour: timeFormat === '12h' ? 'numeric' : '2-digit',
+        minute: '2-digit',
+        hour12: timeFormat === '12h'
     };
     const time = date.toLocaleTimeString('pt-BR', timeOptions);
-    
+
     if (isToday) return `Hoje, ${time}`;
     if (isTomorrow) return `Amanhã, ${time}`;
     return `${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}, ${time}`;
@@ -44,23 +44,23 @@ const getCategoryIcon = (category?: Category) => {
 };
 
 const NotificationCard: React.FC<{
-  notification: Notification;
-  task?: Task;
-  category?: Category;
-  onClick: () => void;
-  onSnooze: () => void;
-  onMarkHabitComplete: (habitId: string) => void;
-  isRead?: boolean;
-  timeFormat: '12h' | '24h';
-  // 👇 Novas props para o modo agrupado
-  allTasks?: Task[]; 
-  onSelectTaskFromGroup?: (task: Task) => void;
+    notification: Notification;
+    task?: Task;
+    category?: Category;
+    onClick: () => void;
+    onSnooze: () => void;
+    onMarkHabitComplete: (habitId: string) => void;
+    isRead?: boolean;
+    timeFormat: '12h' | '24h';
+    // 👇 Novas props para o modo agrupado
+    allTasks?: Task[];
+    onSelectTaskFromGroup?: (task: Task) => void;
 }> = ({ notification, task, category, onClick, onSnooze, onMarkHabitComplete, isRead, timeFormat, allTasks, onSelectTaskFromGroup }) => {
-    
+
     const [isExpanded, setIsExpanded] = useState(false);
     const [isSnoozing, setIsSnoozing] = useState(false);
     const [isCompleted, setIsCompleted] = useState(false);
-    
+
     const isHabitReminder = notification.taskId.startsWith('habit-');
     // Detecta se é o nosso novo resumo agrupado
     const isGroupSummary = notification.taskId === 'summary-group' && notification.relatedTaskIds;
@@ -73,19 +73,19 @@ const NotificationCard: React.FC<{
     // --- 1. RENDERIZAÇÃO DO MODO GRUPO (Accordion) ---
     if (isGroupSummary && notification.relatedTaskIds && allTasks) {
         const groupedTasks = allTasks.filter(t => notification.relatedTaskIds?.includes(t.id));
-        
+
         // Fundo Roxo/Indigo para destacar que é um Resumo
-        const groupBgClass = isRead 
-            ? 'bg-white dark:bg-[#21262D] opacity-75' 
+        const groupBgClass = isRead
+            ? 'bg-white dark:bg-[#21262D] opacity-75'
             : 'bg-indigo-50/60 dark:bg-indigo-900/10 border-l-4 border-l-indigo-500';
-        
-        const groupBorderClass = isRead 
-            ? 'border-gray-100 dark:border-gray-800' 
+
+        const groupBorderClass = isRead
+            ? 'border-gray-100 dark:border-gray-800'
             : 'border-indigo-100 dark:border-indigo-900/30';
 
         return (
             <li className="mb-2 last:mb-0">
-                 <div className={`relative w-full rounded-xl border transition-all duration-200 ${groupBgClass} ${groupBorderClass}`}>
+                <div className={`relative w-full rounded-xl border transition-all duration-200 ${groupBgClass} ${groupBorderClass}`}>
                     {/* Cabeçalho do Grupo (Clicável para expandir) */}
                     <div onClick={() => setIsExpanded(!isExpanded)} className="p-4 cursor-pointer flex gap-4 select-none group">
                         <div className="flex-shrink-0 pt-1">
@@ -106,10 +106,10 @@ const NotificationCard: React.FC<{
                             <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {notification.message}
                             </p>
-                            
+
                             <div className="mt-2 flex items-center text-xs text-indigo-600 dark:text-indigo-400 font-semibold group-hover:underline">
                                 {isExpanded ? 'Recolher lista' : 'Ver lista de tarefas'}
-                                <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}/>
+                                <ChevronDownIcon className={`w-3 h-3 ml-1 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
                     </div>
@@ -119,8 +119,8 @@ const NotificationCard: React.FC<{
                         <div className="border-t border-indigo-100 dark:border-indigo-900/30 bg-white/50 dark:bg-black/20 animate-slide-down">
                             <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                                 {groupedTasks.map(t => (
-                                    <li 
-                                        key={t.id} 
+                                    <li
+                                        key={t.id}
                                         onClick={() => onSelectTaskFromGroup && onSelectTaskFromGroup(t)}
                                         className="px-4 py-3 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-white/5 cursor-pointer transition-colors group/item"
                                     >
@@ -136,7 +136,7 @@ const NotificationCard: React.FC<{
                             </ul>
                         </div>
                     )}
-                 </div>
+                </div>
             </li>
         );
     }
@@ -152,7 +152,7 @@ const NotificationCard: React.FC<{
         CardIcon = getCategoryIcon(category);
     }
 
-    
+
     if (notification.taskId === 'system-changelog') {
         CardIcon = SparklesIcon;
     }
@@ -162,10 +162,10 @@ const NotificationCard: React.FC<{
         CardIcon = getCategoryIcon(category);
     }
 
-    const bgClass = isRead 
-        ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100' 
+    const bgClass = isRead
+        ? 'bg-white dark:bg-[#21262D] opacity-75 hover:opacity-100'
         : 'bg-blue-50/60 dark:bg-blue-900/10 border-l-4 border-l-primary-500';
-    
+
     const borderClass = isRead
         ? 'border-gray-100 dark:border-gray-800'
         : 'border-blue-100 dark:border-blue-900/30';
@@ -182,14 +182,14 @@ const NotificationCard: React.FC<{
         onMarkHabitComplete(habitId);
         setIsCompleted(true);
     };
-    
+
     const handleCardClick = () => {
         if (!isHabitReminder) onClick();
     };
 
     return (
         <li className="mb-2 last:mb-0">
-             <div 
+            <div
                 onClick={handleCardClick}
                 className={`relative group w-full p-4 rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-md ${bgClass} ${borderClass}`}
             >
@@ -220,7 +220,7 @@ const NotificationCard: React.FC<{
                                 </button>
                             ) : (
                                 <button onClick={handleSnooze} disabled={isSnoozing} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${isSnoozing ? 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 cursor-default' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'}`}>
-                                    <ClockIcon className="w-3.5 h-3.5"/> {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
+                                    <ClockIcon className="w-3.5 h-3.5" /> {isSnoozing ? 'Adiado' : 'Lembrar +2h'}
                                 </button>
                             )}
                         </div>
@@ -232,22 +232,22 @@ const NotificationCard: React.FC<{
 };
 
 const NotificationBell: React.FC<{
-  notifications: Notification[];
-  unreadNotifications: Notification[];
-  tasks: Task[];
-  categories: Category[];
-  onNotificationClick: (notification: Notification) => void;
-  onSnooze: (notification: Notification) => void;
-  onMarkHabitComplete: (habitId: string) => void;
-  onMarkAllAsRead: () => void;
-  onClearAllNotifications: () => void;
-  timeFormat: '12h' | '24h';
-  onSelectTask: (task: Task) => void;
+    notifications: Notification[];
+    unreadNotifications: Notification[];
+    tasks: Task[];
+    categories: Category[];
+    onNotificationClick: (notification: Notification) => void;
+    onSnooze: (notification: Notification) => void;
+    onMarkHabitComplete: (habitId: string) => void;
+    onMarkAllAsRead: () => void;
+    onClearAllNotifications: () => void;
+    timeFormat: '12h' | '24h';
+    onSelectTask: (task: Task) => void;
 }> = ({ notifications, unreadNotifications, tasks, categories, onNotificationClick, onSnooze, onMarkHabitComplete, onMarkAllAsRead, onClearAllNotifications, timeFormat, onSelectTask }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
-    
-    const readNotifications = useMemo(() => 
+
+    const readNotifications = useMemo(() =>
         notifications.filter(n => !unreadNotifications.some(un => un.id === n.id)),
         [notifications, unreadNotifications]
     );
@@ -261,7 +261,7 @@ const NotificationBell: React.FC<{
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
-    
+
     return (
         <div ref={dropdownRef} className="relative">
             <button onClick={() => setIsOpen(prev => !prev)} className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors">
@@ -280,9 +280,9 @@ const NotificationBell: React.FC<{
                             </p>
                         </div>
                         {unreadNotifications.length > 0 ? (
-                           <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">
+                            <button onClick={onMarkAllAsRead} className="text-xs font-semibold text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors">
                                 Marcar lidas
-                           </button>
+                            </button>
                         ) : notifications.length > 0 ? (
                             <button onClick={onClearAllNotifications} title="Limpar todas" className="text-gray-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
                                 <BroomIcon className="w-4 h-4" />
@@ -318,7 +318,7 @@ const NotificationBell: React.FC<{
                                     })}
                                 </>
                             )}
-                             {readNotifications.length > 0 && (
+                            {readNotifications.length > 0 && (
                                 <>
                                     <li className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mt-2">Anteriores</li>
                                     {readNotifications.map(n => {
@@ -365,296 +365,354 @@ interface HabitWithStatus extends Habit {
 }
 
 interface HeaderProps {
-  currentView: View;
-  tasks: Task[];
-  tags: Tag[];
-  categories: Category[];
-  onSelectTask: (task: Task) => void;
-  onAddTask: () => void;
-  theme: 'light' | 'dark';
-  toggleTheme: () => void;
-  globalCategoryFilter: string;
-  onCategoryChange: (categoryId: string) => void;
-  notifications: Notification[];
-  unreadNotifications: Notification[];
-  onNotificationClick: (notification: Notification) => void;
-  onSnoozeNotification: (notification: Notification) => void;
-  onMarkHabitComplete: (habitId: string) => void;
-  onMarkAllNotificationsAsRead: () => void;
-  onClearAllNotifications: () => void;
-  setCurrentView: (view: View) => void;
-  userName: string;
-  habitsWithStatus: HabitWithStatus[];
-  onToggleHabit: (habitId: string) => void;
-  onMarkAllHabitsComplete: () => void;
-  onOpenHabitSettings: () => void;
-  appSettings: AppSettings;
+    currentView: View;
+    tasks: Task[];
+    tags: Tag[];
+    categories: Category[];
+    onSelectTask: (task: Task) => void;
+    onAddTask: () => void;
+    theme: 'light' | 'dark';
+    toggleTheme: () => void;
+    globalCategoryFilter: string;
+    onCategoryChange: (categoryId: string) => void;
+    notifications: Notification[];
+    unreadNotifications: Notification[];
+    onNotificationClick: (notification: Notification) => void;
+    onSnoozeNotification: (notification: Notification) => void;
+    onMarkHabitComplete: (habitId: string) => void;
+    onMarkAllNotificationsAsRead: () => void;
+    onClearAllNotifications: () => void;
+    setCurrentView: (view: View) => void;
+    userName: string;
+    habitsWithStatus: HabitWithStatus[];
+    onToggleHabit: (habitId: string) => void;
+    onMarkAllHabitsComplete: () => void;
+    onOpenHabitSettings: () => void;
+    appSettings: AppSettings;
 }
 
 const VIEW_ICONS: Record<View, { icon: React.FC<{ className?: string }>, color?: string }> = {
-  dashboard: { icon: DashboardIcon, color: 'text-cyan-500' },
-  calendar: { icon: CalendarIcon, color: 'text-cyan-500' },
-  list: { icon: ListIcon, color: 'text-cyan-500' },
-  reminders: { icon: ClockIcon, color: 'text-cyan-500' },
-  reports: { icon: BarChartIcon, color: 'text-cyan-500' },
-  profile: { icon: UserCircleIcon, color: 'text-indigo-500' },
-  projects: { icon: FolderIcon, color: 'text-cyan-500' },
-  taskDetail: { icon: ListIcon, color: 'text-cyan-500' },
-  projectDetail: { icon: FolderIcon, color: 'text-cyan-500' },
-  settings: { icon: Cog6ToothIcon, color: 'text-cyan-500' },
+    dashboard: { icon: DashboardIcon, color: 'text-cyan-500' },
+    calendar: { icon: CalendarIcon, color: 'text-cyan-500' },
+    list: { icon: ListIcon, color: 'text-cyan-500' },
+    reminders: { icon: ClockIcon, color: 'text-cyan-500' },
+    reports: { icon: BarChartIcon, color: 'text-cyan-500' },
+    profile: { icon: UserCircleIcon, color: 'text-indigo-500' },
+    projects: { icon: FolderIcon, color: 'text-cyan-500' },
+    taskDetail: { icon: ListIcon, color: 'text-cyan-500' },
+    projectDetail: { icon: FolderIcon, color: 'text-cyan-500' },
+    settings: { icon: Cog6ToothIcon, color: 'text-cyan-500' },
+};
+
+// --- HELPER: Destacar texto buscado ---
+const HighlightText = ({ text, highlight }: { text: string; highlight: string }) => {
+    if (!text) return null;
+    const cleanHighlight = highlight.startsWith('#') ? highlight.slice(1).trim() : highlight.trim();
+    if (!cleanHighlight) return <>{text}</>;
+
+    const parts = text.split(new RegExp(`(${cleanHighlight})`, 'gi'));
+    return (
+        <span className="truncate">
+            {parts.map((part, i) =>
+                part.toLowerCase() === cleanHighlight.toLowerCase() ?
+                    <strong key={i} className="text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30 rounded-sm px-0.5">{part}</strong> :
+                    part
+            )}
+        </span>
+    );
 };
 
 const Header: React.FC<HeaderProps> = ({ currentView, tasks, tags, categories, onSelectTask, onAddTask, theme, toggleTheme, globalCategoryFilter, onCategoryChange, notifications, unreadNotifications, onNotificationClick, onSnoozeNotification, onMarkHabitComplete, onMarkAllNotificationsAsRead, onClearAllNotifications, setCurrentView, userName, habitsWithStatus, onToggleHabit, onMarkAllHabitsComplete, onOpenHabitSettings, appSettings }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
-  const [isHabitPopupOpen, setIsHabitPopupOpen] = useState(false);
-  const [searchMode, setSearchMode] = useState<'name' | 'tags'>('name');
-  const searchContainerRef = useRef<HTMLDivElement>(null);
-  const categoryFilterRef = useRef<HTMLDivElement>(null);
-  const habitPopupRef = useRef<HTMLDivElement>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isCategoryFilterOpen, setIsCategoryFilterOpen] = useState(false);
+    const [isHabitPopupOpen, setIsHabitPopupOpen] = useState(false);
 
+    const searchContainerRef = useRef<HTMLDivElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const categoryFilterRef = useRef<HTMLDivElement>(null);
+    const habitPopupRef = useRef<HTMLDivElement>(null);
 
-  const searchResults = useMemo(() => {
-    const grouped: Record<string, Task[]> = {};
+    // --- NOVA LÓGICA DE BUSCA UNIFICADA ---
+    const searchResultsList = useMemo(() => {
+        if (!searchQuery.trim()) return [];
 
-    if (!searchQuery) {
-        if (searchMode === 'name') {
-            return { 'Pendente': [], 'Em andamento': [], 'Concluída': [] };
-        }
-        return {};
-    }
+        const query = searchQuery.toLowerCase();
+        const isTagSearch = query.startsWith('#');
+        const cleanQuery = isTagSearch ? query.slice(1).trim() : query.trim();
 
-    if (searchMode === 'tags') {
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        const tasksByTag: Record<string, Task[]> = {};
+        if (!cleanQuery) return []; // Digitou só "#"
 
-        tasks.forEach(task => {
-            task.tags?.forEach(tag => {
-                if (tag.toLowerCase().includes(lowerCaseQuery)) {
-                    const groupKey = `#${tag}`;
-                    if (!tasksByTag[groupKey]) {
-                        tasksByTag[groupKey] = [];
-                    }
-                    if (!tasksByTag[groupKey].find(t => t.id === task.id)) {
-                        tasksByTag[groupKey].push(task);
-                    }
-                }
-            });
-        });
-        return tasksByTag;
-
-    } else { // searchMode === 'name'
-        grouped['Pendente'] = [];
-        grouped['Em andamento'] = [];
-        grouped['Concluída'] = [];
-        
-        const filteredTasks = tasks.filter(
-          (task) =>
-            task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            task.description?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-
-        filteredTasks.forEach((task) => {
-            if (grouped[task.status]) {
-              grouped[task.status].push(task);
+        return tasks.filter(task => {
+            if (isTagSearch) {
+                return task.tags?.some(tag => tag.toLowerCase().includes(cleanQuery));
+            } else {
+                const matchTitle = task.title.toLowerCase().includes(cleanQuery);
+                const matchDesc = task.description?.toLowerCase().includes(cleanQuery);
+                const matchTag = task.tags?.some(tag => tag.toLowerCase().includes(cleanQuery));
+                return matchTitle || matchDesc || matchTag;
             }
-        });
-        return grouped;
-    }
-  }, [searchQuery, tasks, searchMode]);
+        }).slice(0, 10); // Limita a 10 resultados para a lista ficar leve
+    }, [searchQuery, tasks]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+    const hasResults = searchResultsList.length > 0;
+
+    // Atalho de Teclado Ctrl+K / Cmd+K
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+                setIsSearchOpen(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setIsSearchOpen(false);
+            }
+            if (categoryFilterRef.current && !categoryFilterRef.current.contains(event.target as Node)) {
+                setIsCategoryFilterOpen(false);
+            }
+            if (habitPopupRef.current && !habitPopupRef.current.contains(event.target as Node)) {
+                setIsHabitPopupOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    const handleResultClick = (task: Task) => {
+        onSelectTask(task);
+        setSearchQuery('');
         setIsSearchOpen(false);
-      }
-      if (categoryFilterRef.current && !categoryFilterRef.current.contains(event.target as Node)) {
-        setIsCategoryFilterOpen(false);
-      }
-      if (habitPopupRef.current && !habitPopupRef.current.contains(event.target as Node)) {
-        setIsHabitPopupOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-  
-  const handleResultClick = (task: Task) => {
-      onSelectTask(task);
-      setSearchQuery('');
-      setIsSearchOpen(false);
-  }
+    }
 
-  const hasResults = useMemo(() => 
-    Object.values(searchResults).some(group => Array.isArray(group) && group.length > 0),
-  [searchResults]);
-  
-  const selectedCategoryName = useMemo(() => {
-    if (!globalCategoryFilter) return 'Todas as Categorias';
-    return categories.find(c => c.id === globalCategoryFilter)?.name || 'Todas as Categorias';
-  }, [globalCategoryFilter, categories]);
+    const selectedCategoryName = useMemo(() => {
+        if (!globalCategoryFilter) return 'Todas as Categorias';
+        return categories.find(c => c.id === globalCategoryFilter)?.name || 'Todas as Categorias';
+    }, [globalCategoryFilter, categories]);
 
-  const viewTitle = currentView === 'dashboard' ? `Olá, ${userName}!` : VIEW_TITLES[currentView];
-  const viewConfig = VIEW_ICONS[currentView];
-  const ViewIcon = viewConfig?.icon;
+    const viewTitle = currentView === 'dashboard' ? `Olá, ${userName}!` : VIEW_TITLES[currentView];
+    const viewConfig = VIEW_ICONS[currentView];
+    const ViewIcon = viewConfig?.icon;
 
-  return (
-    <header className="p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            {ViewIcon && <ViewIcon className={`w-10 h-10 ${viewConfig.color || 'text-gray-800 dark:text-gray-200'}`} />}
-            {viewTitle}
-        </h2>
-        <div className="flex items-center space-x-2">
-          <div ref={searchContainerRef} className="relative hidden md:block">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <SearchIcon className="w-5 h-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Buscar tarefas..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsSearchOpen(e.target.value.length > 0);
-              }}
-              onFocus={() => searchQuery && setIsSearchOpen(true)}
-              className="bg-white dark:bg-[#21262D] text-gray-900 dark:text-gray-200 rounded-lg pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-700 w-60 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
-            />
-            {isSearchOpen && hasResults && (
-              <div className="absolute top-full mt-2 w-[480px] bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-20 max-h-[70vh] overflow-y-auto p-6">
-                <div className="flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 pb-3 mb-4">
-                    <button
-                        onClick={() => setSearchMode('name')}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${searchMode === 'name' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                    >
-                        Nome
-                    </button>
-                    <button
-                        onClick={() => setSearchMode('tags')}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${searchMode === 'tags' ? 'bg-primary-500 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                    >
-                        Tags
-                    </button>
-                </div>
-                <div className="space-y-6">
-                    {Object.keys(searchResults).map((groupKey) => {
-                      const tasksInGroup = searchResults[groupKey];
-                      if (tasksInGroup.length === 0) return null;
-                      
-                      const statusColor = STATUS_COLORS[groupKey as Status];
-
-                      return (
-                        <div key={groupKey}>
-                          <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 dark:text-gray-400 px-2 pb-2 mb-3">
-                            {statusColor && <span className={`w-2.5 h-2.5 rounded-full ${statusColor}`}></span>}
-                            {groupKey}
-                          </h4>
-                          <div className="space-y-2">
-                            {tasksInGroup.map(task => {
-                                const category = categories.find(c => c.id === task.categoryId);
-                                const tag = tags.find(t => t.id === task.tagId);
-                                return (
-                                    <div key={task.id} className="rounded-lg hover:bg-gray-100 dark:hover:bg-white/10" onClick={() => handleResultClick(task)}>
-                                        <TaskCard
-                                          task={task}
-                                          category={category}
-                                          tag={tag}
-                                          onSelect={() => {}} 
-                                          variant="compact"
-                                        />
-                                    </div>
-                                );
-                            })}
-                          </div>
+    return (
+        <header className="p-4">
+            <div className="flex items-center justify-between">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                    {ViewIcon && <ViewIcon className={`w-10 h-10 ${viewConfig.color || 'text-gray-800 dark:text-gray-200'}`} />}
+                    {viewTitle}
+                </h2>
+                <div className="flex items-center space-x-2">
+                    {/* BARRA DE BUSCA PRO */}
+                    <div ref={searchContainerRef} className="relative hidden md:block">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                            {/* Ícone da Lupa voltou ao tamanho original (w-5 h-5) */}
+                            <SearchIcon className="w-5 h-5 text-gray-400" />
                         </div>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
-            {isSearchOpen && !hasResults && searchQuery && (
-                <div className="absolute top-full mt-2 w-[480px] bg-white dark:bg-[#21262D] rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 z-20 p-6 text-center text-sm text-gray-500">
-                    Nenhum resultado encontrado.
-                </div>
-            )}
-          </div>
-          <div ref={categoryFilterRef} className="relative hidden md:block">
-             <button
-                onClick={() => setIsCategoryFilterOpen(prev => !prev)}
-                className={`flex items-center justify-between gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium w-48 transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${
-                    globalCategoryFilter
-                    ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300' 
-                    : 'bg-white dark:bg-[#21262D] border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/10'
-                }`}
-             >
-                <span className="truncate">{selectedCategoryName}</span>
-                <ChevronDownIcon className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isCategoryFilterOpen ? 'rotate-180' : ''}`} />
-             </button>
-             {isCategoryFilterOpen && (
-                <div className="absolute top-full mt-2 left-0 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 w-full space-y-1">
-                    <button onClick={() => { onCategoryChange(''); setIsCategoryFilterOpen(false); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
-                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Todas as Categorias</span>
+
+                        {/* Input com as classes ORIGINAIS restauradas, apenas com pr-14 para o botão Ctrl+K */}
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            placeholder="Buscar ou #tag..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setIsSearchOpen(true);
+                            }}
+                            onFocus={() => setIsSearchOpen(true)}
+                            className="bg-white dark:bg-[#21262D] text-gray-900 dark:text-gray-200 text-sm rounded-lg pl-10 pr-14 py-2.5 border border-gray-300 dark:border-gray-700 w-64 lg:w-72 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500"
+                        />
+
+                        {/* Ícone de Atalho Visual */}
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700">Ctrl + K</span>
+                        </div>
+
+                        {/* MODAL DE RESULTADOS (Mais largo: w-[560px]) */}
+                        {isSearchOpen && (
+                            <div className="absolute top-full mt-2 w-[560px] bg-white dark:bg-[#21262D] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 overflow-hidden flex flex-col max-h-[70vh] animate-scale-in origin-top">
+
+                                {/* ESTADO VAZIO: Sugestões de Tags */}
+                                {!searchQuery.trim() && appSettings.customTags && appSettings.customTags.length > 0 && (
+                                    <div className="p-4 bg-gray-50/50 dark:bg-black/10 border-b border-gray-100 dark:border-gray-800">
+                                        <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Pesquisas Rápidas</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {appSettings.customTags.slice(0, 8).map(tag => (
+                                                <button 
+                                    key={tag}
+                                    onClick={() => setSearchQuery(`#${tag}`)}
+                                    className="px-2.5 py-1 text-xs font-medium bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-gray-600 dark:text-gray-300 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-all shadow-sm"
+                                >
+                                    <span className="opacity-40 mr-0.5">#</span>{tag}
+                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* RESULTADOS DA BUSCA (List Items) */}
+                                {searchQuery.trim() && hasResults && (
+                                    <div className="overflow-y-auto p-2 custom-scrollbar">
+                                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Tarefas Encontradas</p>
+                                        {searchResultsList.map(task => {
+                                            const statusIcon =
+                                                task.status === 'Concluída' ? <CheckCircleIcon className="w-4 h-4 text-green-500" /> :
+                                                    task.status === 'Em andamento' ? <PlayCircleIcon className="w-4 h-4 text-yellow-500" /> :
+                                                        <StopCircleIcon className="w-4 h-4 text-blue-500" />;
+
+                                            // Busca a categoria para exibir o ícone dela
+                                            const category = categories.find(c => c.id === task.categoryId);
+                                            const CategoryIcon = getCategoryIcon(category);
+
+                                            // 👇 NOVA LÓGICA: Ordena as tags para a pesquisada aparecer primeiro
+                                            const queryStr = searchQuery.startsWith('#') ? searchQuery.slice(1).trim().toLowerCase() : searchQuery.trim().toLowerCase();
+                                            const tagsToDisplay = task.tags ? [...task.tags].sort((a, b) => {
+                                                if (!queryStr) return 0;
+                                                const aMatch = a.toLowerCase().includes(queryStr);
+                                                const bMatch = b.toLowerCase().includes(queryStr);
+                                                return aMatch === bMatch ? 0 : aMatch ? -1 : 1;
+                                            }).slice(0, 2) : [];
+
+                                            return (
+                                                <button
+                                                    key={task.id}
+                                                    onClick={() => handleResultClick(task)}
+                                                    className="w-full text-left flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors group"
+                                                >
+                                                    {/* Status Icon */}
+                                                    <div className="flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" title={`Status: ${task.status}`}>
+                                                        {statusIcon}
+                                                    </div>
+
+                                                    {/* Titulo, Ícone de Categoria e Tags */}
+                                                    <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+
+                                                        <div className="flex items-center gap-2.5 truncate pr-2">
+                                                            {/* O Ícone da Categoria entra aqui! */}
+                                                            <div title={category?.name || 'Sem categoria'} className="text-gray-400 dark:text-gray-500 flex-shrink-0 bg-gray-100 dark:bg-gray-800 p-1 rounded">
+                                                                <CategoryIcon className="w-3.5 h-3.5" />
+                                                            </div>
+
+                                                            <div className="truncate text-sm text-gray-800 dark:text-gray-200 font-medium">
+                                                                <HighlightText text={task.title} highlight={searchQuery} />
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Mostra a tag pesquisada primeiro! */}
+                                                        {tagsToDisplay.length > 0 && (
+                                                            <div className="flex-shrink-0 flex items-center gap-1">
+                                                                {tagsToDisplay.map(tag => (
+                                                                    <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">
+                                                                        <HighlightText text={`#${tag}`} highlight={searchQuery} />
+                                                                    </span>
+                                                                ))}
+                                                                {/* Indicador visual se houver mais tags escondidas */}
+                                                                {(task.tags?.length || 0) > 2 && (
+                                                                    <span className="text-[10px] text-gray-400 font-medium ml-0.5">
+                                                                        +{task.tags!.length - 2}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* ESTADO VAZIO: Sem resultados */}
+                                {searchQuery.trim() && !hasResults && (
+                                    <div className="p-8 text-center flex flex-col items-center">
+                                        <SearchIcon className="w-8 h-8 text-gray-300 dark:text-gray-700 mb-2" />
+                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Nenhum resultado para "{searchQuery}"</p>
+                                        <p className="text-xs text-gray-500 mt-1">Tente buscar por outro termo ou #tag.</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                    <div ref={categoryFilterRef} className="relative hidden md:block">
+                        <button
+                            onClick={() => setIsCategoryFilterOpen(prev => !prev)}
+                            className={`flex items-center justify-between gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium w-48 transition-all duration-200 hover:ring-2 hover:ring-primary-400 ${globalCategoryFilter
+                                ? 'bg-primary-50 dark:bg-primary-900/40 border-primary-500 text-primary-700 dark:text-primary-300'
+                                : 'bg-white dark:bg-[#21262D] border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/10'
+                                }`}
+                        >
+                            <span className="truncate">{selectedCategoryName}</span>
+                            <ChevronDownIcon className={`w-4 h-4 text-gray-500 dark:text-gray-400 transition-transform ${isCategoryFilterOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isCategoryFilterOpen && (
+                            <div className="absolute top-full mt-2 left-0 bg-white dark:bg-[#21262D] p-2 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10 w-full space-y-1">
+                                <button onClick={() => { onCategoryChange(''); setIsCategoryFilterOpen(false); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
+                                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Todas as Categorias</span>
+                                </button>
+                                {categories.map(cat => {
+                                    // Correção AQUI também: Usamos a função auxiliar
+                                    const CategoryIcon = getCategoryIcon(cat);
+                                    return (
+                                        <button key={cat.id} onClick={() => { onCategoryChange(cat.id); setIsCategoryFilterOpen(false); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
+                                            <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                    <div ref={habitPopupRef} className="relative">
+                        <button onClick={() => setIsHabitPopupOpen(prev => !prev)} className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
+                            <ClipboardDocumentCheckIcon className="w-6 h-6" />
+                            {habitsWithStatus.some(h => !h.isCompleted) && (
+                                <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-yellow-400 border-2 border-white dark:border-[#21262D]"></span>
+                            )}
+                        </button>
+                        <HabitChecklistPopup
+                            isOpen={isHabitPopupOpen}
+                            onClose={() => setIsHabitPopupOpen(false)}
+                            habitsWithStatus={habitsWithStatus}
+                            onToggleHabit={onToggleHabit}
+                            onMarkAllComplete={onMarkAllHabitsComplete}
+                            onOpenSettings={onOpenHabitSettings}
+                        />
+                    </div>
+                    <NotificationBell
+                        notifications={notifications}
+                        unreadNotifications={unreadNotifications}
+                        tasks={tasks}
+                        categories={categories}
+                        onNotificationClick={onNotificationClick}
+                        onSnooze={onSnoozeNotification}
+                        onMarkHabitComplete={onMarkHabitComplete}
+                        onMarkAllAsRead={onMarkAllNotificationsAsRead}
+                        onClearAllNotifications={onClearAllNotifications}
+                        timeFormat={appSettings.timeFormat}
+                        onSelectTask={onSelectTask}
+                    />
+                    <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
+                        {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
                     </button>
-                    {categories.map(cat => {
-                        // Correção AQUI também: Usamos a função auxiliar
-                        const CategoryIcon = getCategoryIcon(cat);
-                        return (
-                            <button key={cat.id} onClick={() => { onCategoryChange(cat.id); setIsCategoryFilterOpen(false); }} className="w-full text-left flex items-center gap-3 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-white/10">
-                                <CategoryIcon className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{cat.name}</span>
-                            </button>
-                        )
-                    })}
+                    <button
+                        onClick={onAddTask}
+                        className="flex items-center bg-primary-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-primary-600 transition-all shadow-md hover:shadow-lg hover:shadow-primary-400/30 duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-primary-400 dark:hover:ring-offset-[#0D1117]"
+                    >
+                        <PlusIcon className="w-5 h-5 mr-2" />
+                        Adicionar Tarefa
+                    </button>
                 </div>
-             )}
-          </div>
-          <div ref={habitPopupRef} className="relative">
-             <button onClick={() => setIsHabitPopupOpen(prev => !prev)} className="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
-                <ClipboardDocumentCheckIcon className="w-6 h-6" />
-                {habitsWithStatus.some(h => !h.isCompleted) && (
-                    <span className="absolute top-0 right-0 h-3 w-3 rounded-full bg-yellow-400 border-2 border-white dark:border-[#21262D]"></span>
-                )}
-             </button>
-             <HabitChecklistPopup
-                isOpen={isHabitPopupOpen}
-                onClose={() => setIsHabitPopupOpen(false)}
-                habitsWithStatus={habitsWithStatus}
-                onToggleHabit={onToggleHabit}
-                onMarkAllComplete={onMarkAllHabitsComplete}
-                onOpenSettings={onOpenHabitSettings}
-              />
-          </div>
-          <NotificationBell 
-            notifications={notifications}
-            unreadNotifications={unreadNotifications}
-            tasks={tasks}
-            categories={categories}
-            onNotificationClick={onNotificationClick}
-            onSnooze={onSnoozeNotification}
-            onMarkHabitComplete={onMarkHabitComplete}
-            onMarkAllAsRead={onMarkAllNotificationsAsRead}
-            onClearAllNotifications={onClearAllNotifications}
-            timeFormat={appSettings.timeFormat}
-            onSelectTask={onSelectTask}
-          />
-          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400">
-            {theme === 'light' ? <MoonIcon className="w-6 h-6" /> : <SunIcon className="w-6 h-6" />}
-          </button>
-          <button
-            onClick={onAddTask}
-            className="flex items-center bg-primary-500 text-white px-4 py-2 rounded-lg font-bold hover:bg-primary-600 transition-all shadow-md hover:shadow-lg hover:shadow-primary-400/30 duration-200 hover:ring-2 hover:ring-offset-2 hover:ring-primary-400 dark:hover:ring-offset-[#0D1117]"
-          >
-            <PlusIcon className="w-5 h-5 mr-2" />
-            Adicionar Tarefa
-          </button>
-        </div>
-      </div>
-    </header>
-  );
+            </div>
+        </header>
+    );
 };
 
 export default Header;
