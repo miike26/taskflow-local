@@ -16,6 +16,7 @@ import HabitChecklistPopup from '../HabitChecklistPopup';
 import DateRangeCalendar from '../DateRangeCalendar';
 import RichTextNoteEditor from '../RichTextNoteEditor';
 import Calendar from '../Calendar';
+import { sanitizeTag } from '../../utils/tags';
 
 // --- HELPER: Gera Link Mágico do Google Calendar ---
 const generateGoogleCalendarLink = (task: Task): string => {
@@ -1126,6 +1127,11 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
     const [newNote, setNewNote] = useState('');
     const [newTag, setNewTag] = useState('');
     const [isNoteEditorExpanded, setIsNoteEditorExpanded] = useState(false);
+    
+    // 👇 NOVO: Estados para o Autocomplete de Tags
+    const [isTagInputFocused, setIsTagInputFocused] = useState(false);
+    const tagAutocompleteRef = useRef<HTMLDivElement>(null);
+    const tagInputRef = useRef<HTMLInputElement>(null);
 
     // --- ESTADOS PARA DOCUMENTOS ---
     const [isDocsCollapsed, setIsDocsCollapsed] = useState(false);
@@ -1297,6 +1303,7 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) setIsCategoryDropdownOpen(false);
             if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target as Node)) setIsTagDropdownOpen(false);
             if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) setIsFilterDropdownOpen(false);
+            if (tagAutocompleteRef.current && !tagAutocompleteRef.current.contains(event.target as Node)) setIsTagInputFocused(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -1488,15 +1495,25 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
         onUpdate(taskData.id, { tags: updatedTags });
     };
 
-    const handleAddTagToList = () => {
-        if (!newTag.trim()) return;
-        if (taskData.tags?.includes(newTag.trim())) {
+    const handleAddTagToList = (tagToSave?: string) => {
+        const rawTag = tagToSave || newTag;
+        if (!rawTag.trim()) return;
+
+        const cleanTag = sanitizeTag(rawTag);
+        
+        if (taskData.tags?.includes(cleanTag)) {
             setNewTag('');
+            // Devolve o foco para o input instantaneamente
+            tagInputRef.current?.focus(); 
             return;
         }
-        const updatedTags = [...(taskData.tags || []), newTag.trim()];
+        
+        const updatedTags = [...(taskData.tags || []), cleanTag];
         onUpdate(taskData.id, { tags: updatedTags });
         setNewTag('');
+        // Não mudamos o setIsTagInputFocused para false!
+        // Apenas forçamos o cursor a continuar no input
+        tagInputRef.current?.focus(); 
     };
 
     // Subtasks
@@ -1917,6 +1934,20 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
             }
         }
     };
+
+    // --- LÓGICA DO AUTOCOMPLETE DE TAGS ---
+    const tagSuggestions = useMemo(() => {
+        // Se o dicionário não existe OU o campo está vazio, não mostra nenhuma sugestão
+        if (!appSettings.customTags || !newTag.trim()) return [];
+
+        const sanitizedInput = sanitizeTag(newTag);
+        
+        return appSettings.customTags
+            .filter(t => t.includes(sanitizedInput))
+            .filter(t => !(taskData.tags || []).includes(t))
+            .slice(0, 10); 
+            
+    }, [newTag, appSettings.customTags, taskData.tags]);
 
     return (
 
@@ -2415,19 +2446,71 @@ const TaskDetailView: React.FC<TaskDetailViewProps> = ({ task, onUpdate, onDelet
                             </div>
                         </div>
 
-                        <div>
-                            <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2 block">Tags</label>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                                {taskData.tags?.map(t => (
-                                    <span key={t} className="flex items-center gap-1.5 bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 px-3 py-1 rounded-full text-sm font-medium">
-                                        {t} <button onClick={() => handleRemoveTag(t)} className="text-primary-500 hover:text-primary-800 dark:hover:text-primary-200"><XIcon className="w-3 h-3" /></button>
-                                    </span>
-                                ))}
+                        {/* Seção de Tags (Refatorada) */}
+                        <div className="flex flex-col gap-3">
+                            
+                            {/* Linha 1: Label na esquerda, Input na direita (Alinhado com os de cima) */}
+                            <div className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-1.5" ref={tagAutocompleteRef}>
+                                <label className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-1 xl:mb-0">Tags</label>
+                                
+                                {/* O Input com tamanho travado em 205px nas telas grandes para alinhar com os combos acima */}
+                                <div className="relative w-full xl:w-[205px]">
+                                    <input 
+                                        ref={tagInputRef}
+                                        type="text" 
+                                        value={newTag} 
+                                        onChange={e => setNewTag(e.target.value)} 
+                                        onFocus={() => setIsTagInputFocused(true)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddTagToList()} 
+                                        placeholder="Adicionar tag..." 
+                                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm p-2 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500" 
+                                    />
+                                    
+                                    {/* Menu Flutuante de Sugestões */}
+                                    {isTagInputFocused && newTag.trim() && (
+                                        <div className="absolute top-full left-0 mt-1 w-full bg-white dark:bg-[#21262D] rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden flex flex-col max-h-60 animate-fade-in">
+                                            <div className="overflow-y-auto p-1 custom-scrollbar">
+
+                                                {tagSuggestions.map(tagStr => (
+                                                    <button
+                                                        key={tagStr}
+                                                        onClick={() => handleAddTagToList(tagStr)}
+                                                        className="w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                                    >
+                                                        <span className="text-gray-400 font-bold text-sm leading-none">#</span>
+                                                        {tagStr}
+                                                    </button>
+                                                ))}
+
+                                                {!tagSuggestions.includes(sanitizeTag(newTag)) && sanitizeTag(newTag).length > 0 && (
+                                                    <button
+                                                        onClick={() => handleAddTagToList()}
+                                                        className="w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center gap-2 hover:bg-primary-50 dark:hover:bg-primary-900/30 text-primary-700 dark:text-primary-300 border-t border-gray-100 dark:border-gray-800 mt-1 pt-2"
+                                                    >
+                                                        <PlusIcon className="w-4 h-4" />
+                                                        Criar: <strong className="break-all">"{sanitizeTag(newTag)}"</strong>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <div className="flex flex-col xl:flex-row gap-2">
-                                <input type="text" value={newTag} onChange={e => setNewTag(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddTagToList()} placeholder="Adicionar tag..." className="flex-grow block w-full rounded-lg border border-gray-300 dark:border-gray-700 shadow-sm bg-white dark:bg-[#0D1117] text-gray-900 dark:text-gray-200 placeholder:text-gray-500 dark:placeholder:text-gray-400 text-sm p-2.5 transition-colors duration-200 hover:border-primary-400 dark:hover:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:focus:ring-primary-500/50 focus:border-primary-500" />
-                                <button onClick={handleAddTagToList} className="bg-primary-500 text-white p-2.5 rounded-lg hover:bg-primary-600 disabled:opacity-50" disabled={!newTag.trim()}><PlusIcon className="w-5 h-5" /></button>
-                            </div>
+
+                            {/* Linha 2: As tags que já foram adicionadas ficam embaixo do input */}
+                            {taskData.tags && taskData.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                    {taskData.tags.map(t => (
+                                        <span key={t} className="flex items-center gap-1.5 bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 px-2.5 py-1 rounded-full text-xs font-semibold border border-primary-200 dark:border-primary-800/30">
+                                            <span className="opacity-50 font-normal">#</span>
+                                            {t} 
+                                            <button onClick={() => handleRemoveTag(t)} className="text-primary-500 hover:text-primary-800 dark:hover:text-primary-200 transition-colors ml-0.5">
+                                                <XIcon className="w-3 h-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="mt-auto pt-4 px-4">
